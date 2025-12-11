@@ -11,6 +11,7 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 - Monorepo: Turborepo + pnpm workspaces
 - Apps: `apps/web` (Vite + React 18), `apps/api` (Fastify)
 - Shared packages: `packages/ui`, `packages/utils`, `packages/types`, `packages/tsconfig`, `packages/tailwind-config`
+- Validation: Zod v4 shared schemas in `@home/types`
 - Linting: ESLint v9 flat config at repo root (`eslint.config.js`) + Prettier (do not use `packages/eslint-config` for project config)
 - Other: Tailwind, Changesets, GitHub Actions CI
 
@@ -24,22 +25,24 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 - Turborepo: Use `tasks` (Turbo v2); do not introduce deprecated `pipeline` keys.
 - No license headers or unrelated refactors.
 - Secrets: Never commit `.env` or credentials.
+- Docs (DRY): Keep documentation DRY. Treat `README.md` as the canonical source for commands, scripts, and environment usage; link to it from `AGENTS.md` instead of duplicating. Use `AGENTS.md` for operator-specific constraints, workflows, and pointers.
 
 ## Workflow for LLMs
 1. Understand task and plan small, verifiable steps.
 2. Apply changes surgically. Prefer small patches.
 3. Validate locally:
    - Root checks: `pnpm typecheck`, `pnpm lint`, `pnpm build`
-   - Dev servers: `pnpm dev` (or `pnpm dev:web`, `pnpm dev:api`)
+   - Dev servers: `pnpm dev` (or `pnpm dev:web`, `pnpm dev:api`) — Web proxies `/api` to API
    - Note: `typecheck` depends on upstream builds so apps can typecheck against built internal packages.
-4. Update or add docs when adding packages or features.
+4. Update docs when adding packages or features: ensure both `README.md` and `AGENTS.md` reflect the change; keep updates concise and current.
 5. Prepare PR description using the template; list affected paths.
 
 ## Repo Conventions
 - UI: Put reusable components in `packages/ui/src/lib`, export from `packages/ui/src/index.ts`.
 - Utils/Types: Keep small, generic helpers in `packages/utils` and shared types in `packages/types`.
-- API: Add routes in `apps/api/src`, keep handlers small and typed, return JSON shapes with `ApiResponse<T>` where appropriate.
-- Web: Keep pages and feature code in `apps/web/src`, prefer simple component composition.
+- Shared schemas: Define Zod v4 schemas under `packages/types/src/schemas/*`; export via `packages/types/src/index.ts`.
+- API: Add routes in `apps/api/src`, keep handlers small and typed, return `ApiResponse<T>` and validate/parse using shared Zod schemas.
+- Web: Keep pages and feature code in `apps/web/src`, fetch from `/api/*`, and validate responses with shared Zod schemas using `apiResponse(YourSchema)`.
 
 ## Commits
 - Use clear, conventional-style messages when possible (e.g., `feat:`, `fix:`, `chore:`).
@@ -57,6 +60,16 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 - Typecheck all: `pnpm typecheck`
 - Lint clean: `pnpm lint`
 - For UI changes: verify visual usage in `apps/web` manually.
+
+## E2E UI Testing
+- Playwright config lives at the repo root: `playwright.config.ts`.
+- DRY source of truth for commands: see "E2E Tests (Playwright)" in `README.md`.
+- Tests start both API and Web servers and validate UI against API responses.
+
+## Deployment model
+- API routes are namespaced under `/api`.
+- In non‑dev environments, the API serves the built Web SPA with a fallback for non‑API routes.
+- In dev, static serving is disabled in the API; use Vite dev server for the Web app.
 
 ## PR Expectations
 - Summary: What/why and user impact.

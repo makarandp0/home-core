@@ -5,3 +5,5 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+export * from './schemas/user';
+export * from './schemas/api';
