@@ -19,7 +19,6 @@
     "fastify": "^4.26.2"
   },
   "devDependencies": {
-    "@home/eslint-config": "workspace:*",
     "@home/tsconfig": "workspace:*",
     "@types/node": "^22.0.0",
     "eslint": "^9.11.1",

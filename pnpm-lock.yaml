@@ -54,9 +54,6 @@ importers:
         specifier: ^4.26.2
         version: 4.29.1
     devDependencies:
-      '@home/eslint-config':
-        specifier: workspace:*
-        version: link:../../packages/eslint-config
       '@home/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -91,9 +88,6 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
     devDependencies:
-      '@home/eslint-config':
-        specifier: workspace:*
-        version: link:../../packages/eslint-config
       '@home/tailwind-config':
         specifier: workspace:*
         version: link:../../packages/tailwind-config
@@ -163,9 +157,6 @@ importers:
         specifier: ^4.0.0
         version: 4.1.13
     devDependencies:
-      '@home/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
       '@home/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -182,9 +173,6 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
     devDependencies:
-      '@home/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
       '@home/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -200,9 +188,6 @@ importers:
 
   packages/utils:
     devDependencies:
-      '@home/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
       '@home/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
