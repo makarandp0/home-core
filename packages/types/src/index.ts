@@ -7,3 +7,4 @@ export interface ApiResponse<T> {
 
 export * from './schemas/user';
 export * from './schemas/api';
+export * from './schemas/health';

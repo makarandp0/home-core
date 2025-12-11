@@ -1,7 +1,8 @@
 import Fastify from 'fastify';
 import { join } from 'node:path';
 import fastifyStatic from '@fastify/static';
-import { UserSchema, type User, type ApiResponse } from '@home/types';
+import healthRoutes from './routes/health';
+import userRoutes from './routes/user';
 
 const server = Fastify({ logger: true });
 
@@ -15,24 +16,8 @@ if (serveStatic) {
 }
 
 // Register API routes under "/api" prefix
-server.register(
-  (app, _opts, done) => {
-    app.get('/health', async () => ({ ok: true }));
-
-    // Example route using shared Zod schema
-    app.get('/user', async (): Promise<ApiResponse<User>> => {
-      const parsed = UserSchema.parse({
-        id: 'u_1',
-        name: 'Ada Lovelace',
-        email: 'ada@example.com',
-      });
-      return { ok: true, data: parsed };
-    });
-
-    done();
-  },
-  { prefix: '/api' },
-);
+server.register(healthRoutes, { prefix: '/api' });
+server.register(userRoutes, { prefix: '/api' });
 
 // SPA fallback: serve index.html for non-API routes when static is enabled
 server.setNotFoundHandler((req, reply) => {
