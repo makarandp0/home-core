@@ -5,13 +5,17 @@
   "packageManager": "pnpm@9.12.0",
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter @home/web dev",
+    "dev:api": "pnpm --filter @home/api dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write .",
     "changeset": "changeset",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "start:web": "pnpm --filter @home/web build && pnpm --filter @home/web preview",
+    "start:api": "pnpm --filter @home/api build && pnpm --filter @home/api start"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",

@@ -4,9 +4,7 @@
     "lib": ["ES2022"],
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "outDir": "dist",
     "noEmit": false
   },
   "include": ["src"]
 }
-
