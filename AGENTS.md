@@ -23,6 +23,7 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 - Structure: Do not rename or move files unless compelling; follow existing patterns.
 - Styling: Use Tailwind utility classes in UI. Keep React components simple and typed.
 - Types: TS is strict; extend `@home/tsconfig` presets per target (app/library/server).
+- Type assertions: Explicit `as` type assertions (e.g. `x as Foo`) are banned. Prefer safe narrowing, typed generics, or helper functions. Enforcement: root ESLint rule using the `TSAsExpression` selector in `eslint.config.js`.
 - Packages: Use workspace ranges (`workspace:*`) for internal deps.
 - Linting: Use the root flat config. Do not add per-package `.eslintrc.*` files.
 - Formatting: Always run Prettier on any edits. Before pushing, run `pnpm format` (see README for commands) or enable editor format-on-save with the Prettier extension to keep diffs consistent.

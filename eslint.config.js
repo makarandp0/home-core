@@ -18,6 +18,14 @@ module.exports = [
     settings: { react: { version: 'detect' } },
     rules: {
       'react/react-in-jsx-scope': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSAsExpression',
+          message:
+            'Type assertions using `as` are banned. Prefer safe narrowing, typed generics, or explicit helper functions instead of `x as Foo`.',
+        },
+      ],
     },
   },
   prettierConfig,
