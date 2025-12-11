@@ -10,8 +10,9 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 ## Tech Stack
 - Monorepo: Turborepo + pnpm workspaces
 - Apps: `apps/web` (Vite + React 18), `apps/api` (Fastify)
-- Shared packages: `packages/ui`, `packages/utils`, `packages/types`, `packages/tsconfig`, `packages/eslint-config`, `packages/tailwind-config`
-- Tooling: TypeScript, ESLint + Prettier, Tailwind, Changesets, GitHub Actions CI
+- Shared packages: `packages/ui`, `packages/utils`, `packages/types`, `packages/tsconfig`, `packages/tailwind-config`
+- Linting: ESLint v9 flat config at repo root (`eslint.config.js`) + Prettier (do not use `packages/eslint-config` for project config)
+- Other: Tailwind, Changesets, GitHub Actions CI
 
 ## Ground Rules
 - Scope: Only change what is required to satisfy the task.
@@ -19,6 +20,8 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 - Styling: Use Tailwind utility classes in UI. Keep React components simple and typed.
 - Types: TS is strict; extend `@home/tsconfig` presets per target (app/library/server).
 - Packages: Use workspace ranges (`workspace:*`) for internal deps.
+- Linting: Use the root flat config. Do not add per-package `.eslintrc.*` files.
+- Turborepo: Use `tasks` (Turbo v2); do not introduce deprecated `pipeline` keys.
 - No license headers or unrelated refactors.
 - Secrets: Never commit `.env` or credentials.
 
@@ -26,8 +29,9 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 1. Understand task and plan small, verifiable steps.
 2. Apply changes surgically. Prefer small patches.
 3. Validate locally:
-   - Root: `pnpm typecheck`, `pnpm lint`, `pnpm build`
-   - Apps: `pnpm --filter @home/web dev`, `pnpm --filter @home/api dev`
+   - Root checks: `pnpm typecheck`, `pnpm lint`, `pnpm build`
+   - Dev servers: `pnpm dev` (or `pnpm dev:web`, `pnpm dev:api`)
+   - Note: `typecheck` depends on upstream builds so apps can typecheck against built internal packages.
 4. Update or add docs when adding packages or features.
 5. Prepare PR description using the template; list affected paths.
 
@@ -36,6 +40,10 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 - Utils/Types: Keep small, generic helpers in `packages/utils` and shared types in `packages/types`.
 - API: Add routes in `apps/api/src`, keep handlers small and typed, return JSON shapes with `ApiResponse<T>` where appropriate.
 - Web: Keep pages and feature code in `apps/web/src`, prefer simple component composition.
+
+## Commits
+- Use clear, conventional-style messages when possible (e.g., `feat:`, `fix:`, `chore:`).
+- Keep diffs small and focused; separate unrelated changes into different commits/PRs.
 
 ## Adding Dependencies
 - App-only: `pnpm add <pkg> --filter @home/web`
