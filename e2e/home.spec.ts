@@ -7,7 +7,9 @@ test('home page shows user from API', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: /home-core web/i })).toBeVisible();
 
   // Section heading
-  await expect(page.getByRole('heading', { level: 2, name: /User \(validated via Zod\)/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 2, name: /User \(validated via Zod\)/i }),
+  ).toBeVisible();
 
   // Data fetched from API and displayed
   await expect(page.getByText('Name: Ada Lovelace')).toBeVisible();

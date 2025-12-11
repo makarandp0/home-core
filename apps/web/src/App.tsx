@@ -34,9 +34,7 @@ export function App() {
       <div className="mb-6 rounded-md border bg-white p-4 shadow-sm">
         <h2 className="mb-2 text-lg font-medium">User (validated via Zod)</h2>
         {loading && <p className="text-sm text-gray-600">Loading…</p>}
-        {!loading && error && (
-          <p className="text-sm text-red-600">Error: {error}</p>
-        )}
+        {!loading && error && <p className="text-sm text-red-600">Error: {error}</p>}
         {!loading && !error && user && (
           <div className="space-y-1">
             <p className="text-sm text-gray-700">

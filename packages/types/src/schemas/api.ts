@@ -6,4 +6,3 @@ export const apiResponse = <T extends z.ZodTypeAny>(data: T) =>
     data: data.optional(),
     error: z.string().optional(),
   });
-

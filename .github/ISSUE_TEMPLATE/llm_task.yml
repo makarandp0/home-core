@@ -1,7 +1,7 @@
 name: LLM Task
 description: Create a precise task for an LLM to implement
-title: "[LLM] Brief title"
-labels: ["llm"]
+title: '[LLM] Brief title'
+labels: ['llm']
 body:
   - type: textarea
     id: goal
@@ -50,4 +50,3 @@ body:
     attributes:
       label: Additional Notes
       description: Any gotchas, risks, or examples.
-

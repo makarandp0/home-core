@@ -3,15 +3,15 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2022,
-    sourceType: 'module'
+    sourceType: 'module',
   },
   env: {
     browser: true,
     node: true,
-    es2022: true
+    es2022: true,
   },
   settings: {
-    react: { version: 'detect' }
+    react: { version: 'detect' },
   },
   plugins: ['@typescript-eslint', 'react', 'react-hooks'],
   extends: [
@@ -19,11 +19,10 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'prettier'
+    'prettier',
   ],
   rules: {
-    'react/react-in-jsx-scope': 'off'
+    'react/react-in-jsx-scope': 'off',
   },
-  ignorePatterns: ['dist', 'build', 'node_modules']
+  ignorePatterns: ['dist', 'build', 'node_modules'],
 };
-

@@ -13,12 +13,12 @@ module.exports = [
     files: ['**/*.{ts,tsx}'],
     plugins: {
       react: reactPlugin,
-      'react-hooks': reactHooks
+      'react-hooks': reactHooks,
     },
     settings: { react: { version: 'detect' } },
     rules: {
-      'react/react-in-jsx-scope': 'off'
-    }
+      'react/react-in-jsx-scope': 'off',
+    },
   },
-  prettierConfig
+  prettierConfig,
 ];
