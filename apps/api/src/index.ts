@@ -1,8 +1,9 @@
 import Fastify from 'fastify';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
-import healthRoutes from './routes/health';
-import userRoutes from './routes/user';
+import healthRoutes from './routes/health.js';
+import userRoutes from './routes/user.js';
 
 const server = Fastify({ logger: true });
 
@@ -10,6 +11,8 @@ const server = Fastify({ logger: true });
 const serveStatic = process.env.NODE_ENV !== 'development' && process.env.SERVE_STATIC !== 'false';
 if (serveStatic) {
   // Serve built frontend assets (SPA) at "/"
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
   server.register(fastifyStatic, {
     root: join(__dirname, '../../web/dist'),
   });

@@ -1,0 +1,40 @@
+# VCS
+.git
+.gitignore
+
+# Node / pnpm caches
+node_modules
+.pnpm-store
+
+# Turborepo cache
+.turbo
+
+# Build outputs
+dist
+apps/*/dist
+packages/*/dist
+
+# Tests and artifacts
+coverage
+test-results
+playwright-report
+e2e
+
+# Editors / IDE
+.vscode
+.idea
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files (keep examples)
+.env
+.env.*
+!.env.example
+
+# OS junk
+.DS_Store
+**/.DS_Store
+Thumbs.db
+

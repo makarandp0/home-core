@@ -1,8 +1,10 @@
 {
-  "extends": "@home/tsconfig/server.json",
+  "extends": "@home/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "noEmit": false
+    "noEmit": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
   "include": ["src"]
 }

@@ -5,6 +5,7 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-export * from './schemas/user';
-export * from './schemas/api';
-export * from './schemas/health';
+// Node ESM requires explicit extensions
+export * from './schemas/user.js';
+export * from './schemas/api.js';
+export * from './schemas/health.js';

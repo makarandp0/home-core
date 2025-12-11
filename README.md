@@ -91,6 +91,33 @@ pnpm start:api   # builds then starts Node on 3001
 pnpm start:web   # builds then serves on 4173
 ```
 
+## Docker (API + SPA)
+
+You can build and run the API (ESM) and serve the built Web SPA from the same container. The provided Dockerfile is multi‑stage and optimized for Railway.
+
+- Build:
+
+```
+docker build -f apps/api/Dockerfile -t home-api:local .
+```
+
+- Run:
+
+```
+docker run --rm -e PORT=3001 -p 3001:3001 home-api:local
+# Health checks
+curl http://localhost:3001/api/health
+curl http://localhost:3001/api/user
+```
+
+Notes:
+
+- ESM throughout: the API and `@home/types` build as ESM; Node resolves via package `type: module` and explicit file extensions.
+- The image runs the compiled server (`node apps/api/dist/index.js`).
+- `PORT` defaults to `3001`; Railway sets this automatically.
+- Static SPA serving is enabled by default (`SERVE_STATIC=true`); the API will serve the built SPA from `apps/web/dist` with an SPA fallback for non-`/api` routes.
+
+
 ## API + Web integration
 
 - API routes live under `/api/*`.
