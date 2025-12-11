@@ -1,0 +1,53 @@
+name: LLM Task
+description: Create a precise task for an LLM to implement
+title: "[LLM] Brief title"
+labels: ["llm"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One-sentence description of the outcome.
+      placeholder: Implement X so that Y.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Background, constraints, relevant links, and non-goals.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Bullet list. What must be true to ship?
+      placeholder: |
+        - pnpm typecheck/lint/build pass
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Expected files/packages to touch; avoid unrelated changes.
+  - type: checkboxes
+    id: areas
+    attributes:
+      label: Affected Areas
+      options:
+        - label: apps/web
+        - label: apps/api
+        - label: packages/ui
+        - label: packages/utils
+        - label: packages/types
+        - label: packages/tsconfig
+        - label: packages/eslint-config
+        - label: packages/tailwind-config
+        - label: CI/configs
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Any gotchas, risks, or examples.
+

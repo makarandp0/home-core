@@ -1,0 +1,15 @@
+# Cursor AI / LLM editing rules for this repo
+
+You are operating in a pnpm + Turborepo monorepo. Follow these rules:
+
+- Keep diffs minimal and focused on the task.
+- Maintain TypeScript strictness and existing tsconfig inheritance.
+- Use internal workspace deps with version "workspace:*".
+- UI components live in packages/ui with Tailwind utility classes.
+- Do not add new tooling or frameworks without explicit instruction.
+- Run and respect: pnpm typecheck, pnpm lint, pnpm build.
+- Prefer adding small utilities to packages/utils and types to packages/types.
+- Avoid editing CI unless required by the change.
+- Never commit secrets or .env files.
+- Update docs (AGENTS.md or /docs) when adding packages or public APIs.
+

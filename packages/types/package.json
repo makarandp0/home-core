@@ -1,0 +1,20 @@
+{
+  "name": "@home/types",
+  "version": "0.1.0",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@home/eslint-config": "workspace:*",
+    "@home/tsconfig": "workspace:*",
+    "typescript": "^5.6.2"
+  }
+}

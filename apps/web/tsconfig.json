@@ -1,0 +1,11 @@
+{
+  "extends": "@home/tsconfig/react-app.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "index.html"]
+}
+
