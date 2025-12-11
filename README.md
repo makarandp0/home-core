@@ -10,7 +10,7 @@ Includes shared Zod v4 schemas in `packages/types` used by both API and Web.
 
 ## Requirements
 
-- Node 20 (see `.nvmrc`)
+- Node 22.18.0 (see `.nvmrc`)
 - Corepack enabled (`corepack enable`)
 
 ## Install
