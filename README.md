@@ -4,7 +4,7 @@ Monorepo using Turborepo + pnpm with:
 
 - apps/web: Vite + React 18
 - apps/api: Fastify (TypeScript)
-- packages/\*: shared UI, utils, types, and configs
+- packages/\*: shared utils, types, and configs
 
 Includes shared Zod v4 schemas in `packages/types` used by both API and Web.
 
@@ -139,7 +139,7 @@ Notes:
 
 - App-only dep: `pnpm add <pkg> --filter @home/web`
 - API-only dep: `pnpm add <pkg> --filter @home/api`
-- Shared package dep: `pnpm add <pkg> --filter @home/ui`
+- Shared package dep: `pnpm add <pkg> --filter @home/types` (or @home/utils)
 - Dev-only dep: add `-D`
 - Internal packages use `"workspace:*"` versions
 

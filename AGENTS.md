@@ -12,7 +12,7 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 
 - Monorepo: Turborepo + pnpm workspaces
 - Apps: `apps/web` (Vite + React 18), `apps/api` (Fastify)
-- Shared packages: `packages/ui`, `packages/utils`, `packages/types`, `packages/tsconfig`, `packages/tailwind-config`
+- Shared packages: `packages/utils`, `packages/types`, `packages/tsconfig`, `packages/tailwind-config`
 - Validation: Zod v4 shared schemas in `@home/types`
 - Linting: ESLint v9 flat config at repo root (`eslint.config.js`) + Prettier (do not use `packages/eslint-config` for project config)
 - Other: Tailwind, Changesets, GitHub Actions CI
@@ -46,7 +46,7 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 
 ## Repo Conventions
 
-- UI: Put reusable components in `packages/ui/src/lib`, export from `packages/ui/src/index.ts`.
+- UI: Keep UI components in `apps/web/src/components`.
 - Utils/Types: Keep small, generic helpers in `packages/utils` and shared types in `packages/types`.
 - Shared schemas: Define Zod v4 schemas under `packages/types/src/schemas/*`; export via `packages/types/src/index.ts`.
 - API: Add routes in `apps/api/src`, keep handlers small and typed, return `ApiResponse<T>` and validate/parse using shared Zod schemas.
@@ -61,7 +61,7 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 
 - App-only: `pnpm add <pkg> --filter @home/web`
 - API-only: `pnpm add <pkg> --filter @home/api`
-- Shared package: `pnpm add <pkg> --filter @home/ui`
+- Shared package: `pnpm add <pkg> --filter @home/types` (or @home/utils)
 - Dev-only: add `-D`.
 - Internal linking: prefer `"workspace:*"` versions for internal packages.
 

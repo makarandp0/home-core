@@ -13,11 +13,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@home/ui": "workspace:*",
-    "@home/utils": "workspace:*",
     "@home/types": "workspace:*",
+    "@home/utils": "workspace:*",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.10.1"
   },
   "devDependencies": {
     "@home/tailwind-config": "workspace:*",

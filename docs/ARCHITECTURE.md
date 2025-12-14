@@ -6,7 +6,6 @@
   - web/ — Vite + React (client app)
   - api/ — Fastify (HTTP API)
 - packages/
-  - ui/ — Reusable React components (Tailwind)
   - utils/ — Generic helpers
   - types/ — Shared types
   - tsconfig/ — Shared TS configs
@@ -28,6 +27,6 @@
 
 ## How Things Fit
 
-- `apps/web` depends on `@home/ui`, `@home/utils`, and shares types from `@home/types`.
+- `apps/web` depends on `@home/utils` and shares types from `@home/types`. UI components live in `apps/web/src/components`.
 - `apps/api` uses server tsconfig and may import types from `@home/types`.
 - Shared configs avoid duplication and keep consistent lint/ts settings.
