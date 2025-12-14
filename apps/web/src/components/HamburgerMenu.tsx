@@ -19,12 +19,12 @@ export const HamburgerMenu: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex flex-col items-center justify-center gap-1 rounded-md p-2 hover:bg-gray-100"
+        className="flex flex-col items-center justify-center gap-1 rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
         aria-label="Menu"
       >
-        <span className="block h-0.5 w-6 bg-gray-700" />
-        <span className="block h-0.5 w-6 bg-gray-700" />
-        <span className="block h-0.5 w-6 bg-gray-700" />
+        <span className="block h-0.5 w-6 bg-gray-700 dark:bg-gray-300" />
+        <span className="block h-0.5 w-6 bg-gray-700 dark:bg-gray-300" />
+        <span className="block h-0.5 w-6 bg-gray-700 dark:bg-gray-300" />
       </button>
 
       {isOpen && (
@@ -33,17 +33,17 @@ export const HamburgerMenu: React.FC = () => {
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-md border bg-white shadow-lg">
+          <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-md border dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
             <nav className="py-1">
               <button
                 onClick={handleHomeClick}
-                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Home
               </button>
               <button
                 onClick={handleVersionClick}
-                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Version
               </button>

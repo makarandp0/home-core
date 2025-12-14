@@ -13,6 +13,6 @@ export const Button: React.FC<ButtonProps> = ({
   const styles =
     variant === 'primary'
       ? 'bg-blue-600 text-white hover:bg-blue-700'
-      : 'bg-gray-200 text-gray-900 hover:bg-gray-300';
+      : 'bg-gray-200 text-gray-900 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600';
   return <button className={[base, styles, className].join(' ')} {...props} />;
 };

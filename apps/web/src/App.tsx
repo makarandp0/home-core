@@ -1,22 +1,29 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from './hooks/useTheme';
+import { ThemeToggle } from './components/ThemeToggle';
 import { HamburgerMenu } from './components/HamburgerMenu';
 import { HomePage } from './pages/HomePage';
 import { VersionPage } from './pages/VersionPage';
 
 export function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">home-core web</h1>
-          <HamburgerMenu />
+    <ThemeProvider>
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-semibold dark:text-gray-100">home-core web</h1>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <HamburgerMenu />
+            </div>
+          </div>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/version" element={<VersionPage />} />
+          </Routes>
         </div>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/version" element={<VersionPage />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
