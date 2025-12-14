@@ -47,6 +47,10 @@ pnpm dev:api
 
 During development, the Web app proxies `/api/*` to the API (see `apps/web/vite.config.ts`).
 
+## Environment
+
+- `VITE_COMMIT_SHA`: auto-injected by Vite from `COMMIT_SHA` (falls back to `dev`). Available in the Web app via `import.meta.env.VITE_COMMIT_SHA` for diagnostics and cache-busting.
+
 ## Linting & Formatting
 
 - ESLint v9 flat config at the repo root: `eslint.config.js`

@@ -1,11 +1,13 @@
 import React from 'react';
 import { Button } from '@home/ui';
-import { UserSchema, apiResponse, type User } from '@home/types';
+import { UserSchema, HealthSchema, apiResponse, type User } from '@home/types';
+import { FRONTEND_VERSION } from './version';
 
 export function App() {
   const [user, setUser] = React.useState<User | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const run = async () => {
@@ -24,6 +26,19 @@ export function App() {
         setError(e instanceof Error ? e.message : 'Failed to load');
       } finally {
         setLoading(false);
+      }
+    };
+    run();
+  }, []);
+  React.useEffect(() => {
+    const run = async () => {
+      try {
+        const res = await fetch('/api/health');
+        const json = await res.json();
+        const parsed = HealthSchema.parse(json);
+        setBackendVersion(parsed.version ?? null);
+      } catch {
+        setBackendVersion(null);
       }
     };
     run();
@@ -52,6 +67,11 @@ export function App() {
       <div className="flex gap-3">
         <Button variant="primary">Primary</Button>
         <Button variant="secondary">Secondary</Button>
+      </div>
+      <div className="mt-6 text-xs text-gray-500">
+        <span className="font-semibold">Versions:</span>{' '}
+        <span>web {FRONTEND_VERSION}</span>
+        {backendVersion ? <span> • api {backendVersion}</span> : null}
       </div>
     </div>
   );

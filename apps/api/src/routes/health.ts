@@ -3,7 +3,8 @@ import { HealthSchema, type Health } from '@home/types';
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get('/health', async (): Promise<Health> => {
-    const parsed = HealthSchema.parse({ ok: true });
-    return parsed;
+    const version = process.env.COMMIT_SHA;
+    const payload = { ok: true, ...(version ? { version } : {}) };
+    return HealthSchema.parse(payload);
   });
 };

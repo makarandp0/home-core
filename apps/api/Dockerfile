@@ -2,6 +2,10 @@
 
 # Build stage: install deps and build all workspaces
 FROM node:22-bookworm-slim AS builder
+ARG COMMIT_SHA
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA:-${RAILWAY_GIT_COMMIT_SHA}}
+ENV VITE_COMMIT_SHA=${COMMIT_SHA}
 ENV NODE_ENV=development
 WORKDIR /app
 
@@ -20,6 +24,9 @@ RUN pnpm build
 
 # Runtime stage: install only API production deps and run compiled server
 FROM node:22-bookworm-slim AS runner
+ARG COMMIT_SHA
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA:-${RAILWAY_GIT_COMMIT_SHA}}
 ENV NODE_ENV=production
 WORKDIR /app
 

@@ -13,6 +13,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Expose a stable commit SHA to the client. Prefer CI-provided COMMIT_SHA,
+  // and fall back to "dev" during local development.
+  define: {
+    'import.meta.env.VITE_COMMIT_SHA': JSON.stringify(
+      process.env.COMMIT_SHA ?? 'dev',
+    ),
+  },
   server: {
     proxy: {
       '/api': {
