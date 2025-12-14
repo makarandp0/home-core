@@ -2,20 +2,13 @@
 
 This repository is designed for LLM-driven contributions. Follow these rules to make precise, safe, and helpful changes.
 
+**Technical reference:** See `README.md` for complete tech stack, commands, scripts, and environment setup.
+
 ## Mission
 
 - Make minimal, targeted diffs that solve the task at the root cause.
 - Keep code consistent with the existing style and structure.
 - Prefer clarity and maintainability over cleverness.
-
-## Tech Stack
-
-- Monorepo: Turborepo + pnpm workspaces
-- Apps: `apps/web` (Vite + React 18), `apps/api` (Fastify)
-- Shared packages: `packages/utils`, `packages/types`, `packages/tsconfig`, `packages/tailwind-config`
-- Validation: Zod v4 shared schemas in `@home/types`
-- Linting: ESLint v9 flat config at repo root (`eslint.config.js`) + Prettier (do not use `packages/eslint-config` for project config)
-- Other: Tailwind, Changesets, GitHub Actions CI
 
 ## Ground Rules
 
@@ -37,10 +30,10 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 
 1. Understand task and plan small, verifiable steps.
 2. Apply changes surgically. Prefer small patches.
-3. Validate locally:
-   - Root checks: `pnpm typecheck`, `pnpm lint`, `pnpm build`
-   - Dev servers: `pnpm dev` (or `pnpm dev:web`, `pnpm dev:api`) — Web proxies `/api` to API
-   - Note: `typecheck` depends on upstream builds so apps can typecheck against built internal packages.
+3. Validate locally (see [Scripts](README.md#scripts) in `README.md` for commands):
+   - Run typecheck, lint, and build from repo root
+   - Note: `typecheck` depends on upstream builds so apps can typecheck against built internal packages
+   - Use dev servers to verify changes; web proxies `/api` to API during development
 4. Update docs when adding packages or features: ensure both `README.md` and `AGENTS.md` reflect the change; keep updates concise and current.
 5. Prepare PR description using the template; list affected paths.
 
@@ -59,18 +52,19 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 
 ## Adding Dependencies
 
-- App-only: `pnpm add <pkg> --filter @home/web`
-- API-only: `pnpm add <pkg> --filter @home/api`
-- Shared package: `pnpm add <pkg> --filter @home/types` (or @home/utils)
-- Dev-only: add `-D`.
-- Internal linking: prefer `"workspace:*"` versions for internal packages.
+See [Working with dependencies](README.md#working-with-dependencies) in `README.md` for pnpm filter commands.
+
+**Operator rules:**
+- Always use `"workspace:*"` versions for internal packages
+- Verify dependencies are added to the correct workspace
 
 ## Checks Before PR
 
-- Build passes: `pnpm build`
-- Typecheck all: `pnpm typecheck`
-- Lint clean: `pnpm lint`
-- For UI changes: verify visual usage in `apps/web` manually.
+Run standard validation commands (see [Scripts](README.md#scripts) in `README.md`): build, typecheck, and lint.
+
+**Additional checks:**
+- For UI changes: verify visual usage in `apps/web` manually
+- Conventional commit message (e.g., `feat:`, `fix:`, `chore:`)
 
 ## E2E UI Testing
 
@@ -80,9 +74,9 @@ This repository is designed for LLM-driven contributions. Follow these rules to 
 
 ## Deployment model
 
-- API routes are namespaced under `/api`.
-- In non‑dev environments, the API serves the built Web SPA with a fallback for non‑API routes.
-- In dev, static serving is disabled in the API; use Vite dev server for the Web app.
+See [API + Web integration](README.md#api--web-integration) in `README.md` for deployment architecture.
+
+**Key constraint:** API routes must be namespaced under `/api/*` to avoid conflicts with SPA routing.
 
 ## PR Expectations
 
