@@ -11,6 +11,3 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true, data: parsed };
   });
 };
-
-export default userRoutes;
-

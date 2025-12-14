@@ -2,8 +2,8 @@ import Fastify from 'fastify';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
-import healthRoutes from './routes/health.js';
-import userRoutes from './routes/user.js';
+import { healthRoutes } from './routes/health.js';
+import { userRoutes } from './routes/user.js';
 
 const server = Fastify({ logger: true });
 

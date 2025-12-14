@@ -7,6 +7,3 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
     return parsed;
   });
 };
-
-export default healthRoutes;
-
