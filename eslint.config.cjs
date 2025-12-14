@@ -6,7 +6,15 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const prettierConfig = require('eslint-config-prettier');
 
 module.exports = [
-  { ignores: ['**/dist/**', '**/build/**', '**/node_modules/**', '**/.turbo/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/build/**',
+      '**/node_modules/**',
+      '**/.turbo/**',
+      'eslint.config.cjs',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
