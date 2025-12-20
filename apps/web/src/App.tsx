@@ -5,6 +5,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { HamburgerMenu } from './components/HamburgerMenu';
 import { HomePage } from './pages/HomePage';
 import { VersionPage } from './pages/VersionPage';
+import { VisionPage } from './pages/VisionPage';
 
 export function App() {
   return (
@@ -21,6 +22,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/version" element={<VersionPage />} />
+            <Route path="/vision" element={<VisionPage />} />
           </Routes>
         </div>
       </BrowserRouter>

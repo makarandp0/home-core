@@ -4,8 +4,21 @@ import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
 import { healthRoutes } from './routes/health.js';
 import { userRoutes } from './routes/user.js';
+import { visionRoutes } from './routes/vision.js';
 
-const server = Fastify({ logger: true });
+const server = Fastify({
+  logger: true,
+  bodyLimit: 50 * 1024 * 1024, // 50MB for large images
+});
+
+// Global error handler to ensure consistent API response format
+server.setErrorHandler((error, _request, reply) => {
+  const statusCode = error.statusCode ?? 500;
+  reply.code(statusCode).send({
+    ok: false,
+    error: error.message || 'Internal Server Error',
+  });
+});
 
 // Only serve static assets outside development (or when explicitly enabled)
 const serveStatic = process.env.NODE_ENV !== 'development' && process.env.SERVE_STATIC !== 'false';
@@ -21,6 +34,7 @@ if (serveStatic) {
 // Register API routes under "/api" prefix
 server.register(healthRoutes, { prefix: '/api' });
 server.register(userRoutes, { prefix: '/api' });
+server.register(visionRoutes, { prefix: '/api' });
 
 // SPA fallback: serve index.html for non-API routes when static is enabled
 server.setNotFoundHandler((req, reply) => {
