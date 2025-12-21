@@ -1,7 +1,6 @@
 """FastAPI document processing service."""
 
 import base64
-from typing import Union
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -30,7 +29,7 @@ def is_image(filename: str) -> bool:
 
 async def process_document_bytes(
     file_bytes: bytes, filename: str
-) -> Union[DocumentData, dict[str, str]]:
+) -> DocumentData | dict[str, str]:
     """
     Process document bytes and extract text.
 

@@ -1,12 +1,11 @@
 """PDF text extraction using PyMuPDF."""
 
 from io import BytesIO
-from typing import Tuple
 
 import fitz  # PyMuPDF
 
 
-def extract_pdf_text(file_bytes: bytes) -> Tuple[str, int]:
+def extract_pdf_text(file_bytes: bytes) -> tuple[str, int]:
     """
     Extract text from a PDF file using native text extraction.
 

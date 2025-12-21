@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -9,7 +9,7 @@ class DocumentData(BaseModel):
     text: str = Field(description="Extracted text content")
     page_count: int = Field(description="Number of pages processed")
     method: Literal["native", "ocr"] = Field(description="Extraction method used")
-    confidence: Optional[float] = Field(
+    confidence: float | None = Field(
         default=None, description="OCR confidence score (0-1), only for OCR method"
     )
 
@@ -18,8 +18,8 @@ class ProcessingResult(BaseModel):
     """API response for document processing."""
 
     ok: bool
-    data: Optional[DocumentData] = None
-    error: Optional[str] = None
+    data: DocumentData | None = None
+    error: str | None = None
 
 
 class ProcessRequest(BaseModel):

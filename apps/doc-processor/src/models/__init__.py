@@ -1,8 +1,8 @@
 from .schemas import (
     DocumentData,
+    HealthResponse,
     ProcessingResult,
     ProcessRequest,
-    HealthResponse,
 )
 
 __all__ = ["DocumentData", "ProcessingResult", "ProcessRequest", "HealthResponse"]

@@ -1,6 +1,5 @@
 """OCR processing using EasyOCR."""
 
-from typing import Optional, Tuple
 
 import easyocr
 
@@ -8,7 +7,7 @@ from ..config import OCR_LANGUAGES
 from .pdf import pdf_to_images
 
 # Lazy-loaded OCR reader (downloads model on first use)
-_reader: Optional[easyocr.Reader] = None
+_reader: easyocr.Reader | None = None
 
 
 def _get_reader() -> easyocr.Reader:
@@ -19,7 +18,7 @@ def _get_reader() -> easyocr.Reader:
     return _reader
 
 
-def ocr_image(image_bytes: bytes) -> Tuple[str, float]:
+def ocr_image(image_bytes: bytes) -> tuple[str, float]:
     """
     Extract text from an image using OCR.
 
@@ -51,7 +50,7 @@ def ocr_image(image_bytes: bytes) -> Tuple[str, float]:
     return combined_text, avg_confidence
 
 
-def ocr_pdf_pages(file_bytes: bytes) -> Tuple[str, int, float]:
+def ocr_pdf_pages(file_bytes: bytes) -> tuple[str, int, float]:
     """
     Extract text from a scanned PDF using OCR.
 
