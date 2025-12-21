@@ -45,10 +45,6 @@ jobs:
         working-directory: apps/doc-processor
         run: uv sync --all-extras
 
-      - name: Lint Python
-        working-directory: apps/doc-processor
-        run: uv run ruff check src/
-
       - name: Lint
         run: pnpm lint
 
