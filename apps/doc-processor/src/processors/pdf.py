@@ -18,6 +18,7 @@ def extract_pdf_text(file_bytes: bytes) -> Tuple[str, int]:
     """
     doc = fitz.open(stream=BytesIO(file_bytes), filetype="pdf")
     text_parts: list[str] = []
+    page_count = doc.page_count
 
     for page in doc:
         page_text = page.get_text()
@@ -25,7 +26,7 @@ def extract_pdf_text(file_bytes: bytes) -> Tuple[str, int]:
             text_parts.append(page_text)
 
     doc.close()
-    return "\n\n".join(text_parts), doc.page_count
+    return "\n\n".join(text_parts), page_count
 
 
 def pdf_to_images(file_bytes: bytes, dpi: int = 200) -> list[bytes]:

@@ -1,10 +1,8 @@
 """OCR processing using EasyOCR."""
 
-from io import BytesIO
 from typing import Optional, Tuple
 
 import easyocr
-from PIL import Image
 
 from ..config import OCR_LANGUAGES
 from .pdf import pdf_to_images
@@ -33,11 +31,9 @@ def ocr_image(image_bytes: bytes) -> Tuple[str, float]:
     """
     reader = _get_reader()
 
-    # Convert bytes to PIL Image for EasyOCR
-    image = Image.open(BytesIO(image_bytes))
-
+    # EasyOCR accepts bytes directly
     # Run OCR - returns list of (bbox, text, confidence)
-    results = reader.readtext(image)
+    results = reader.readtext(image_bytes)
 
     if not results:
         return "", 0.0

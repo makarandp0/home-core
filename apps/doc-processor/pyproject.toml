@@ -2,7 +2,7 @@
 name = "doc-processor"
 version = "0.1.0"
 description = "Document processing service for PDF and image text extraction"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -11,6 +11,8 @@ dependencies = [
     "easyocr>=1.7.0",
     "pillow>=10.0.0",
     "pydantic>=2.0.0",
+    "torch>=2.0.0,<2.2.0",  # 2.2+ dropped macOS x86_64 support
+    "numpy<2",  # torch 2.1.x requires numpy 1.x
 ]
 
 [project.optional-dependencies]
@@ -22,12 +24,12 @@ dev = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 typeCheckingMode = "basic"
