@@ -36,14 +36,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
       - name: Install Python dependencies
         working-directory: apps/doc-processor
-        run: uv sync
+        run: uv sync --all-extras
 
       - name: Lint Python
         working-directory: apps/doc-processor
