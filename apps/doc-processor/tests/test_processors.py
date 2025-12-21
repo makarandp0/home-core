@@ -1,16 +1,80 @@
-"""Basic tests for document processors."""
+"""Tests for document processors."""
+
+import os
+from pathlib import Path
 
 import pytest
 
+from src.processors.pdf import extract_pdf_text, pdf_to_images
+from src.processors.ocr import ocr_image
 
-def test_placeholder():
-    """Placeholder test - real tests would require test fixtures."""
-    assert True
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
-# TODO: Add tests with actual PDF and image fixtures
-# def test_pdf_extraction():
-#     with open("fixtures/sample.pdf", "rb") as f:
-#         text, page_count = extract_pdf_text(f.read())
-#     assert page_count > 0
-#     assert len(text) > 0
+class TestPdfProcessor:
+    """Tests for PDF text extraction."""
+
+    def test_extract_text_from_pdf(self):
+        """Test extracting text from a PDF with text content."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        text, page_count = extract_pdf_text(pdf_bytes)
+
+        assert page_count == 1
+        assert "Test Document" in text
+        assert "sample PDF" in text
+        assert "multiple lines" in text
+
+    def test_extract_text_from_empty_pdf(self):
+        """Test extracting text from a PDF with no text."""
+        pdf_path = FIXTURES_DIR / "empty.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        text, page_count = extract_pdf_text(pdf_bytes)
+
+        assert page_count == 1
+        assert text.strip() == ""
+
+    def test_pdf_to_images(self):
+        """Test converting PDF pages to images."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        images = pdf_to_images(pdf_bytes)
+
+        assert len(images) == 1
+        assert isinstance(images[0], bytes)
+        # PNG magic bytes
+        assert images[0][:4] == b'\x89PNG'
+
+
+class TestOcrProcessor:
+    """Tests for OCR text extraction."""
+
+    def test_ocr_image(self):
+        """Test OCR on an image with text."""
+        img_path = FIXTURES_DIR / "sample.png"
+        with open(img_path, "rb") as f:
+            img_bytes = f.read()
+
+        text, confidence = ocr_image(img_bytes)
+
+        # OCR may not be perfect, check for key words
+        text_lower = text.lower()
+        assert "sample" in text_lower or "image" in text_lower or "text" in text_lower
+        assert 0 <= confidence <= 1
+
+    def test_ocr_returns_confidence(self):
+        """Test that OCR returns a confidence score."""
+        img_path = FIXTURES_DIR / "sample.png"
+        with open(img_path, "rb") as f:
+            img_bytes = f.read()
+
+        text, confidence = ocr_image(img_bytes)
+
+        assert isinstance(confidence, float)
+        assert confidence > 0  # Should have some confidence for clear text

@@ -21,6 +21,10 @@ RUN uv sync --frozen --no-dev
 # Copy source code
 COPY src/ src/
 
+# Pre-download EasyOCR model during build (English only, ~100MB)
+# This avoids download delay on first request
+RUN .venv/bin/python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
+
 # Runtime stage
 FROM python:3.11-slim
 
@@ -37,6 +41,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/pyproject.toml /app/pyproject.toml
+
+# Copy pre-downloaded EasyOCR model from builder
+COPY --from=builder /root/.EasyOCR /root/.EasyOCR
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"

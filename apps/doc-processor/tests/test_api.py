@@ -1,0 +1,92 @@
+"""Tests for FastAPI endpoints."""
+
+import base64
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from src.main import app
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+client = TestClient(app)
+
+
+class TestHealthEndpoint:
+    """Tests for health check endpoint."""
+
+    def test_health_check(self):
+        """Test health endpoint returns ok."""
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is True
+        assert data["service"] == "doc-processor"
+        assert "version" in data
+
+
+class TestProcessBase64Endpoint:
+    """Tests for base64 document processing endpoint."""
+
+    def test_process_pdf(self):
+        """Test processing a PDF document."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_b64 = base64.b64encode(f.read()).decode()
+
+        response = client.post(
+            "/process/base64",
+            json={"file_data": pdf_b64, "filename": "test.pdf"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is True
+        assert data["data"] is not None
+        assert "Test Document" in data["data"]["text"]
+        assert data["data"]["page_count"] == 1
+        assert data["data"]["method"] == "native"
+
+    def test_process_image(self):
+        """Test processing an image with OCR."""
+        img_path = FIXTURES_DIR / "sample.png"
+        with open(img_path, "rb") as f:
+            img_b64 = base64.b64encode(f.read()).decode()
+
+        response = client.post(
+            "/process/base64",
+            json={"file_data": img_b64, "filename": "test.png"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is True
+        assert data["data"] is not None
+        assert data["data"]["method"] == "ocr"
+        assert data["data"]["confidence"] is not None
+
+    def test_reject_unsupported_file_type(self):
+        """Test that unsupported file types are rejected."""
+        response = client.post(
+            "/process/base64",
+            json={"file_data": base64.b64encode(b"test").decode(), "filename": "test.txt"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is False
+        assert "Unsupported file type" in data["error"]
+
+    def test_reject_invalid_base64(self):
+        """Test that invalid base64 is rejected."""
+        response = client.post(
+            "/process/base64",
+            json={"file_data": "not-valid-base64!!!", "filename": "test.pdf"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is False
+        assert "base64" in data["error"].lower()
