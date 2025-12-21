@@ -222,6 +222,14 @@ export function VisionPage() {
                       {document.document_type}
                     </dd>
                   </div>
+                  {document.id && (
+                    <div className="flex items-start gap-2">
+                      <dt className="w-32 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        ID
+                      </dt>
+                      <dd className="text-sm text-gray-900 dark:text-gray-100">{document.id}</dd>
+                    </div>
+                  )}
                   {document.name && (
                     <div className="flex items-start gap-2">
                       <dt className="w-32 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">
