@@ -34,4 +34,4 @@ class HealthResponse(BaseModel):
 
     ok: bool
     service: str = "doc-processor"
-    version: str = "0.1.0"
+    version: str  # Set dynamically from config

@@ -5,7 +5,7 @@ import base64
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
-from .config import MAX_FILE_SIZE
+from .config import MAX_FILE_SIZE, VERSION
 from .models import DocumentData, HealthResponse, ProcessingResult, ProcessRequest
 from .processors import extract_pdf_text, ocr_image, ocr_pdf_pages
 
@@ -75,7 +75,7 @@ async def process_document_bytes(
 @app.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """Health check endpoint."""
-    return HealthResponse(ok=True)
+    return HealthResponse(ok=True, version=VERSION)
 
 
 @app.post("/process", response_model=ProcessingResult)

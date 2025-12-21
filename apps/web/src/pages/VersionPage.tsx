@@ -99,6 +99,7 @@ interface ConfiguredProviders {
 
 export function VersionPage() {
   const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
+  const [docProcessorVersion, setDocProcessorVersion] = React.useState<string | null>(null);
   const [configuredProviders, setConfiguredProviders] = React.useState<ConfiguredProviders | null>(
     null
   );
@@ -111,9 +112,11 @@ export function VersionPage() {
         const json = await res.json();
         const parsed = HealthSchema.parse(json);
         setBackendVersion(parsed.version ?? null);
+        setDocProcessorVersion(parsed.docProcessorVersion ?? null);
         setConfiguredProviders(parsed.configuredProviders ?? null);
       } catch {
         setBackendVersion(null);
+        setDocProcessorVersion(null);
         setConfiguredProviders(null);
       } finally {
         setLoading(false);
@@ -145,12 +148,21 @@ export function VersionPage() {
         <div className="space-y-2">
           <CommitLink label="Frontend (Web)" commit={FRONTEND_VERSION} />
           {loading ? (
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded">
-              <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">Backend (API)</span>
-              <span className="text-sm text-gray-400 dark:text-gray-600">Loading...</span>
-            </div>
+            <>
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">Backend (API)</span>
+                <span className="text-sm text-gray-400 dark:text-gray-600">Loading...</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">Doc Processor</span>
+                <span className="text-sm text-gray-400 dark:text-gray-600">Loading...</span>
+              </div>
+            </>
           ) : (
-            <CommitLink label="Backend (API)" commit={backendVersion || 'unknown'} />
+            <>
+              <CommitLink label="Backend (API)" commit={backendVersion || 'unknown'} />
+              <CommitLink label="Doc Processor" commit={docProcessorVersion || 'unavailable'} />
+            </>
           )}
         </div>
 
