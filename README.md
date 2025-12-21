@@ -4,6 +4,7 @@ Monorepo using Turborepo + pnpm with:
 
 - apps/web: Vite + React 18
 - apps/api: Fastify (TypeScript)
+- apps/doc-processor: FastAPI (Python) - Document processing service
 - packages/\*: shared utils, types, and configs
 
 Includes shared Zod v4 schemas in `packages/types` used by both API and Web.
@@ -12,6 +13,7 @@ Includes shared Zod v4 schemas in `packages/types` used by both API and Web.
 
 - Node 22.18.0 (see `.nvmrc`)
 - Corepack enabled (`corepack enable`)
+- Python 3.11+ and [uv](https://docs.astral.sh/uv/) (for doc-processor only)
 
 ## Install
 
@@ -24,6 +26,8 @@ pnpm install
 - `pnpm dev`: run all apps in watch mode (parallel)
 - `pnpm dev:web`: run the web app only (http://localhost:5173)
 - `pnpm dev:api`: run the API only (http://localhost:3001)
+- `pnpm dev:doc-processor`: run the doc-processor only (http://localhost:8000)
+- `pnpm setup:doc-processor`: install Python dependencies for doc-processor
 - `pnpm build`: build all apps and packages
 - `pnpm typecheck`: type-check all workspaces
 - `pnpm lint`: lint all workspaces
@@ -43,9 +47,29 @@ Or filter to a single app:
 ```
 pnpm dev:web
 pnpm dev:api
+pnpm dev:doc-processor
 ```
 
 During development, the Web app proxies `/api/*` to the API (see `apps/web/vite.config.ts`).
+
+### Document Processor Setup
+
+The doc-processor is a Python service for PDF and image text extraction. First-time setup:
+
+```bash
+pnpm setup:doc-processor
+```
+
+This installs [uv](https://docs.astral.sh/uv/) (if needed) and Python dependencies. Then run:
+
+```bash
+pnpm dev:doc-processor
+```
+
+The service runs on http://localhost:8000 and provides:
+- `/health` - Health check
+- `/process` - Process uploaded documents (PDF/images)
+- `/process/base64` - Process base64-encoded documents
 
 ## Environment
 
@@ -64,8 +88,11 @@ Available variables:
 | `ANTHROPIC_API_KEY` | [Anthropic](https://console.anthropic.com/) API key for Claude vision (optional if users provide their own) |
 | `OPENAI_API_KEY`    | [OpenAI](https://platform.openai.com/api-keys) API key for GPT-4o vision (optional if users provide their own) |
 | `GEMINI_API_KEY`    | [Google AI Studio](https://aistudio.google.com/apikey) API key for Gemini vision (optional if users provide their own) |
+| `DOC_PROCESSOR_URL` | URL of the doc-processor service (default: `http://localhost:8000`) |
 
 The Vision API (`/api/vision`) will use these keys as defaults. Users can override by providing their own API key in the UI.
+
+The Document API (`/api/documents/process`) forwards requests to the doc-processor service.
 
 ### Railway Deployment
 
@@ -161,6 +188,35 @@ Notes:
 - The image runs the compiled server (`node apps/api/dist/index.js`).
 - `PORT` defaults to `3001`; Railway sets this automatically.
 - Static SPA serving is enabled by default (`SERVE_STATIC=true`); the API will serve the built SPA from `apps/web/dist` with an SPA fallback for non-`/api` routes.
+
+### Docker (Doc Processor)
+
+Build and run the doc-processor service:
+
+```bash
+# Build
+docker build -t doc-processor:local apps/doc-processor/
+
+# Run
+docker run --rm -p 8000:8000 doc-processor:local
+
+# Test
+curl http://localhost:8000/health
+```
+
+### Docker Compose (All Services)
+
+Run all services together:
+
+```bash
+docker-compose up
+```
+
+This starts:
+- API on http://localhost:3001
+- Doc Processor on http://localhost:8000
+
+The API automatically connects to the doc-processor via `DOC_PROCESSOR_URL=http://doc-processor:8000`.
 
 ## API + Web integration
 

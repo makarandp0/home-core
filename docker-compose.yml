@@ -1,0 +1,26 @@
+# Local development with multiple services
+# Usage: docker-compose up
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DOC_PROCESSOR_URL=http://doc-processor:8000
+      - SERVE_STATIC=false
+    depends_on:
+      - doc-processor
+
+  doc-processor:
+    build:
+      context: apps/doc-processor
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000

@@ -4,6 +4,8 @@ export const HealthSchema = z.object({
   ok: z.boolean(),
   // Optional backend commit version (short SHA)
   version: z.string().optional(),
+  // Optional doc-processor service version (short SHA)
+  docProcessorVersion: z.string().optional(),
   // Which vision providers have API keys configured (redacted key or null)
   configuredProviders: z
     .object({
