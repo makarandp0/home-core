@@ -8,5 +8,4 @@ export {
   getProviderById,
   isProviderConfigured,
   getProviderIds,
-  type ProviderId,
 } from './registry.js';

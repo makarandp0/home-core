@@ -14,9 +14,10 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
     const version = process.env.COMMIT_SHA;
 
     // Build configuredProviders dynamically from the registry
-    const configuredProviders = Object.fromEntries(
-      providerList.map((p) => [p.id, redactKey(process.env[p.envVar])])
-    ) as Record<string, string | null>;
+    const configuredProviders: Record<string, string | null> = {};
+    for (const p of providerList) {
+      configuredProviders[p.id] = redactKey(process.env[p.envVar]);
+    }
 
     const payload = {
       ok: true,
