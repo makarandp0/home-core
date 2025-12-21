@@ -21,6 +21,36 @@ export interface VisionProvider {
   analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult>;
 }
 
+// Shared system prompts - used by all providers
+export const OCR_SYSTEM_PROMPT =
+  'You are an OCR (Optical Character Recognition) tool. ' +
+  'Extract ALL text visible in the image exactly as it appears. ' +
+  'Include all words, numbers, dates, and characters. ' +
+  'Preserve the layout structure where possible. ' +
+  'Do not interpret or summarize - just extract the raw text.';
+
+export const PARSING_SYSTEM_PROMPT =
+  'You are a text parsing assistant. You will be given raw text extracted from a document. ' +
+  'Parse the text and respond with valid JSON only. No markdown, no explanations.';
+
+// Shared utilities
+export function parseImageData(imageData: string): { mediaType: string; base64Data: string } {
+  const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error('Invalid image data format');
+  }
+  const [, mediaType, base64Data] = match;
+  return { mediaType, base64Data };
+}
+
+export function cleanJsonResponse(text: string): string {
+  return text.replace(/```json\n?|\n?```/g, '').trim();
+}
+
+export function buildFullPrompt(prompt: string, extractionPrompt: string): string {
+  return prompt ? `${prompt}\n\nAdditionally, ${extractionPrompt}` : extractionPrompt;
+}
+
 export const DOCUMENT_EXTRACTION_PROMPT = `Analyze the extracted text and return a JSON object with the following structure:
 {
   "document_type": "string - type of document (e.g., driver_license, passport, id_card, invoice, receipt, etc.)",

@@ -59,10 +59,11 @@ cp apps/api/.env.example apps/api/.env
 
 Available variables:
 
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Anthropic API key for Claude vision (optional if users provide their own) |
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4o vision (optional if users provide their own) |
+| Variable            | Description                                                               |
+| ------------------- | ------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | [Anthropic](https://console.anthropic.com/) API key for Claude vision (optional if users provide their own) |
+| `OPENAI_API_KEY`    | [OpenAI](https://platform.openai.com/api-keys) API key for GPT-4o vision (optional if users provide their own) |
+| `GEMINI_API_KEY`    | [Google AI Studio](https://aistudio.google.com/apikey) API key for Gemini vision (optional if users provide their own) |
 
 The Vision API (`/api/vision`) will use these keys as defaults. Users can override by providing their own API key in the UI.
 
@@ -160,7 +161,6 @@ Notes:
 - The image runs the compiled server (`node apps/api/dist/index.js`).
 - `PORT` defaults to `3001`; Railway sets this automatically.
 - Static SPA serving is enabled by default (`SERVE_STATIC=true`); the API will serve the built SPA from `apps/web/dist` with an SPA fallback for non-`/api` routes.
-
 
 ## API + Web integration
 

@@ -4,6 +4,7 @@ import {
   DocumentDataSchema,
   type VisionResponse,
   type ApiResponse,
+  type VisionProvider as VisionProviderType,
 } from '@home/types';
 import {
   anthropicProvider,
@@ -11,45 +12,22 @@ import {
   geminiProvider,
   Anthropic,
   OpenAI,
+  type VisionProvider,
 } from '../providers/index.js';
 
-type ProviderType = 'openai' | 'anthropic' | 'gemini';
+// Centralized provider configuration - single source of truth
+const PROVIDER_CONFIG: Record<VisionProviderType, { envVar: string; provider: VisionProvider }> = {
+  anthropic: { envVar: 'ANTHROPIC_API_KEY', provider: anthropicProvider },
+  openai: { envVar: 'OPENAI_API_KEY', provider: openaiProvider },
+  gemini: { envVar: 'GEMINI_API_KEY', provider: geminiProvider },
+};
 
-function getApiKey(provider: ProviderType, requestApiKey?: string): string | null {
-  if (requestApiKey) {
-    return requestApiKey;
-  }
-  switch (provider) {
-    case 'anthropic':
-      return process.env.ANTHROPIC_API_KEY ?? null;
-    case 'gemini':
-      return process.env.GEMINI_API_KEY ?? null;
-    default:
-      return process.env.OPENAI_API_KEY ?? null;
-  }
-}
+const getApiKey = (provider: VisionProviderType, requestApiKey?: string): string | null =>
+  requestApiKey || process.env[PROVIDER_CONFIG[provider].envVar] || null;
 
-function getEnvVarName(provider: ProviderType): string {
-  switch (provider) {
-    case 'anthropic':
-      return 'ANTHROPIC_API_KEY';
-    case 'gemini':
-      return 'GEMINI_API_KEY';
-    default:
-      return 'OPENAI_API_KEY';
-  }
-}
+const getEnvVarName = (provider: VisionProviderType): string => PROVIDER_CONFIG[provider].envVar;
 
-function getProvider(provider: ProviderType) {
-  switch (provider) {
-    case 'anthropic':
-      return anthropicProvider;
-    case 'gemini':
-      return geminiProvider;
-    default:
-      return openaiProvider;
-  }
-}
+const getProvider = (provider: VisionProviderType): VisionProvider => PROVIDER_CONFIG[provider].provider;
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {

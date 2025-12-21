@@ -2,6 +2,8 @@ import * as React from 'react';
 import {
   apiResponse,
   VisionResponseSchema,
+  VISION_PROVIDERS,
+  VISION_PROVIDER_LIST,
   type VisionProvider,
   type DocumentData,
 } from '@home/types';
@@ -82,10 +84,9 @@ export function VisionPage() {
     }
   };
 
-  const providerLabels = { anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Google' };
-  const keyPlaceholders = { anthropic: 'sk-ant-...', openai: 'sk-...', gemini: 'AIza...' };
-  const providerLabel = providerLabels[provider];
-  const keyPlaceholder = keyPlaceholders[provider];
+  const providerMeta = VISION_PROVIDERS[provider];
+  const providerLabel = providerMeta.shortLabel;
+  const keyPlaceholder = providerMeta.placeholder;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -100,41 +101,19 @@ export function VisionPage() {
             Provider
           </label>
           <div className="flex flex-wrap gap-4">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="provider"
-                value="anthropic"
-                checked={provider === 'anthropic'}
-                onChange={() => setProvider('anthropic')}
-                className="h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-200">
-                Anthropic (Claude)
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="provider"
-                value="openai"
-                checked={provider === 'openai'}
-                onChange={() => setProvider('openai')}
-                className="h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-200">OpenAI (GPT-4o)</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="provider"
-                value="gemini"
-                checked={provider === 'gemini'}
-                onChange={() => setProvider('gemini')}
-                className="h-4 w-4 text-blue-600"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-200">Google (Gemini)</span>
-            </label>
+            {VISION_PROVIDER_LIST.map((p) => (
+              <label key={p.id} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="provider"
+                  value={p.id}
+                  checked={provider === p.id}
+                  onChange={() => setProvider(p.id)}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-200">{p.label}</span>
+              </label>
+            ))}
           </div>
         </div>
 
