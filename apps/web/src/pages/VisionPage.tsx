@@ -82,8 +82,10 @@ export function VisionPage() {
     }
   };
 
-  const providerLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
-  const keyPlaceholder = provider === 'anthropic' ? 'sk-ant-...' : 'sk-...';
+  const providerLabels = { anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Google' };
+  const keyPlaceholders = { anthropic: 'sk-ant-...', openai: 'sk-...', gemini: 'AIza...' };
+  const providerLabel = providerLabels[provider];
+  const keyPlaceholder = keyPlaceholders[provider];
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -97,7 +99,7 @@ export function VisionPage() {
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
             Provider
           </label>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
@@ -121,6 +123,17 @@ export function VisionPage() {
                 className="h-4 w-4 text-blue-600"
               />
               <span className="text-sm text-gray-700 dark:text-gray-200">OpenAI (GPT-4o)</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="provider"
+                value="gemini"
+                checked={provider === 'gemini'}
+                onChange={() => setProvider('gemini')}
+                className="h-4 w-4 text-blue-600"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-200">Google (Gemini)</span>
             </label>
           </div>
         </div>

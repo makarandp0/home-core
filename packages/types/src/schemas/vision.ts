@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const VisionProviderSchema = z.enum(['openai', 'anthropic']);
+export const VisionProviderSchema = z.enum(['openai', 'anthropic', 'gemini']);
 export type VisionProvider = z.infer<typeof VisionProviderSchema>;
 
 export const VisionRequestSchema = z.object({

@@ -14,6 +14,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
     const configuredProviders = {
       anthropic: redactKey(process.env.ANTHROPIC_API_KEY),
       openai: redactKey(process.env.OPENAI_API_KEY),
+      gemini: redactKey(process.env.GEMINI_API_KEY),
     };
     const payload = {
       ok: true,

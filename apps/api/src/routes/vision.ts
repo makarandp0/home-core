@@ -5,16 +5,50 @@ import {
   type VisionResponse,
   type ApiResponse,
 } from '@home/types';
-import { anthropicProvider, openaiProvider, Anthropic, OpenAI } from '../providers/index.js';
+import {
+  anthropicProvider,
+  openaiProvider,
+  geminiProvider,
+  Anthropic,
+  OpenAI,
+} from '../providers/index.js';
 
-function getApiKey(provider: 'openai' | 'anthropic', requestApiKey?: string): string | null {
+type ProviderType = 'openai' | 'anthropic' | 'gemini';
+
+function getApiKey(provider: ProviderType, requestApiKey?: string): string | null {
   if (requestApiKey) {
     return requestApiKey;
   }
-  if (provider === 'anthropic') {
-    return process.env.ANTHROPIC_API_KEY ?? null;
+  switch (provider) {
+    case 'anthropic':
+      return process.env.ANTHROPIC_API_KEY ?? null;
+    case 'gemini':
+      return process.env.GEMINI_API_KEY ?? null;
+    default:
+      return process.env.OPENAI_API_KEY ?? null;
   }
-  return process.env.OPENAI_API_KEY ?? null;
+}
+
+function getEnvVarName(provider: ProviderType): string {
+  switch (provider) {
+    case 'anthropic':
+      return 'ANTHROPIC_API_KEY';
+    case 'gemini':
+      return 'GEMINI_API_KEY';
+    default:
+      return 'OPENAI_API_KEY';
+  }
+}
+
+function getProvider(provider: ProviderType) {
+  switch (provider) {
+    case 'anthropic':
+      return anthropicProvider;
+    case 'gemini':
+      return geminiProvider;
+    default:
+      return openaiProvider;
+  }
 }
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
@@ -34,17 +68,16 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
     const apiKey = getApiKey(provider, requestApiKey);
     if (!apiKey) {
       reply.code(400);
-      const envVar = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
       return {
         ok: false,
-        error: `No API key provided. Either pass an API key or set ${envVar} environment variable.`,
+        error: `No API key provided. Either pass an API key or set ${getEnvVarName(provider)} environment variable.`,
       };
     }
 
     try {
       const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
-      const visionProvider = provider === 'anthropic' ? anthropicProvider : openaiProvider;
+      const visionProvider = getProvider(provider);
       const result = await visionProvider.analyze(apiKey, imageData, prompt ?? '');
 
       // Always return extractedText and response
