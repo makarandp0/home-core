@@ -2,25 +2,49 @@ import * as React from 'react';
 import {
   apiResponse,
   VisionResponseSchema,
-  VISION_PROVIDERS,
-  VISION_PROVIDER_LIST,
-  type VisionProvider,
+  ProvidersResponseSchema,
+  type ProviderInfo,
   type DocumentData,
 } from '@home/types';
 import { Button } from '../components/Button';
 import { compressImage } from '../utils/compressImage';
 
 export function VisionPage() {
+  const [providers, setProviders] = React.useState<ProviderInfo[]>([]);
+  const [providersLoading, setProvidersLoading] = React.useState(true);
   const [image, setImage] = React.useState<string | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [prompt, setPrompt] = React.useState('');
   const [apiKey, setApiKey] = React.useState('');
-  const [provider, setProvider] = React.useState<VisionProvider>('anthropic');
+  const [provider, setProvider] = React.useState<string>('');
   const [extractedText, setExtractedText] = React.useState<string | null>(null);
   const [response, setResponse] = React.useState<string | null>(null);
   const [document, setDocument] = React.useState<DocumentData | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  // Fetch providers from API on mount
+  React.useEffect(() => {
+    async function fetchProviders() {
+      try {
+        const res = await fetch('/api/providers');
+        const json = await res.json();
+        const parsed = apiResponse(ProvidersResponseSchema).parse(json);
+        if (parsed.ok && parsed.data) {
+          setProviders(parsed.data.providers);
+          // Default to first provider
+          if (parsed.data.providers.length > 0) {
+            setProvider(parsed.data.providers[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch providers:', err);
+      } finally {
+        setProvidersLoading(false);
+      }
+    }
+    fetchProviders();
+  }, []);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,9 +108,9 @@ export function VisionPage() {
     }
   };
 
-  const providerMeta = VISION_PROVIDERS[provider];
-  const providerLabel = providerMeta.shortLabel;
-  const keyPlaceholder = providerMeta.placeholder;
+  const providerMeta = providers.find((p) => p.id === provider);
+  const providerLabel = providerMeta?.label?.split(' ')[0] ?? 'Provider';
+  const keyPlaceholder = providerMeta?.placeholder ?? '';
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -100,21 +124,25 @@ export function VisionPage() {
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
             Provider
           </label>
-          <div className="flex flex-wrap gap-4">
-            {VISION_PROVIDER_LIST.map((p) => (
-              <label key={p.id} className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="radio"
-                  name="provider"
-                  value={p.id}
-                  checked={provider === p.id}
-                  onChange={() => setProvider(p.id)}
-                  className="h-4 w-4 text-blue-600"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-200">{p.label}</span>
-              </label>
-            ))}
-          </div>
+          {providersLoading ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400">Loading providers...</div>
+          ) : (
+            <div className="flex flex-wrap gap-4">
+              {providers.map((p) => (
+                <label key={p.id} className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name="provider"
+                    value={p.id}
+                    checked={provider === p.id}
+                    onChange={() => setProvider(p.id)}
+                    className="h-4 w-4 text-blue-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-200">{p.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -177,7 +205,7 @@ export function VisionPage() {
 
         <Button
           type="submit"
-          disabled={loading || !image}
+          disabled={loading || !image || !provider || providersLoading}
           className={loading ? 'cursor-not-allowed opacity-50' : ''}
         >
           {loading ? 'Analyzing...' : 'Analyze Image'}

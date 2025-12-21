@@ -1,32 +1,9 @@
 import { z } from 'zod';
 
-export const VisionProviderSchema = z.enum(['openai', 'anthropic', 'gemini']);
+// Provider ID validation - accepts any string for flexibility
+// The backend registry is the source of truth for valid providers
+export const VisionProviderSchema = z.string().min(1);
 export type VisionProvider = z.infer<typeof VisionProviderSchema>;
-
-// Provider metadata - single source of truth for UI labels and placeholders
-export const VISION_PROVIDERS = {
-  anthropic: {
-    id: 'anthropic' as const,
-    label: 'Anthropic (Claude)',
-    shortLabel: 'Anthropic',
-    placeholder: 'sk-ant-...',
-  },
-  openai: {
-    id: 'openai' as const,
-    label: 'OpenAI (GPT-4o)',
-    shortLabel: 'OpenAI',
-    placeholder: 'sk-...',
-  },
-  gemini: {
-    id: 'gemini' as const,
-    label: 'Google (Gemini)',
-    shortLabel: 'Google',
-    placeholder: 'AIza...',
-  },
-} as const;
-
-export type VisionProviderMetadata = (typeof VISION_PROVIDERS)[VisionProvider];
-export const VISION_PROVIDER_LIST = Object.values(VISION_PROVIDERS);
 
 export const VisionRequestSchema = z.object({
   image: z.string().min(1),

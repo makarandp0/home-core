@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { HealthSchema, type Health } from '@home/types';
+import { providerList } from '../providers/index.js';
 
 function redactKey(key: string | undefined): string | null {
   if (!key || key.length < 8) return null;
@@ -11,11 +12,12 @@ function redactKey(key: string | undefined): string | null {
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get('/health', async (): Promise<Health> => {
     const version = process.env.COMMIT_SHA;
-    const configuredProviders = {
-      anthropic: redactKey(process.env.ANTHROPIC_API_KEY),
-      openai: redactKey(process.env.OPENAI_API_KEY),
-      gemini: redactKey(process.env.GEMINI_API_KEY),
-    };
+
+    // Build configuredProviders dynamically from the registry
+    const configuredProviders = Object.fromEntries(
+      providerList.map((p) => [p.id, redactKey(process.env[p.envVar])])
+    ) as Record<string, string | null>;
+
     const payload = {
       ok: true,
       ...(version ? { version } : {}),

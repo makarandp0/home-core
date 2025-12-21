@@ -4,30 +4,8 @@ import {
   DocumentDataSchema,
   type VisionResponse,
   type ApiResponse,
-  type VisionProvider as VisionProviderType,
 } from '@home/types';
-import {
-  anthropicProvider,
-  openaiProvider,
-  geminiProvider,
-  Anthropic,
-  OpenAI,
-  type VisionProvider,
-} from '../providers/index.js';
-
-// Centralized provider configuration - single source of truth
-const PROVIDER_CONFIG: Record<VisionProviderType, { envVar: string; provider: VisionProvider }> = {
-  anthropic: { envVar: 'ANTHROPIC_API_KEY', provider: anthropicProvider },
-  openai: { envVar: 'OPENAI_API_KEY', provider: openaiProvider },
-  gemini: { envVar: 'GEMINI_API_KEY', provider: geminiProvider },
-};
-
-const getApiKey = (provider: VisionProviderType, requestApiKey?: string): string | null =>
-  requestApiKey || process.env[PROVIDER_CONFIG[provider].envVar] || null;
-
-const getEnvVarName = (provider: VisionProviderType): string => PROVIDER_CONFIG[provider].envVar;
-
-const getProvider = (provider: VisionProviderType): VisionProvider => PROVIDER_CONFIG[provider].provider;
+import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -41,22 +19,27 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       };
     }
 
-    const { image, prompt, apiKey: requestApiKey, provider } = parseResult.data;
+    const { image, prompt, apiKey: requestApiKey, provider: providerId } = parseResult.data;
 
-    const apiKey = getApiKey(provider, requestApiKey);
+    const provider = getProviderById(providerId);
+    if (!provider) {
+      reply.code(400);
+      return { ok: false, error: `Unknown provider: ${providerId}` };
+    }
+
+    const apiKey = requestApiKey || process.env[provider.envVar] || null;
     if (!apiKey) {
       reply.code(400);
       return {
         ok: false,
-        error: `No API key provided. Either pass an API key or set ${getEnvVarName(provider)} environment variable.`,
+        error: `No API key provided. Either pass an API key or set ${provider.envVar} environment variable.`,
       };
     }
 
     try {
       const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
-      const visionProvider = getProvider(provider);
-      const result = await visionProvider.analyze(apiKey, imageData, prompt ?? '');
+      const result = await provider.analyze(apiKey, imageData, prompt ?? '');
 
       // Always return extractedText and response
       // Only include document if it validates correctly

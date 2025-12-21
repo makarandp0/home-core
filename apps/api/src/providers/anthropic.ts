@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { VisionProvider, VisionResult, DocumentData } from './types.js';
+import type { ProviderDefinition, VisionResult, DocumentData } from './types.js';
 import {
   DOCUMENT_EXTRACTION_PROMPT,
   OCR_SYSTEM_PROMPT,
@@ -32,7 +32,12 @@ function parseAnthropicImageData(imageData: string): { mediaType: ImageMediaType
   return { mediaType, base64Data };
 }
 
-export const anthropicProvider: VisionProvider = {
+export const anthropicProvider: ProviderDefinition = {
+  id: 'anthropic',
+  label: 'Anthropic (Claude)',
+  placeholder: 'sk-ant-...',
+  envVar: 'ANTHROPIC_API_KEY',
+
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const anthropic = new Anthropic({ apiKey });
     const { mediaType, base64Data } = parseAnthropicImageData(imageData);

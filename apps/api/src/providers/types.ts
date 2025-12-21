@@ -21,6 +21,14 @@ export interface VisionProvider {
   analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult>;
 }
 
+// Provider definition combines metadata with implementation
+export interface ProviderDefinition extends VisionProvider {
+  readonly id: string;
+  readonly label: string;
+  readonly placeholder: string;
+  readonly envVar: string;
+}
+
 // Shared system prompts - used by all providers
 export const OCR_SYSTEM_PROMPT =
   'You are an OCR (Optical Character Recognition) tool. ' +

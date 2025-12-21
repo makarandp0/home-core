@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { VisionProvider, VisionResult, DocumentData } from './types.js';
+import type { ProviderDefinition, VisionResult, DocumentData } from './types.js';
 import {
   DOCUMENT_EXTRACTION_PROMPT,
   OCR_SYSTEM_PROMPT,
@@ -9,7 +9,12 @@ import {
   buildFullPrompt,
 } from './types.js';
 
-export const geminiProvider: VisionProvider = {
+export const geminiProvider: ProviderDefinition = {
+  id: 'gemini',
+  label: 'Google (Gemini)',
+  placeholder: 'AIza...',
+  envVar: 'GEMINI_API_KEY',
+
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });

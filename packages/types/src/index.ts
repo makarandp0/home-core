@@ -10,3 +10,4 @@ export * from './schemas/user.js';
 export * from './schemas/api.js';
 export * from './schemas/health.js';
 export * from './schemas/vision.js';
+export * from './schemas/providers.js';

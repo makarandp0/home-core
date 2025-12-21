@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { VisionProvider, VisionResult, DocumentData } from './types.js';
+import type { ProviderDefinition, VisionResult, DocumentData } from './types.js';
 import {
   DOCUMENT_EXTRACTION_PROMPT,
   OCR_SYSTEM_PROMPT,
@@ -8,7 +8,12 @@ import {
   buildFullPrompt,
 } from './types.js';
 
-export const openaiProvider: VisionProvider = {
+export const openaiProvider: ProviderDefinition = {
+  id: 'openai',
+  label: 'OpenAI (GPT-4o)',
+  placeholder: 'sk-...',
+  envVar: 'OPENAI_API_KEY',
+
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const openai = new OpenAI({ apiKey });
 
