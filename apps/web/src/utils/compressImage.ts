@@ -1,3 +1,5 @@
+import { makAssert } from '@home/utils';
+
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB (under Anthropic's 5MB limit)
 
 export function compressImage(file: File, maxSize: number = MAX_IMAGE_SIZE): Promise<string> {
@@ -5,6 +7,7 @@ export function compressImage(file: File, maxSize: number = MAX_IMAGE_SIZE): Pro
     const img = new Image();
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    makAssert(ctx !== null, 'Canvas 2D context should be available');
 
     img.onload = () => {
       let { width, height } = img;
@@ -13,7 +16,7 @@ export function compressImage(file: File, maxSize: number = MAX_IMAGE_SIZE): Pro
       // Start with original dimensions
       canvas.width = width;
       canvas.height = height;
-      ctx?.drawImage(img, 0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
 
       let result = canvas.toDataURL('image/jpeg', quality);
 
@@ -27,7 +30,7 @@ export function compressImage(file: File, maxSize: number = MAX_IMAGE_SIZE): Pro
           height = Math.floor(height * 0.8);
           canvas.width = width;
           canvas.height = height;
-          ctx?.drawImage(img, 0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
           quality = 0.8;
         }
         result = canvas.toDataURL('image/jpeg', quality);
@@ -40,7 +43,8 @@ export function compressImage(file: File, maxSize: number = MAX_IMAGE_SIZE): Pro
 
     const reader = new FileReader();
     reader.onload = () => {
-      img.src = reader.result as string;
+      makAssert(typeof reader.result === 'string', 'FileReader result should be a string when using readAsDataURL');
+      img.src = reader.result;
     };
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsDataURL(file);
