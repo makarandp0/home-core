@@ -49,6 +49,37 @@ During development, the Web app proxies `/api/*` to the API (see `apps/web/vite.
 
 ## Environment
 
+### API (.env)
+
+The API supports environment variables via a `.env` file in `apps/api/`. Copy the example file to get started:
+
+```
+cp apps/api/.env.example apps/api/.env
+```
+
+Available variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude vision (optional if users provide their own) |
+| `OPENAI_API_KEY` | OpenAI API key for GPT-4o vision (optional if users provide their own) |
+
+The Vision API (`/api/vision`) will use these keys as defaults. Users can override by providing their own API key in the UI.
+
+### Railway Deployment
+
+For Railway deployments, use the provided template to set environment variables:
+
+```bash
+cp railway-vars.example.txt railway-vars.txt
+# Edit railway-vars.txt with your actual API keys
+railway variables set $(cat railway-vars.txt | xargs)
+```
+
+Note: `railway-vars.txt` is gitignored to prevent committing secrets.
+
+### Web
+
 - `VITE_COMMIT_SHA`: auto-injected by Vite from `COMMIT_SHA` (falls back to `dev`). Available in the Web app via `import.meta.env.VITE_COMMIT_SHA` for diagnostics and cache-busting.
 
 ## Linting & Formatting
@@ -112,6 +143,15 @@ docker run --rm -e PORT=3001 -p 3001:3001 home-api:local
 # Health checks
 curl http://localhost:3001/api/health
 curl http://localhost:3001/api/user
+```
+
+- Run with Vision API keys:
+
+```
+docker run --rm -e PORT=3001 \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -e OPENAI_API_KEY=sk-... \
+  -p 3001:3001 home-api:local
 ```
 
 Notes:
