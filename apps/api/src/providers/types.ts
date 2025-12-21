@@ -1,5 +1,6 @@
 export interface DocumentData {
   document_type: string;
+  id?: string;
   expiry_date?: string;
   name?: string;
   fields: Record<string, string>;
@@ -23,6 +24,7 @@ export interface VisionProvider {
 export const DOCUMENT_EXTRACTION_PROMPT = `Analyze the extracted text and return a JSON object with the following structure:
 {
   "document_type": "string - type of document (e.g., driver_license, passport, id_card, invoice, receipt, etc.)",
+  "id": "string or null - the primary identifier of the document (e.g., passport number, driver's license number, invoice number, etc.)",
   "expiry_date": "string or null - expiration date if present, formatted as YYYY-MM-DD",
   "name": "string or null - person's name if present",
   "fields": {
