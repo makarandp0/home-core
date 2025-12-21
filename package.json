@@ -10,6 +10,7 @@
     "dev": "COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) VITE_COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) turbo run dev --parallel",
     "dev:web": "COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) VITE_COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) pnpm --filter @home/web dev",
     "dev:api": "COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) pnpm --filter @home/api dev",
+    "dev:doc-processor": "pnpm --filter @home/doc-processor dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
