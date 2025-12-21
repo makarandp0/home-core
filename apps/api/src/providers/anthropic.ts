@@ -1,6 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { VisionProvider, VisionResult, DocumentData } from './types.js';
-import { DOCUMENT_EXTRACTION_PROMPT } from './types.js';
+import type { ProviderDefinition, VisionResult, DocumentData } from './types.js';
+import {
+  DOCUMENT_EXTRACTION_PROMPT,
+  OCR_SYSTEM_PROMPT,
+  PARSING_SYSTEM_PROMPT,
+  parseImageData as parseImageDataBase,
+  cleanJsonResponse,
+  buildFullPrompt,
+} from './types.js';
 
 type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
@@ -15,12 +22,8 @@ function isValidMediaType(mediaType: string): mediaType is ImageMediaType {
   return SUPPORTED_MEDIA_TYPES.some((type) => type === mediaType);
 }
 
-function parseImageData(imageData: string): { mediaType: ImageMediaType; base64Data: string } {
-  const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) {
-    throw new Error('Invalid image data format');
-  }
-  const [, mediaType, base64Data] = match;
+function parseAnthropicImageData(imageData: string): { mediaType: ImageMediaType; base64Data: string } {
+  const { mediaType, base64Data } = parseImageDataBase(imageData);
 
   if (!isValidMediaType(mediaType)) {
     throw new Error(`Unsupported image type: ${mediaType}`);
@@ -29,21 +32,21 @@ function parseImageData(imageData: string): { mediaType: ImageMediaType; base64D
   return { mediaType, base64Data };
 }
 
-export const anthropicProvider: VisionProvider = {
+export const anthropicProvider: ProviderDefinition = {
+  id: 'anthropic',
+  label: 'Anthropic (Claude)',
+  placeholder: 'sk-ant-...',
+  envVar: 'ANTHROPIC_API_KEY',
+
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const anthropic = new Anthropic({ apiKey });
-    const { mediaType, base64Data } = parseImageData(imageData);
+    const { mediaType, base64Data } = parseAnthropicImageData(imageData);
 
     // Step 1: OCR - Extract all visible text from the image
     const ocrMessage = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
-      system:
-        'You are an OCR (Optical Character Recognition) tool. ' +
-        'Extract ALL text visible in the image exactly as it appears. ' +
-        'Include all words, numbers, dates, and characters. ' +
-        'Preserve the layout structure where possible. ' +
-        'Do not interpret or summarize - just extract the raw text.',
+      system: OCR_SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
@@ -66,16 +69,12 @@ export const anthropicProvider: VisionProvider = {
     const extractedText = ocrTextBlock?.type === 'text' ? ocrTextBlock.text : '';
 
     // Step 2: Parse - Structure the extracted text based on user's prompt
-    const fullPrompt = prompt
-      ? `${prompt}\n\nAdditionally, ${DOCUMENT_EXTRACTION_PROMPT}`
-      : DOCUMENT_EXTRACTION_PROMPT;
+    const fullPrompt = buildFullPrompt(prompt, DOCUMENT_EXTRACTION_PROMPT);
 
     const parseMessage = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system:
-        'You are a text parsing assistant. You will be given raw text extracted from a document. ' +
-        'Parse the text and respond with valid JSON only. No markdown, no explanations.',
+      system: PARSING_SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
@@ -90,8 +89,7 @@ export const anthropicProvider: VisionProvider = {
     // Try to parse the response as JSON
     let document: DocumentData | undefined;
     try {
-      const cleaned = responseText.replace(/```json\n?|\n?```/g, '').trim();
-      document = JSON.parse(cleaned);
+      document = JSON.parse(cleanJsonResponse(responseText));
     } catch {
       // If parsing fails, leave document undefined
     }

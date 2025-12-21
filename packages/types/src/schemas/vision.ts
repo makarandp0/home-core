@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const VisionProviderSchema = z.enum(['openai', 'anthropic', 'gemini']);
+// Provider ID validation - accepts any string for flexibility
+// The backend registry is the source of truth for valid providers
+export const VisionProviderSchema = z.string().min(1);
 export type VisionProvider = z.infer<typeof VisionProviderSchema>;
 
 export const VisionRequestSchema = z.object({

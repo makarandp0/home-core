@@ -5,6 +5,7 @@ import fastifyStatic from '@fastify/static';
 import { healthRoutes } from './routes/health.js';
 import { userRoutes } from './routes/user.js';
 import { visionRoutes } from './routes/vision.js';
+import { providersRoutes } from './routes/providers.js';
 
 const server = Fastify({
   logger: true,
@@ -35,6 +36,7 @@ if (serveStatic) {
 server.register(healthRoutes, { prefix: '/api' });
 server.register(userRoutes, { prefix: '/api' });
 server.register(visionRoutes, { prefix: '/api' });
+server.register(providersRoutes, { prefix: '/api' });
 
 // SPA fallback: serve index.html for non-API routes when static is enabled
 server.setNotFoundHandler((req, reply) => {
