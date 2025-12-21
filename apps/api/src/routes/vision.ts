@@ -1,112 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
 import {
   VisionRequestSchema,
-  VisionResponseSchema,
+  DocumentDataSchema,
   type VisionResponse,
   type ApiResponse,
 } from '@home/types';
-
-async function callOpenAI(
-  apiKey: string,
-  imageUrl: string,
-  prompt: string
-): Promise<VisionResponse> {
-  const openai = new OpenAI({ apiKey });
-
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: imageUrl } },
-        ],
-      },
-    ],
-    max_tokens: 1024,
-  });
-
-  const responseText = completion.choices[0]?.message?.content ?? '';
-
-  return VisionResponseSchema.parse({
-    response: responseText,
-    usage: completion.usage
-      ? {
-          promptTokens: completion.usage.prompt_tokens,
-          completionTokens: completion.usage.completion_tokens,
-          totalTokens: completion.usage.total_tokens,
-        }
-      : undefined,
-  });
-}
-
-type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-
-const SUPPORTED_MEDIA_TYPES: readonly ImageMediaType[] = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-];
-
-function isValidMediaType(mediaType: string): mediaType is ImageMediaType {
-  return SUPPORTED_MEDIA_TYPES.some((type) => type === mediaType);
-}
-
-async function callAnthropic(
-  apiKey: string,
-  imageData: string,
-  prompt: string
-): Promise<VisionResponse> {
-  const anthropic = new Anthropic({ apiKey });
-
-  // Extract base64 data and media type from data URL
-  const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) {
-    throw new Error('Invalid image data format');
-  }
-  const [, mediaType, base64Data] = match;
-
-  if (!isValidMediaType(mediaType)) {
-    throw new Error(`Unsupported image type: ${mediaType}`);
-  }
-
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mediaType,
-              data: base64Data,
-            },
-          },
-          { type: 'text', text: prompt },
-        ],
-      },
-    ],
-  });
-
-  const textBlock = message.content.find((block) => block.type === 'text');
-  const responseText = textBlock?.type === 'text' ? textBlock.text : '';
-
-  return VisionResponseSchema.parse({
-    response: responseText,
-    usage: {
-      promptTokens: message.usage.input_tokens,
-      completionTokens: message.usage.output_tokens,
-      totalTokens: message.usage.input_tokens + message.usage.output_tokens,
-    },
-  });
-}
+import { anthropicProvider, openaiProvider, Anthropic, OpenAI } from '../providers/index.js';
 
 function getApiKey(provider: 'openai' | 'anthropic', requestApiKey?: string): string | null {
   if (requestApiKey) {
@@ -143,15 +42,21 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+      const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
-      let data: VisionResponse;
+      const visionProvider = provider === 'anthropic' ? anthropicProvider : openaiProvider;
+      const result = await visionProvider.analyze(apiKey, imageData, prompt ?? '');
 
-      if (provider === 'anthropic') {
-        data = await callAnthropic(apiKey, imageUrl, prompt);
-      } else {
-        data = await callOpenAI(apiKey, imageUrl, prompt);
-      }
+      // Always return extractedText and response
+      // Only include document if it validates correctly
+      const documentResult = DocumentDataSchema.safeParse(result.document);
+
+      const data: VisionResponse = {
+        extractedText: result.extractedText,
+        response: result.response,
+        document: documentResult.success ? documentResult.data : undefined,
+        usage: result.usage,
+      };
 
       return { ok: true, data };
     } catch (err) {

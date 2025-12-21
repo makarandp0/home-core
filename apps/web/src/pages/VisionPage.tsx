@@ -1,6 +1,12 @@
 import * as React from 'react';
-import { apiResponse, VisionResponseSchema, type VisionProvider } from '@home/types';
+import {
+  apiResponse,
+  VisionResponseSchema,
+  type VisionProvider,
+  type DocumentData,
+} from '@home/types';
 import { Button } from '../components/Button';
+import { compressImage } from '../utils/compressImage';
 
 export function VisionPage() {
   const [image, setImage] = React.useState<string | null>(null);
@@ -8,11 +14,13 @@ export function VisionPage() {
   const [prompt, setPrompt] = React.useState('');
   const [apiKey, setApiKey] = React.useState('');
   const [provider, setProvider] = React.useState<VisionProvider>('anthropic');
+  const [extractedText, setExtractedText] = React.useState<string | null>(null);
   const [response, setResponse] = React.useState<string | null>(null);
+  const [document, setDocument] = React.useState<DocumentData | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -21,19 +29,14 @@ export function VisionPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      if (typeof base64 === 'string') {
-        setImage(base64);
-        setImagePreview(base64);
-        setError(null);
-      }
-    };
-    reader.onerror = () => {
-      setError('Failed to read image file');
-    };
-    reader.readAsDataURL(file);
+    try {
+      setError(null);
+      const compressed = await compressImage(file);
+      setImage(compressed);
+      setImagePreview(compressed);
+    } catch {
+      setError('Failed to process image file');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,14 +46,12 @@ export function VisionPage() {
       setError('Please select an image');
       return;
     }
-    if (!prompt.trim()) {
-      setError('Please enter a prompt');
-      return;
-    }
 
     setLoading(true);
     setError(null);
+    setExtractedText(null);
     setResponse(null);
+    setDocument(null);
 
     try {
       const res = await fetch('/api/vision', {
@@ -58,8 +59,8 @@ export function VisionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image,
-          prompt: prompt.trim(),
           provider,
+          ...(prompt.trim() && { prompt: prompt.trim() }),
           ...(apiKey.trim() && { apiKey: apiKey.trim() }),
         }),
       });
@@ -68,7 +69,9 @@ export function VisionPage() {
       const parsed = apiResponse(VisionResponseSchema).parse(json);
 
       if (parsed.ok && parsed.data) {
+        setExtractedText(parsed.data.extractedText);
         setResponse(parsed.data.response);
+        setDocument(parsed.data.document ?? null);
       } else {
         setError(parsed.error ?? 'Unknown error occurred');
       }
@@ -145,12 +148,13 @@ export function VisionPage() {
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
-            Prompt
+            Prompt{' '}
+            <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
           </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="What would you like to know about this image?"
+            placeholder="What would you like to know about this image? Leave empty for document extraction."
             rows={3}
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500"
           />
@@ -181,21 +185,101 @@ export function VisionPage() {
 
         <Button
           type="submit"
-          disabled={loading || !image || !prompt.trim()}
+          disabled={loading || !image}
           className={loading ? 'cursor-not-allowed opacity-50' : ''}
         >
           {loading ? 'Analyzing...' : 'Analyze Image'}
         </Button>
       </form>
 
-      {response && (
-        <div className="mt-8">
-          <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">Response</h3>
-          <div className="rounded-md bg-gray-100 p-4 dark:bg-gray-800">
-            <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-              {response}
-            </p>
-          </div>
+      {(extractedText || response || document) && (
+        <div className="mt-8 space-y-6">
+          {extractedText && (
+            <div>
+              <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                Extracted Text (OCR)
+              </h3>
+              <div className="rounded-md bg-gray-100 p-4 dark:bg-gray-800">
+                <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                  {extractedText}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {document && (
+            <div>
+              <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                Document Data
+              </h3>
+              <div className="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <dl className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <dt className="w-32 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Type
+                    </dt>
+                    <dd className="text-sm text-gray-900 dark:text-gray-100">
+                      {document.document_type}
+                    </dd>
+                  </div>
+                  {document.name && (
+                    <div className="flex items-start gap-2">
+                      <dt className="w-32 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Name
+                      </dt>
+                      <dd className="text-sm text-gray-900 dark:text-gray-100">{document.name}</dd>
+                    </div>
+                  )}
+                  {document.expiry_date && (
+                    <div className="flex items-start gap-2">
+                      <dt className="w-32 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Expiry Date
+                      </dt>
+                      <dd className="text-sm text-gray-900 dark:text-gray-100">
+                        {document.expiry_date}
+                      </dd>
+                    </div>
+                  )}
+                  {document.fields && Object.keys(document.fields).length > 0 && (
+                    <>
+                      <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
+                        <dt className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                          Additional Fields
+                        </dt>
+                        <dd>
+                          <dl className="space-y-2">
+                            {Object.entries(document.fields).map(([key, value]) => (
+                              <div key={key} className="flex items-start gap-2">
+                                <dt className="w-32 shrink-0 text-sm text-gray-600 dark:text-gray-300">
+                                  {key}
+                                </dt>
+                                <dd className="text-sm text-gray-900 dark:text-gray-100">
+                                  {value}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </dd>
+                      </div>
+                    </>
+                  )}
+                </dl>
+              </div>
+            </div>
+          )}
+
+          {response && (
+            <div>
+              <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                Raw Response
+              </h3>
+              <div className="rounded-md bg-gray-100 p-4 dark:bg-gray-800">
+                <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                  {response}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
