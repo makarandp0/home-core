@@ -66,6 +66,18 @@ Available variables:
 
 The Vision API (`/api/vision`) will use these keys as defaults. Users can override by providing their own API key in the UI.
 
+### Railway Deployment
+
+For Railway deployments, use the provided template to set environment variables:
+
+```bash
+cp railway-vars.example.txt railway-vars.txt
+# Edit railway-vars.txt with your actual API keys
+railway variables set $(cat railway-vars.txt | xargs)
+```
+
+Note: `railway-vars.txt` is gitignored to prevent committing secrets.
+
 ### Web
 
 - `VITE_COMMIT_SHA`: auto-injected by Vite from `COMMIT_SHA` (falls back to `dev`). Available in the Web app via `import.meta.env.VITE_COMMIT_SHA` for diagnostics and cache-busting.

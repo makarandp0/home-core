@@ -92,8 +92,16 @@ function CommitLink({ commit, label }: { commit: string; label: string }) {
   );
 }
 
+interface ConfiguredProviders {
+  anthropic: string | null;
+  openai: string | null;
+}
+
 export function VersionPage() {
   const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
+  const [configuredProviders, setConfiguredProviders] = React.useState<ConfiguredProviders | null>(
+    null
+  );
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -103,14 +111,31 @@ export function VersionPage() {
         const json = await res.json();
         const parsed = HealthSchema.parse(json);
         setBackendVersion(parsed.version ?? null);
+        setConfiguredProviders(parsed.configuredProviders ?? null);
       } catch {
         setBackendVersion(null);
+        setConfiguredProviders(null);
       } finally {
         setLoading(false);
       }
     };
     run();
   }, []);
+
+  const missingProviders = configuredProviders
+    ? [
+        !configuredProviders.anthropic && 'Anthropic',
+        !configuredProviders.openai && 'OpenAI',
+      ].filter(Boolean)
+    : [];
+
+  const configuredList: Array<{ name: string; key: string }> = [];
+  if (configuredProviders?.anthropic) {
+    configuredList.push({ name: 'Anthropic', key: configuredProviders.anthropic });
+  }
+  if (configuredProviders?.openai) {
+    configuredList.push({ name: 'OpenAI', key: configuredProviders.openai });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -132,6 +157,40 @@ export function VersionPage() {
         <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 text-center">
           Click on a PR link to view it on GitHub
         </p>
+
+        {!loading && missingProviders.length > 0 && (
+          <div className="mt-6 rounded-md bg-yellow-50 p-4 dark:bg-yellow-900/20">
+            <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              Vision API Configuration
+            </h3>
+            <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+              The following providers are not configured on the server:{' '}
+              <strong>{missingProviders.join(', ')}</strong>
+            </p>
+            <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
+              Users will need to provide their own API keys in the Vision page, or set the
+              environment variables on the server.
+            </p>
+          </div>
+        )}
+
+        {!loading && configuredList.length > 0 && (
+          <div className="mt-6 rounded-md bg-green-50 p-4 dark:bg-green-900/20">
+            <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
+              Configured Providers
+            </h3>
+            <ul className="mt-2 space-y-1">
+              {configuredList.map((provider) => (
+                <li key={provider.name} className="text-sm text-green-700 dark:text-green-300">
+                  {provider.name}:{' '}
+                  <code className="rounded bg-green-100 px-1 py-0.5 font-mono text-xs dark:bg-green-800">
+                    {provider.key}
+                  </code>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
