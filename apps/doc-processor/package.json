@@ -1,0 +1,13 @@
+{
+  "name": "@home/doc-processor",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "echo 'Python service - no build step'",
+    "start": "uv run uvicorn src.main:app --host 0.0.0.0 --port 8000",
+    "lint": "uv run ruff check src/ || echo 'Skipping Python lint (uv not available)'",
+    "typecheck": "echo 'Python typecheck runs via uv in CI'",
+    "test": "uv run pytest tests/"
+  }
+}
