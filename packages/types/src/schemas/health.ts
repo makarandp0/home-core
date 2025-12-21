@@ -9,6 +9,7 @@ export const HealthSchema = z.object({
     .object({
       anthropic: z.string().nullable(),
       openai: z.string().nullable(),
+      gemini: z.string().nullable(),
     })
     .optional(),
 });
