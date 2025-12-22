@@ -1,6 +1,9 @@
 import React from 'react';
 import { HealthSchema } from '@home/types';
 import { FRONTEND_VERSION } from '../version';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface PrInfo {
   number: number;
@@ -54,22 +57,22 @@ function CommitLink({ commit, label }: { commit: string; label: string }) {
   }, [commit, isValidCommit]);
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded">
-      <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">{label}</span>
+    <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+      <span className="font-medium text-sm">{label}</span>
       {isValidCommit ? (
         <div className="flex items-center gap-2">
           {loading ? (
-            <span className="font-mono text-xs text-gray-400 dark:text-gray-600">{shortCommit}</span>
+            <span className="font-mono text-xs text-muted-foreground">{shortCommit}</span>
           ) : prInfo ? (
             <>
-              <span className="font-mono text-xs text-gray-500 dark:text-gray-400" title={prInfo.title}>
+              <span className="font-mono text-xs text-muted-foreground" title={prInfo.title}>
                 {prInfo.title.length > 30 ? `${prInfo.title.slice(0, 30)}...` : prInfo.title}
               </span>
               <a
                 href={prInfo.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
+                className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
               >
                 #{prInfo.number}
               </a>
@@ -79,14 +82,14 @@ function CommitLink({ commit, label }: { commit: string; label: string }) {
               href={`https://github.com/${GITHUB_REPO}/commit/${commit}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
+              className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
             >
               {shortCommit}
             </a>
           )}
         </div>
       ) : (
-        <span className="font-mono text-xs text-gray-400 dark:text-gray-600">{shortCommit}</span>
+        <span className="font-mono text-xs text-muted-foreground">{shortCommit}</span>
       )}
     </div>
   );
@@ -141,21 +144,21 @@ export function VersionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="mb-6 text-3xl font-semibold dark:text-gray-100">Version Information</h1>
+    <div className="mx-auto max-w-2xl">
+      <h1 className="mb-6 text-2xl font-semibold">Version Information</h1>
 
+      <Card className="p-4">
         <div className="space-y-2">
           <CommitLink label="Frontend (Web)" commit={FRONTEND_VERSION} />
           {loading ? (
             <>
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded">
-                <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">Backend (API)</span>
-                <span className="text-sm text-gray-400 dark:text-gray-600">Loading...</span>
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Backend (API)</span>
+                <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded">
-                <span className="font-medium text-gray-700 dark:text-gray-200 text-sm">Doc Processor</span>
-                <span className="text-sm text-gray-400 dark:text-gray-600">Loading...</span>
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Doc Processor</span>
+                <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
             </>
           ) : (
@@ -166,44 +169,64 @@ export function VersionPage() {
           )}
         </div>
 
-        <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 text-center">
+        <p className="mt-4 text-sm text-muted-foreground text-center">
           Click on a PR link to view it on GitHub
         </p>
+      </Card>
 
-        {!loading && missingProviders.length > 0 && (
-          <div className="mt-6 rounded-md bg-yellow-50 p-4 dark:bg-yellow-900/20">
-            <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-              Vision API Configuration
-            </h3>
-            <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-              The following providers are not configured on the server:{' '}
-              <strong>{missingProviders.join(', ')}</strong>
-            </p>
-            <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
-              Users will need to provide their own API keys in the Vision page, or set the
-              environment variables on the server.
-            </p>
+      {!loading && missingProviders.length > 0 && (
+        <Card className={cn(
+          "mt-6 p-4 border-yellow-500/30",
+          "bg-yellow-500/10"
+        )}>
+          <div className="flex items-start gap-3">
+            <Badge variant="outline" className="border-yellow-500/50 text-yellow-600 dark:text-yellow-400">
+              Warning
+            </Badge>
+            <div>
+              <h3 className="text-sm font-medium">
+                Vision API Configuration
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                The following providers are not configured on the server:{' '}
+                <strong className="text-foreground">{missingProviders.join(', ')}</strong>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Users will need to provide their own API keys in the Vision page, or set the
+                environment variables on the server.
+              </p>
+            </div>
           </div>
-        )}
+        </Card>
+      )}
 
-        {!loading && configuredList.length > 0 && (
-          <div className="mt-6 rounded-md bg-green-50 p-4 dark:bg-green-900/20">
-            <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
-              Configured Providers
-            </h3>
-            <ul className="mt-2 space-y-1">
-              {configuredList.map((provider) => (
-                <li key={provider.name} className="text-sm text-green-700 dark:text-green-300">
-                  {provider.name}:{' '}
-                  <code className="rounded bg-green-100 px-1 py-0.5 font-mono text-xs dark:bg-green-800">
-                    {provider.key}
-                  </code>
-                </li>
-              ))}
-            </ul>
+      {!loading && configuredList.length > 0 && (
+        <Card className={cn(
+          "mt-6 p-4 border-green-500/30",
+          "bg-green-500/10"
+        )}>
+          <div className="flex items-start gap-3">
+            <Badge variant="outline" className="border-green-500/50 text-green-600 dark:text-green-400">
+              Active
+            </Badge>
+            <div>
+              <h3 className="text-sm font-medium">
+                Configured Providers
+              </h3>
+              <ul className="mt-2 space-y-1">
+                {configuredList.map((provider) => (
+                  <li key={provider.name} className="text-sm text-muted-foreground">
+                    {provider.name}:{' '}
+                    <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
+                      {provider.key}
+                    </code>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        )}
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

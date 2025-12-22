@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@home/web</title>
     <script>
+      // Set title prefix based on environment
+      (function() {
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        document.title = (isLocal ? '🏠 LOCAL | ' : '🚂 PROD | ') + document.title;
+      })();
+    </script>
+    <script>
       // Prevent flash of unstyled content by applying theme before React loads
       (function() {
         const theme = localStorage.getItem('theme') || 'system';

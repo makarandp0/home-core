@@ -11,9 +11,9 @@ export function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="min-h-screen bg-background text-foreground p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-semibold dark:text-gray-100">home-core web</h1>
+            <h1 className="text-2xl font-semibold">home-core web</h1>
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <HamburgerMenu />
