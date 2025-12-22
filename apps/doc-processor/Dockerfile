@@ -28,10 +28,15 @@ RUN .venv/bin/python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
 # Runtime stage
 FROM python:3.11-slim
 
-# Install runtime dependencies
+# Install runtime dependencies and utility tools for debugging
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
+    build-essential \
+    curl \
+    procps \
+    net-tools \
+    lsof \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
