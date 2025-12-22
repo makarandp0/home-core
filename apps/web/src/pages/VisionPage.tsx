@@ -8,8 +8,10 @@ import {
   type ProviderInfo,
   type DocumentData,
   type ExtractionMethod,
+  type ApiError,
 } from '@home/types';
 import { Button } from '../components/Button';
+import { ErrorDisplay } from '../components/ErrorDisplay';
 import { compressImage } from '../utils/compressImage';
 
 // Confidence threshold for LLM re-extraction (80%)
@@ -52,7 +54,7 @@ export function VisionPage() {
   const [usedLLMExtraction, setUsedLLMExtraction] = React.useState(false);
   const [document, setDocument] = React.useState<DocumentData | null>(null);
   const [parseResponse, setParseResponse] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<ApiError | null>(null);
 
   // Fetch providers on mount
   React.useEffect(() => {
@@ -159,7 +161,8 @@ export function VisionPage() {
       const docParsed = DocumentProcessResponseSchema.parse(docJson);
 
       if (!docParsed.ok || !docParsed.data) {
-        throw new Error(docParsed.error ?? 'Failed to extract text');
+        setError(docParsed.error ?? 'Failed to extract text');
+        throw new Error('extraction_failed');
       }
 
       let finalText = docParsed.data.text;
@@ -192,7 +195,8 @@ export function VisionPage() {
         const extractParsed = apiResponse(VisionExtractTextResponseSchema).parse(extractJson);
 
         if (!extractParsed.ok || !extractParsed.data) {
-          throw new Error(extractParsed.error ?? 'Failed to extract text with LLM');
+          setError(extractParsed.error ?? 'Failed to extract text with LLM');
+          throw new Error('llm_extraction_failed');
         }
 
         finalText = extractParsed.data.extractedText;
@@ -222,7 +226,8 @@ export function VisionPage() {
       const parseParsed = apiResponse(VisionParseResponseSchema).parse(parseJson);
 
       if (!parseParsed.ok || !parseParsed.data) {
-        throw new Error(parseParsed.error ?? 'Failed to parse document');
+        setError(parseParsed.error ?? 'Failed to parse document');
+        throw new Error('parse_failed');
       }
 
       setDocument(parseParsed.data.document ?? null);
@@ -230,7 +235,10 @@ export function VisionPage() {
       setStepStatus((s) => ({ ...s, parsing: 'complete' }));
       setCurrentStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      // Only set error if not already set by API response handling
+      if (!error) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
       setCurrentStep('error');
 
       // Mark current active step as error
@@ -341,11 +349,7 @@ export function VisionPage() {
           </p>
         </div>
 
-        {error && currentStep !== 'error' && (
-          <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          </div>
-        )}
+        {error && currentStep !== 'error' && <ErrorDisplay error={error} />}
 
         <Button
           type="submit"
@@ -376,11 +380,7 @@ export function VisionPage() {
           </div>
 
           {/* Error display */}
-          {error && currentStep === 'error' && (
-            <div className="mb-6 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-            </div>
-          )}
+          {error && currentStep === 'error' && <ErrorDisplay error={error} className="mb-6" />}
 
           {/* Results */}
           {hasResults && (
