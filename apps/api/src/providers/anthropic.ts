@@ -1,5 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { ProviderDefinition, VisionResult, DocumentData } from './types.js';
+import type {
+  ProviderDefinition,
+  VisionResult,
+  DocumentData,
+  ExtractTextResult,
+  ParseTextResult,
+} from './types.js';
 import {
   DOCUMENT_EXTRACTION_PROMPT,
   OCR_SYSTEM_PROMPT,
@@ -106,6 +112,82 @@ export const anthropicProvider: ProviderDefinition = {
           ocrMessage.usage.output_tokens +
           parseMessage.usage.input_tokens +
           parseMessage.usage.output_tokens,
+      },
+    };
+  },
+
+  async extractText(apiKey: string, imageData: string): Promise<ExtractTextResult> {
+    const anthropic = new Anthropic({ apiKey });
+    const { mediaType, base64Data } = parseAnthropicImageData(imageData);
+
+    const ocrMessage = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      system: OCR_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Data,
+              },
+            },
+            { type: 'text', text: 'Extract all text visible in this image.' },
+          ],
+        },
+      ],
+    });
+
+    const ocrTextBlock = ocrMessage.content.find((block) => block.type === 'text');
+    const extractedText = ocrTextBlock?.type === 'text' ? ocrTextBlock.text : '';
+
+    return {
+      extractedText,
+      usage: {
+        promptTokens: ocrMessage.usage.input_tokens,
+        completionTokens: ocrMessage.usage.output_tokens,
+        totalTokens: ocrMessage.usage.input_tokens + ocrMessage.usage.output_tokens,
+      },
+    };
+  },
+
+  async parseText(apiKey: string, text: string, prompt: string): Promise<ParseTextResult> {
+    const anthropic = new Anthropic({ apiKey });
+    const fullPrompt = buildFullPrompt(prompt, DOCUMENT_EXTRACTION_PROMPT);
+
+    const parseMessage = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: PARSING_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `Here is text extracted from a document:\n\n---\n${text}\n---\n\n${fullPrompt}`,
+        },
+      ],
+    });
+
+    const parseTextBlock = parseMessage.content.find((block) => block.type === 'text');
+    const responseText = parseTextBlock?.type === 'text' ? parseTextBlock.text : '';
+
+    let document: DocumentData | undefined;
+    try {
+      document = JSON.parse(cleanJsonResponse(responseText));
+    } catch {
+      // If parsing fails, leave document undefined
+    }
+
+    return {
+      document,
+      response: responseText,
+      usage: {
+        promptTokens: parseMessage.usage.input_tokens,
+        completionTokens: parseMessage.usage.output_tokens,
+        totalTokens: parseMessage.usage.input_tokens + parseMessage.usage.output_tokens,
       },
     };
   },

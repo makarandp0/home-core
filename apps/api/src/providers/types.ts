@@ -17,8 +17,29 @@ export interface VisionResult {
   };
 }
 
+export interface ExtractTextResult {
+  extractedText: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+export interface ParseTextResult {
+  document?: DocumentData;
+  response: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
 export interface VisionProvider {
   analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult>;
+  extractText(apiKey: string, imageData: string): Promise<ExtractTextResult>;
+  parseText(apiKey: string, text: string, prompt: string): Promise<ParseTextResult>;
 }
 
 // Provider definition combines metadata with implementation

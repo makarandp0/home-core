@@ -1,5 +1,11 @@
 import OpenAI from 'openai';
-import type { ProviderDefinition, VisionResult, DocumentData } from './types.js';
+import type {
+  ProviderDefinition,
+  VisionResult,
+  DocumentData,
+  ExtractTextResult,
+  ParseTextResult,
+} from './types.js';
 import {
   DOCUMENT_EXTRACTION_PROMPT,
   OCR_SYSTEM_PROMPT,
@@ -74,6 +80,76 @@ export const openaiProvider: ProviderDefinition = {
         promptTokens: ocrUsage.prompt_tokens + parseUsage.prompt_tokens,
         completionTokens: ocrUsage.completion_tokens + parseUsage.completion_tokens,
         totalTokens: ocrUsage.total_tokens + parseUsage.total_tokens,
+      },
+    };
+  },
+
+  async extractText(apiKey: string, imageData: string): Promise<ExtractTextResult> {
+    const openai = new OpenAI({ apiKey });
+
+    const imageUrl = imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`;
+
+    const ocrCompletion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 2048,
+      messages: [
+        { role: 'system', content: OCR_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Extract all text visible in this image.' },
+            { type: 'image_url', image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+    });
+
+    const extractedText = ocrCompletion.choices[0]?.message?.content ?? '';
+    const usage = ocrCompletion.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+
+    return {
+      extractedText,
+      usage: {
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+        totalTokens: usage.total_tokens,
+      },
+    };
+  },
+
+  async parseText(apiKey: string, text: string, prompt: string): Promise<ParseTextResult> {
+    const openai = new OpenAI({ apiKey });
+    const fullPrompt = buildFullPrompt(prompt, DOCUMENT_EXTRACTION_PROMPT);
+
+    const parseCompletion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 1024,
+      messages: [
+        { role: 'system', content: PARSING_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: `Here is text extracted from a document:\n\n---\n${text}\n---\n\n${fullPrompt}`,
+        },
+      ],
+    });
+
+    const responseText = parseCompletion.choices[0]?.message?.content ?? '';
+    const usage = parseCompletion.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+
+    let document: DocumentData | undefined;
+    try {
+      document = JSON.parse(cleanJsonResponse(responseText));
+    } catch {
+      // If parsing fails, leave document undefined
+    }
+
+    return {
+      document,
+      response: responseText,
+      usage: {
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+        totalTokens: usage.total_tokens,
       },
     };
   },

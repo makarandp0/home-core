@@ -38,3 +38,49 @@ export const VisionResponseSchema = z.object({
 });
 
 export type VisionResponse = z.infer<typeof VisionResponseSchema>;
+
+// Schema for text extraction from images (Step 2 - LLM re-extraction for low confidence)
+export const VisionExtractTextRequestSchema = z.object({
+  image: z.string().min(1),
+  provider: VisionProviderSchema,
+  apiKey: z.string().optional(),
+});
+
+export type VisionExtractTextRequest = z.infer<typeof VisionExtractTextRequestSchema>;
+
+export const VisionExtractTextResponseSchema = z.object({
+  extractedText: z.string(),
+  usage: z
+    .object({
+      promptTokens: z.number(),
+      completionTokens: z.number(),
+      totalTokens: z.number(),
+    })
+    .optional(),
+});
+
+export type VisionExtractTextResponse = z.infer<typeof VisionExtractTextResponseSchema>;
+
+// Schema for parsing text to JSON document (Step 3)
+export const VisionParseRequestSchema = z.object({
+  text: z.string().min(1),
+  provider: VisionProviderSchema,
+  apiKey: z.string().optional(),
+  prompt: z.string().optional(),
+});
+
+export type VisionParseRequest = z.infer<typeof VisionParseRequestSchema>;
+
+export const VisionParseResponseSchema = z.object({
+  document: DocumentDataSchema.optional(),
+  response: z.string(),
+  usage: z
+    .object({
+      promptTokens: z.number(),
+      completionTokens: z.number(),
+      totalTokens: z.number(),
+    })
+    .optional(),
+});
+
+export type VisionParseResponse = z.infer<typeof VisionParseResponseSchema>;
