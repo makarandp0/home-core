@@ -30,6 +30,15 @@ ENV COMMIT_SHA=${COMMIT_SHA:-${RAILWAY_GIT_COMMIT_SHA}}
 ENV NODE_ENV=production
 WORKDIR /app
 
+# Install utility tools for debugging
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    procps \
+    net-tools \
+    lsof \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
 # Provide minimal workspace context to install only API runtime deps
