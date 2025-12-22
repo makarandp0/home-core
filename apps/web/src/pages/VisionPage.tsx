@@ -1,7 +1,8 @@
 import * as React from 'react';
 import {
   apiResponse,
-  VisionResponseSchema,
+  VisionExtractTextResponseSchema,
+  VisionParseResponseSchema,
   ProvidersResponseSchema,
   DocumentProcessResponseSchema,
   type ProviderInfo,
@@ -11,28 +12,49 @@ import {
 import { Button } from '../components/Button';
 import { compressImage } from '../utils/compressImage';
 
+// Confidence threshold for LLM re-extraction (80%)
+const CONFIDENCE_THRESHOLD = 0.8;
+
+type ProcessingStep = 'idle' | 'extracting' | 'reextracting' | 'parsing' | 'complete' | 'error';
+
+interface StepStatus {
+  extracting: 'pending' | 'active' | 'complete' | 'error';
+  reextracting: 'pending' | 'active' | 'complete' | 'skipped';
+  parsing: 'pending' | 'active' | 'complete' | 'error';
+}
+
 export function VisionPage() {
+  // Provider state
   const [providers, setProviders] = React.useState<ProviderInfo[]>([]);
   const [providersLoading, setProvidersLoading] = React.useState(true);
-  const [image, setImage] = React.useState<string | null>(null);
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
-  const [prompt, setPrompt] = React.useState('');
-  const [apiKey, setApiKey] = React.useState('');
   const [provider, setProvider] = React.useState<string>('');
-  // LLM Vision state
-  const [extractedText, setExtractedText] = React.useState<string | null>(null);
-  const [response, setResponse] = React.useState<string | null>(null);
-  const [document, setDocument] = React.useState<DocumentData | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  // Doc Processor state
-  const [docProcessorText, setDocProcessorText] = React.useState<string | null>(null);
-  const [docProcessorMethod, setDocProcessorMethod] = React.useState<ExtractionMethod | null>(null);
-  const [docProcessorConfidence, setDocProcessorConfidence] = React.useState<number | null>(null);
-  const [docProcessorError, setDocProcessorError] = React.useState<string | null>(null);
-  const [docProcessorLoading, setDocProcessorLoading] = React.useState(false);
+  const [apiKey, setApiKey] = React.useState('');
+  const [prompt, setPrompt] = React.useState('');
 
-  // Fetch providers from API on mount
+  // File state
+  const [file, setFile] = React.useState<File | null>(null);
+  const [fileType, setFileType] = React.useState<'image' | 'pdf' | null>(null);
+  const [filePreview, setFilePreview] = React.useState<string | null>(null);
+  const [fileDataUrl, setFileDataUrl] = React.useState<string | null>(null);
+
+  // Processing state
+  const [currentStep, setCurrentStep] = React.useState<ProcessingStep>('idle');
+  const [stepStatus, setStepStatus] = React.useState<StepStatus>({
+    extracting: 'pending',
+    reextracting: 'pending',
+    parsing: 'pending',
+  });
+
+  // Results state
+  const [extractedText, setExtractedText] = React.useState<string | null>(null);
+  const [extractionMethod, setExtractionMethod] = React.useState<ExtractionMethod | null>(null);
+  const [extractionConfidence, setExtractionConfidence] = React.useState<number | null>(null);
+  const [usedLLMExtraction, setUsedLLMExtraction] = React.useState(false);
+  const [document, setDocument] = React.useState<DocumentData | null>(null);
+  const [parseResponse, setParseResponse] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Fetch providers on mount
   React.useEffect(() => {
     async function fetchProviders() {
       try {
@@ -41,7 +63,6 @@ export function VisionPage() {
         const parsed = apiResponse(ProvidersResponseSchema).parse(json);
         if (parsed.ok && parsed.data) {
           setProviders(parsed.data.providers);
-          // Default to first provider
           if (parsed.data.providers.length > 0) {
             setProvider(parsed.data.providers[0].id);
           }
@@ -55,132 +76,186 @@ export function VisionPage() {
     fetchProviders();
   }, []);
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file');
+    const isPdf = selectedFile.type === 'application/pdf';
+    const isImage = selectedFile.type.startsWith('image/');
+
+    if (!isPdf && !isImage) {
+      setError('Please select an image or PDF file');
       return;
     }
 
-    try {
-      setError(null);
-      const compressed = await compressImage(file);
-      setImage(compressed);
-      setImagePreview(compressed);
-    } catch {
-      setError('Failed to process image file');
+    setError(null);
+    setFile(selectedFile);
+    setFileType(isPdf ? 'pdf' : 'image');
+
+    // Reset results
+    resetResults();
+
+    if (isImage) {
+      try {
+        const compressed = await compressImage(selectedFile);
+        setFilePreview(compressed);
+        setFileDataUrl(compressed);
+      } catch {
+        setError('Failed to process image file');
+      }
+    } else {
+      // For PDFs, read as base64
+      setFilePreview(null);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFileDataUrl(reader.result as string);
+      };
+      reader.readAsDataURL(selectedFile);
     }
+  };
+
+  const resetResults = () => {
+    setCurrentStep('idle');
+    setStepStatus({
+      extracting: 'pending',
+      reextracting: 'pending',
+      parsing: 'pending',
+    });
+    setExtractedText(null);
+    setExtractionMethod(null);
+    setExtractionConfidence(null);
+    setUsedLLMExtraction(false);
+    setDocument(null);
+    setParseResponse(null);
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!image) {
-      setError('Please select an image');
+    if (!file || !fileDataUrl) {
+      setError('Please select a file');
       return;
     }
 
-    // Reset LLM state
-    setLoading(true);
-    setError(null);
-    setExtractedText(null);
-    setResponse(null);
-    setDocument(null);
+    resetResults();
+    setCurrentStep('extracting');
+    setStepStatus((s) => ({ ...s, extracting: 'active' }));
 
-    // Reset doc processor state
-    setDocProcessorLoading(true);
-    setDocProcessorError(null);
-    setDocProcessorText(null);
-    setDocProcessorMethod(null);
-    setDocProcessorConfidence(null);
+    try {
+      // Step 1: Extract text using doc_processor
+      const base64Content = fileDataUrl.replace(/^data:[^;]+;base64,/, '');
 
-    // Extract base64 content and determine filename from data URL
-    const mimeMatch = image.match(/^data:(image\/\w+);base64,/);
-    const mimeType = mimeMatch?.[1] ?? 'image/jpeg';
-    const extension = mimeType.split('/')[1] ?? 'jpeg';
-    const base64Content = image.replace(/^data:image\/\w+;base64,/, '');
-
-    // Call both APIs in parallel
-    const visionPromise = fetch('/api/vision', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image,
-        provider,
-        ...(prompt.trim() && { prompt: prompt.trim() }),
-        ...(apiKey.trim() && { apiKey: apiKey.trim() }),
-      }),
-    });
-
-    const docProcessorPromise = fetch('/api/documents/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file: base64Content,
-        filename: `image.${extension}`,
-      }),
-    });
-
-    // Handle LLM Vision response
-    visionPromise
-      .then(async (res) => {
-        const json = await res.json();
-        const parsed = apiResponse(VisionResponseSchema).parse(json);
-
-        if (parsed.ok && parsed.data) {
-          setExtractedText(parsed.data.extractedText);
-          setResponse(parsed.data.response);
-          setDocument(parsed.data.document ?? null);
-        } else {
-          setError(parsed.error ?? 'Unknown error occurred');
-        }
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to call Vision API');
-      })
-      .finally(() => {
-        setLoading(false);
+      const docRes = await fetch('/api/documents/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file: base64Content,
+          filename: file.name,
+        }),
       });
 
-    // Handle Doc Processor response
-    docProcessorPromise
-      .then(async (res) => {
-        const json = await res.json();
-        const parsed = DocumentProcessResponseSchema.parse(json);
+      const docJson = await docRes.json();
+      const docParsed = DocumentProcessResponseSchema.parse(docJson);
 
-        if (parsed.ok && parsed.data) {
-          setDocProcessorText(parsed.data.text);
-          setDocProcessorMethod(parsed.data.method);
-          setDocProcessorConfidence(parsed.data.confidence ?? null);
-        } else {
-          setDocProcessorError(parsed.error ?? 'Doc processor error');
+      if (!docParsed.ok || !docParsed.data) {
+        throw new Error(docParsed.error ?? 'Failed to extract text');
+      }
+
+      let finalText = docParsed.data.text;
+      setExtractedText(finalText);
+      setExtractionMethod(docParsed.data.method);
+      setExtractionConfidence(docParsed.data.confidence ?? null);
+      setStepStatus((s) => ({ ...s, extracting: 'complete' }));
+
+      // Step 2: Check if LLM re-extraction is needed
+      const needsReextraction =
+        fileType === 'image' &&
+        docParsed.data.method === 'ocr' &&
+        (docParsed.data.confidence ?? 0) < CONFIDENCE_THRESHOLD;
+
+      if (needsReextraction) {
+        setCurrentStep('reextracting');
+        setStepStatus((s) => ({ ...s, reextracting: 'active' }));
+
+        const extractRes = await fetch('/api/vision/extract-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: fileDataUrl,
+            provider,
+            ...(apiKey.trim() && { apiKey: apiKey.trim() }),
+          }),
+        });
+
+        const extractJson = await extractRes.json();
+        const extractParsed = apiResponse(VisionExtractTextResponseSchema).parse(extractJson);
+
+        if (!extractParsed.ok || !extractParsed.data) {
+          throw new Error(extractParsed.error ?? 'Failed to extract text with LLM');
         }
-      })
-      .catch((err) => {
-        setDocProcessorError(
-          err instanceof Error ? err.message : 'Failed to call Doc Processor'
-        );
-      })
-      .finally(() => {
-        setDocProcessorLoading(false);
+
+        finalText = extractParsed.data.extractedText;
+        setExtractedText(finalText);
+        setUsedLLMExtraction(true);
+        setStepStatus((s) => ({ ...s, reextracting: 'complete' }));
+      } else {
+        setStepStatus((s) => ({ ...s, reextracting: 'skipped' }));
+      }
+
+      // Step 3: Parse text to JSON
+      setCurrentStep('parsing');
+      setStepStatus((s) => ({ ...s, parsing: 'active' }));
+
+      const parseRes = await fetch('/api/vision/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: finalText,
+          provider,
+          ...(apiKey.trim() && { apiKey: apiKey.trim() }),
+          ...(prompt.trim() && { prompt: prompt.trim() }),
+        }),
       });
+
+      const parseJson = await parseRes.json();
+      const parseParsed = apiResponse(VisionParseResponseSchema).parse(parseJson);
+
+      if (!parseParsed.ok || !parseParsed.data) {
+        throw new Error(parseParsed.error ?? 'Failed to parse document');
+      }
+
+      setDocument(parseParsed.data.document ?? null);
+      setParseResponse(parseParsed.data.response);
+      setStepStatus((s) => ({ ...s, parsing: 'complete' }));
+      setCurrentStep('complete');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setCurrentStep('error');
+
+      // Mark current active step as error
+      setStepStatus((s) => {
+        if (s.extracting === 'active') return { ...s, extracting: 'error' };
+        if (s.reextracting === 'active')
+          return { ...s, reextracting: 'skipped', parsing: 'pending' };
+        if (s.parsing === 'active') return { ...s, parsing: 'error' };
+        return s;
+      });
+    }
   };
 
   const providerMeta = providers.find((p) => p.id === provider);
   const providerLabel = providerMeta?.label?.split(' ')[0] ?? 'Provider';
   const keyPlaceholder = providerMeta?.placeholder ?? '';
 
-  const hasLLMResults = extractedText || response || document;
-  const hasDocProcessorResults = docProcessorText;
-  const hasAnyResults = hasLLMResults || hasDocProcessorResults || loading || docProcessorLoading;
+  const isProcessing = ['extracting', 'reextracting', 'parsing'].includes(currentStep);
+  const hasResults = extractedText || document || parseResponse;
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <h2 className="mb-2 text-xl font-semibold dark:text-gray-100">Vision AI</h2>
+    <div className="mx-auto max-w-4xl">
+      <h2 className="mb-2 text-xl font-semibold dark:text-gray-100">Document Analysis</h2>
       <p className="mb-6 text-gray-600 dark:text-gray-400">
-        Upload an image and compare LLM vision with doc processor OCR side-by-side.
+        Upload an image or PDF to extract and parse document data.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -211,18 +286,23 @@ export function VisionPage() {
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
-            Image
+            File (Image or PDF)
           </label>
           <input
             type="file"
-            accept="image/*"
-            onChange={handleImageChange}
+            accept="image/*,.pdf,application/pdf"
+            onChange={handleFileChange}
             className="block w-full cursor-pointer text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400 dark:file:bg-gray-700 dark:file:text-gray-200 dark:hover:file:bg-gray-600"
           />
-          {imagePreview && (
+          {file && (
+            <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Selected: {file.name} ({fileType?.toUpperCase()})
+            </div>
+          )}
+          {filePreview && (
             <div className="mt-4">
               <img
-                src={imagePreview}
+                src={filePreview}
                 alt="Preview"
                 className="max-h-64 rounded-lg border border-gray-200 dark:border-gray-700"
               />
@@ -238,7 +318,7 @@ export function VisionPage() {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="What would you like to know about this image? Leave empty for document extraction."
+            placeholder="Custom instructions for parsing. Leave empty for default document extraction."
             rows={3}
             className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500"
           />
@@ -261,7 +341,7 @@ export function VisionPage() {
           </p>
         </div>
 
-        {error && (
+        {error && currentStep !== 'error' && (
           <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
@@ -269,170 +349,237 @@ export function VisionPage() {
 
         <Button
           type="submit"
-          disabled={loading || !image || !provider || providersLoading}
-          className={loading ? 'cursor-not-allowed opacity-50' : ''}
+          disabled={isProcessing || !file || !provider || providersLoading}
+          className={isProcessing ? 'cursor-not-allowed opacity-50' : ''}
         >
-          {loading ? 'Analyzing...' : 'Analyze Image'}
+          {isProcessing ? 'Processing...' : 'Analyze Document'}
         </Button>
       </form>
 
-      {hasAnyResults && (
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* LLM Vision Column */}
-          <div className="space-y-4">
-            <h3 className="border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-              LLM Vision ({providerMeta?.label ?? 'Provider'})
-            </h3>
+      {/* Step Progress Indicator */}
+      {currentStep !== 'idle' && (
+        <div className="mt-8">
+          <div className="mb-6 flex items-center justify-between">
+            <StepIndicator
+              label="1. Extract Text"
+              status={stepStatus.extracting}
+              sublabel={extractionMethod ? `(${extractionMethod})` : undefined}
+            />
+            <div className="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700" />
+            <StepIndicator
+              label="2. Re-extract"
+              status={stepStatus.reextracting}
+              sublabel={stepStatus.reextracting === 'skipped' ? '(skipped)' : undefined}
+            />
+            <div className="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700" />
+            <StepIndicator label="3. Parse JSON" status={stepStatus.parsing} />
+          </div>
 
-            {loading && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-                Analyzing with LLM...
-              </div>
-            )}
+          {/* Error display */}
+          {error && currentStep === 'error' && (
+            <div className="mb-6 rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            </div>
+          )}
 
-            {error && (
-              <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-              </div>
-            )}
-
-            {extractedText && (
-              <div>
-                <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Extracted Text (OCR)
-                </h4>
-                <div className="max-h-64 overflow-y-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
-                  <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                    {extractedText}
-                  </p>
+          {/* Results */}
+          {hasResults && (
+            <div className="space-y-6">
+              {/* Extraction info */}
+              {extractedText && (
+                <div className="flex flex-wrap gap-2">
+                  {extractionMethod && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      Extraction: {extractionMethod}
+                    </span>
+                  )}
+                  {extractionConfidence !== null && (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        extractionConfidence >= CONFIDENCE_THRESHOLD
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      }`}
+                    >
+                      Confidence: {(extractionConfidence * 100).toFixed(1)}%
+                    </span>
+                  )}
+                  {usedLLMExtraction && (
+                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                      LLM Re-extracted
+                    </span>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {document && (
-              <div>
-                <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Document Data
-                </h4>
-                <div className="rounded-md border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex items-start gap-2">
-                      <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
-                        Type
-                      </dt>
-                      <dd className="text-gray-900 dark:text-gray-100">
-                        {document.document_type}
-                      </dd>
-                    </div>
-                    {document.id && (
+              {/* Extracted text */}
+              {extractedText && (
+                <div>
+                  <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Extracted Text
+                  </h4>
+                  <div className="max-h-64 overflow-y-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
+                    <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                      {extractedText}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Parsed document */}
+              {document && (
+                <div>
+                  <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Document Data
+                  </h4>
+                  <div className="rounded-md border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+                    <dl className="space-y-2 text-sm">
                       <div className="flex items-start gap-2">
                         <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
-                          ID
+                          Type
                         </dt>
-                        <dd className="text-gray-900 dark:text-gray-100">{document.id}</dd>
-                      </div>
-                    )}
-                    {document.name && (
-                      <div className="flex items-start gap-2">
-                        <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
-                          Name
-                        </dt>
-                        <dd className="text-gray-900 dark:text-gray-100">{document.name}</dd>
-                      </div>
-                    )}
-                    {document.expiry_date && (
-                      <div className="flex items-start gap-2">
-                        <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
-                          Expiry
-                        </dt>
-                        <dd className="text-gray-900 dark:text-gray-100">{document.expiry_date}</dd>
-                      </div>
-                    )}
-                    {document.fields && Object.keys(document.fields).length > 0 && (
-                      <div className="border-t border-gray-200 pt-2 dark:border-gray-700">
-                        <dt className="mb-1 font-medium text-gray-500 dark:text-gray-400">
-                          Fields
-                        </dt>
-                        <dd>
-                          <dl className="space-y-1">
-                            {Object.entries(document.fields).map(([key, value]) => (
-                              <div key={key} className="flex items-start gap-2">
-                                <dt className="w-24 shrink-0 text-gray-600 dark:text-gray-300">
-                                  {key}
-                                </dt>
-                                <dd className="text-gray-900 dark:text-gray-100">{value}</dd>
-                              </div>
-                            ))}
-                          </dl>
+                        <dd className="text-gray-900 dark:text-gray-100">
+                          {document.document_type}
                         </dd>
                       </div>
-                    )}
-                  </dl>
+                      {document.id && (
+                        <div className="flex items-start gap-2">
+                          <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
+                            ID
+                          </dt>
+                          <dd className="text-gray-900 dark:text-gray-100">{document.id}</dd>
+                        </div>
+                      )}
+                      {document.name && (
+                        <div className="flex items-start gap-2">
+                          <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
+                            Name
+                          </dt>
+                          <dd className="text-gray-900 dark:text-gray-100">{document.name}</dd>
+                        </div>
+                      )}
+                      {document.expiry_date && (
+                        <div className="flex items-start gap-2">
+                          <dt className="w-24 shrink-0 font-medium text-gray-500 dark:text-gray-400">
+                            Expiry
+                          </dt>
+                          <dd className="text-gray-900 dark:text-gray-100">
+                            {document.expiry_date}
+                          </dd>
+                        </div>
+                      )}
+                      {document.fields && Object.keys(document.fields).length > 0 && (
+                        <div className="border-t border-gray-200 pt-2 dark:border-gray-700">
+                          <dt className="mb-1 font-medium text-gray-500 dark:text-gray-400">
+                            Fields
+                          </dt>
+                          <dd>
+                            <dl className="space-y-1">
+                              {Object.entries(document.fields).map(([key, value]) => (
+                                <div key={key} className="flex items-start gap-2">
+                                  <dt className="w-24 shrink-0 text-gray-600 dark:text-gray-300">
+                                    {key}
+                                  </dt>
+                                  <dd className="text-gray-900 dark:text-gray-100">{value}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {response && (
-              <div>
-                <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Raw Response
-                </h4>
-                <div className="max-h-48 overflow-y-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
-                  <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                    {response}
-                  </p>
+              {/* Raw response */}
+              {parseResponse && (
+                <div>
+                  <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Raw Response
+                  </h4>
+                  <div className="max-h-48 overflow-y-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
+                    <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                      {parseResponse}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Doc Processor Column */}
-          <div className="space-y-4">
-            <h3 className="border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-              Doc Processor (EasyOCR)
-            </h3>
-
-            {docProcessorLoading && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-                Processing with OCR...
-              </div>
-            )}
-
-            {docProcessorError && (
-              <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-                <p className="text-sm text-red-700 dark:text-red-400">{docProcessorError}</p>
-              </div>
-            )}
-
-            {docProcessorMethod && (
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                  Method: {docProcessorMethod}
-                </span>
-                {docProcessorConfidence !== null && (
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                    Confidence: {(docProcessorConfidence * 100).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            )}
-
-            {docProcessorText && (
-              <div>
-                <h4 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Extracted Text
-                </h4>
-                <div className="max-h-96 overflow-y-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
-                  <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                    {docProcessorText}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
+      )}
+    </div>
+  );
+}
+
+function StepIndicator({
+  label,
+  status,
+  sublabel,
+}: {
+  label: string;
+  status: 'pending' | 'active' | 'complete' | 'error' | 'skipped';
+  sublabel?: string;
+}) {
+  const getStatusStyles = () => {
+    switch (status) {
+      case 'active':
+        return 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'complete':
+        return 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300';
+      case 'error':
+        return 'border-red-500 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+      case 'skipped':
+        return 'border-gray-300 bg-gray-50 text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500';
+      default:
+        return 'border-gray-300 bg-white text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+  };
+
+  const getIcon = () => {
+    switch (status) {
+      case 'active':
+        return (
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600" />
+        );
+      case 'complete':
+        return (
+          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      case 'error':
+        return (
+          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      case 'skipped':
+        return <span className="text-xs">-</span>;
+      default:
+        return <span className="h-2 w-2 rounded-full bg-current" />;
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center px-2">
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-full border-2 ${getStatusStyles()}`}
+      >
+        {getIcon()}
+      </div>
+      <span className="mt-1 text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
+      {sublabel && (
+        <span className="text-xs text-gray-400 dark:text-gray-500">{sublabel}</span>
       )}
     </div>
   );

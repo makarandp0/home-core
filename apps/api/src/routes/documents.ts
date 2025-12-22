@@ -77,8 +77,12 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (!validated.success) {
+        console.error('Doc processor validation failed:', validated.error.issues);
         reply.code(500);
-        return { ok: false, error: 'Invalid response from doc processor' };
+        return {
+          ok: false,
+          error: `Invalid response from doc processor: ${validated.error.issues.map((i) => i.message).join(', ')}`,
+        };
       }
 
       return { ok: true, data: processedData };
