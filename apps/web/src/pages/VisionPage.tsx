@@ -13,6 +13,7 @@ import {
 import { Button } from '../components/Button';
 import { ErrorDisplay } from '../components/ErrorDisplay';
 import { compressImage } from '../utils/compressImage';
+import { makAssert } from '@home/utils';
 
 // Confidence threshold for LLM re-extraction (80%)
 const CONFIDENCE_THRESHOLD = 0.8;
@@ -110,7 +111,8 @@ export function VisionPage() {
       setFilePreview(null);
       const reader = new FileReader();
       reader.onload = () => {
-        setFileDataUrl(reader.result as string);
+        makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
+        setFileDataUrl(reader.result);
       };
       reader.readAsDataURL(selectedFile);
     }
