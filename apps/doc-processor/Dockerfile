@@ -28,6 +28,11 @@ RUN .venv/bin/python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
 # Runtime stage
 FROM python:3.11-slim
 
+# Accept commit SHA from build args (Railway provides RAILWAY_GIT_COMMIT_SHA)
+ARG COMMIT_SHA
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA:-${RAILWAY_GIT_COMMIT_SHA}}
+
 # Install runtime dependencies and utility tools for debugging
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
