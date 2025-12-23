@@ -6,12 +6,23 @@ Development setup, commands, and contribution guidelines for home-core.
 
 - Node 22.18.0 (see `.nvmrc`)
 - Corepack enabled (`corepack enable`)
+- Docker (for local PostgreSQL)
 - Python 3.11+ and [uv](https://docs.astral.sh/uv/) (for doc-processor only)
 
 ## Setup
 
 ```bash
 pnpm install
+```
+
+Start PostgreSQL:
+```bash
+docker compose up postgres -d
+```
+
+Run database migrations:
+```bash
+pnpm --filter @home/db migrate:up
 ```
 
 For doc-processor (Python service):
@@ -53,9 +64,58 @@ apps/
   api/          # Fastify (TypeScript) backend
   doc-processor/# FastAPI (Python) document service
 packages/
+  db/           # Database client and migrations (@home/db)
   types/        # Shared Zod v4 schemas (@home/types)
   utils/        # Shared utilities (@home/utils)
   tsconfig/     # Shared TypeScript configs
+```
+
+## Database
+
+PostgreSQL with Drizzle ORM for type-safe queries and node-pg-migrate for migrations.
+
+### Local Development
+
+```bash
+docker compose up postgres -d              # Start Postgres
+pnpm --filter @home/db migrate:up          # Run migrations
+```
+
+### Migration Workflow
+
+```bash
+# Create a new migration
+pnpm --filter @home/db migrate:create add-users-table
+
+# Edit the migration file in packages/db/migrations/
+
+# Run pending migrations
+pnpm --filter @home/db migrate:up
+
+# Regenerate Drizzle schema from database
+pnpm --filter @home/db db:introspect
+
+# Update packages/db/src/schema/index.ts to export new tables
+```
+
+### Migration Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm --filter @home/db migrate:create <name>` | Create new migration |
+| `pnpm --filter @home/db migrate:up` | Run pending migrations |
+| `pnpm --filter @home/db migrate:down` | Rollback last migration |
+| `pnpm --filter @home/db migrate:status` | Show migration status |
+| `pnpm --filter @home/db db:introspect` | Generate schema from DB |
+
+### Using the Database in API
+
+```typescript
+import { getDb, eq } from '@home/db';
+import { documents } from '@home/db';
+
+const db = getDb();
+const docs = await db.select().from(documents).where(eq(documents.id, id));
 ```
 
 ## Code Conventions
@@ -112,6 +172,12 @@ pnpm start:web  # Build and preview web on :4173
 │  (React)    │     │   (Node.js)      │     │  (Python/FastAPI)   │
 └─────────────┘     └──────────────────┘     └─────────────────────┘
      :5173               :3001                      :8000
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  PostgreSQL  │
+                    └──────────────┘
+                         :5432
 ```
 
 - API routes are namespaced under `/api/*`
@@ -152,7 +218,8 @@ pnpm start:web  # Build and preview web on :4173
 | Add API route | `apps/api/src/routes/` |
 | Add React component | `apps/web/src/components/` |
 | Add shared type/schema | `packages/types/src/schemas/` |
-<!-- TODO: Expand this table -->
+| Add database migration | `packages/db/migrations/` |
+| Add database table | `packages/db/src/schema/` |
 
 ## LLM Operators
 

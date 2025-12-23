@@ -29,3 +29,7 @@ pnpm-debug.log*
 .env
 .env.*
 railway-vars.txt
+
+# Drizzle-kit artifacts (we use node-pg-migrate for migrations)
+packages/db/src/schema/meta/
+packages/db/src/schema/*.sql

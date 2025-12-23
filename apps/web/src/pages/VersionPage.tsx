@@ -103,6 +103,7 @@ interface ConfiguredProviders {
 export function VersionPage() {
   const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
   const [docProcessorVersion, setDocProcessorVersion] = React.useState<string | null>(null);
+  const [databaseConnected, setDatabaseConnected] = React.useState<boolean | null>(null);
   const [configuredProviders, setConfiguredProviders] = React.useState<ConfiguredProviders | null>(
     null
   );
@@ -116,10 +117,12 @@ export function VersionPage() {
         const parsed = HealthSchema.parse(json);
         setBackendVersion(parsed.version ?? null);
         setDocProcessorVersion(parsed.docProcessorVersion ?? null);
+        setDatabaseConnected(parsed.database?.connected ?? null);
         setConfiguredProviders(parsed.configuredProviders ?? null);
       } catch {
         setBackendVersion(null);
         setDocProcessorVersion(null);
+        setDatabaseConnected(null);
         setConfiguredProviders(null);
       } finally {
         setLoading(false);
@@ -160,11 +163,24 @@ export function VersionPage() {
                 <span className="font-medium text-sm">Doc Processor</span>
                 <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Database</span>
+                <span className="text-sm text-muted-foreground">Loading...</span>
+              </div>
             </>
           ) : (
             <>
               <CommitLink label="Backend (API)" commit={backendVersion || 'unknown'} />
               <CommitLink label="Doc Processor" commit={docProcessorVersion || 'unavailable'} />
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Database</span>
+                <span className={cn(
+                  "text-sm font-medium",
+                  databaseConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                )}>
+                  {databaseConnected ? 'Connected' : 'Not Connected'}
+                </span>
+              </div>
             </>
           )}
         </div>

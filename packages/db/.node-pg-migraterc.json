@@ -1,0 +1,8 @@
+{
+  "migrationsTable": "pgmigrations",
+  "dir": "migrations",
+  "schema": "public",
+  "createMigrationsSchema": true,
+  "decamelize": true,
+  "tsconfig": "./tsconfig.migrations.json"
+}
