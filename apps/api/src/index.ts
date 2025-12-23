@@ -16,7 +16,9 @@ import { documentsRoutes } from './routes/documents.js';
 if (process.env.DATABASE_URL) {
   try {
     console.log('Running database migrations...');
-    execSync('pnpm --filter @home/db migrate:up', { stdio: 'inherit' });
+    // Use migrate:up:prod in production (no dotenv wrapper needed since DATABASE_URL is already set)
+    const script = process.env.NODE_ENV === 'production' ? 'migrate:up:prod' : 'migrate:up';
+    execSync(`pnpm --filter @home/db ${script}`, { stdio: 'inherit' });
     console.log('Migrations complete');
   } catch (err) {
     console.error('Migration failed:', err);

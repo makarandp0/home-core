@@ -56,6 +56,7 @@ RUN pnpm install --frozen-lockfile --prod --filter @home/api...
 # Copy built artifacts for API, its workspace deps, and Web (for static serving)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --from=builder /app/packages/db/migrations ./packages/db/migrations
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/web/dist ./apps/web/dist
 # Enable static serving by default
