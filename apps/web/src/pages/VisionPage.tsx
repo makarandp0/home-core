@@ -165,7 +165,6 @@ export function VisionPage() {
                 <ExtractionBadges
                   method={analysis.extractionMethod}
                   confidence={analysis.extractionConfidence}
-                  usedLLMExtraction={analysis.usedLLMExtraction}
                 />
               )}
 

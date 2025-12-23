@@ -9,7 +9,7 @@ export const DocumentProcessRequestSchema = z.object({
 export type DocumentProcessRequest = z.infer<typeof DocumentProcessRequestSchema>;
 
 // Extraction method used
-export const ExtractionMethodSchema = z.enum(['native', 'ocr']);
+export const ExtractionMethodSchema = z.enum(['native', 'ocr', 'llm']);
 export type ExtractionMethod = z.infer<typeof ExtractionMethodSchema>;
 
 // Document processing result data

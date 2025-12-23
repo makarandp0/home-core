@@ -20,6 +20,7 @@ export const DocumentDataSchema = z.object({
   expiry_date: z.string().nullish(),
   name: z.string().nullish(),
   fields: z.record(z.string(), z.string()),
+  keywords: z.array(z.string()).max(10).optional(),
 });
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
