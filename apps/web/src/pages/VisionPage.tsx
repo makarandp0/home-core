@@ -9,6 +9,7 @@ import { ErrorDisplay } from '../components/ErrorDisplay';
 import { StepProgress } from '../components/StepProgress';
 import { DocumentDataDisplay } from '../components/DocumentDataDisplay';
 import { ExtractionBadges } from '../components/ExtractionBadges';
+import { JsonDisplay } from '../components/JsonDisplay';
 import { useProviders, useFileUpload, useDocumentAnalysis } from '../hooks';
 
 export function VisionPage() {
@@ -158,14 +159,7 @@ export function VisionPage() {
       {hasResults && (
         <div className="mt-6 space-y-3">
           {/* JSON Response - shown prominently */}
-          {analysis.parseResponse && (
-            <div className="rounded-md border border-border bg-secondary/30 p-3">
-              <h4 className="mb-2 text-sm font-medium">JSON Response</h4>
-              <pre className="max-h-40 overflow-auto rounded bg-secondary/50 p-2 text-xs">
-                <code>{analysis.parseResponse}</code>
-              </pre>
-            </div>
-          )}
+          {analysis.parseResponse && <JsonDisplay data={analysis.parseResponse} />}
 
           {/* Extraction info badges */}
           {analysis.extractedText && (
