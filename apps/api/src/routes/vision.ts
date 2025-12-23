@@ -10,6 +10,7 @@ import {
   type ApiResponse,
 } from '@home/types';
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
+import { withAnalyzeCache, withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -42,8 +43,14 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+      const promptText = prompt ?? '';
 
-      const result = await provider.analyze(apiKey, imageData, prompt ?? '');
+      const { result, cached } = await withAnalyzeCache(
+        providerId,
+        imageData,
+        promptText,
+        () => provider.analyze(apiKey, imageData, promptText)
+      );
 
       // Always return extractedText and response
       // Only include document if it validates correctly
@@ -54,6 +61,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         response: result.response,
         document: documentResult.success ? documentResult.data : undefined,
         usage: result.usage,
+        cached,
       };
 
       return { ok: true, data };
@@ -108,9 +116,14 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
 
       try {
         const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
-        const result = await provider.extractText(apiKey, imageData);
 
-        return { ok: true, data: result };
+        const { result, cached } = await withExtractTextCache(
+          providerId,
+          imageData,
+          () => provider.extractText(apiKey, imageData)
+        );
+
+        return { ok: true, data: { ...result, cached } };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
 
@@ -160,7 +173,14 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const result = await provider.parseText(apiKey, text, prompt ?? '');
+      const promptText = prompt ?? '';
+
+      const { result, cached } = await withParseTextCache(
+        providerId,
+        text,
+        promptText,
+        () => provider.parseText(apiKey, text, promptText)
+      );
 
       // Validate document if it exists
       const documentResult = result.document ? DocumentDataSchema.safeParse(result.document) : null;
@@ -169,6 +189,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         document: documentResult?.success ? documentResult.data : undefined,
         response: result.response,
         usage: result.usage,
+        cached,
       };
 
       return { ok: true, data };
