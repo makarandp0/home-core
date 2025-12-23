@@ -4,6 +4,7 @@ export interface DocumentData {
   expiry_date?: string;
   name?: string;
   fields: Record<string, string>;
+  keywords?: string[];
 }
 
 export interface VisionResult {
@@ -88,7 +89,8 @@ export const DOCUMENT_EXTRACTION_PROMPT = `Analyze the extracted text and return
   "name": "string or null - person's name if present",
   "fields": {
     "key": "value pairs of all other important information found in the document"
-  }
+  },
+  "keywords": ["array of up to 10 main keywords that describe the document content"]
 }
 
 Important: All dates must be formatted as YYYY-MM-DD (e.g., 2025-12-31).

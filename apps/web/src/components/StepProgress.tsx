@@ -3,7 +3,6 @@ import type { ExtractionMethod } from '@home/types';
 
 export interface StepStatuses {
   extracting: StepStatus;
-  reextracting: StepStatus;
   parsing: StepStatus;
 }
 
@@ -21,13 +20,7 @@ export function StepProgress({ statuses, extractionMethod }: StepProgressProps) 
         sublabel={extractionMethod ? `(${extractionMethod})` : undefined}
       />
       <div className="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700" />
-      <StepIndicator
-        label="2. Re-extract"
-        status={statuses.reextracting}
-        sublabel={statuses.reextracting === 'skipped' ? '(skipped)' : undefined}
-      />
-      <div className="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700" />
-      <StepIndicator label="3. Parse JSON" status={statuses.parsing} />
+      <StepIndicator label="2. Parse JSON" status={statuses.parsing} />
     </div>
   );
 }

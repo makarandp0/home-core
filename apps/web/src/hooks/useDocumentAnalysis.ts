@@ -9,16 +9,14 @@ import {
   type ApiError,
 } from '@home/types';
 import { type StepStatuses } from '../components/StepProgress';
-import { CONFIDENCE_THRESHOLD } from '../components/ExtractionBadges';
 import { type FileType } from './useFileUpload';
 
-export type ProcessingStep = 'idle' | 'extracting' | 'reextracting' | 'parsing' | 'complete' | 'error';
+export type ProcessingStep = 'idle' | 'extracting' | 'parsing' | 'complete' | 'error';
 
 export interface AnalysisResults {
   extractedText: string | null;
   extractionMethod: ExtractionMethod | null;
   extractionConfidence: number | null;
-  usedLLMExtraction: boolean;
   document: DocumentData | null;
   parseResponse: string | null;
 }
@@ -34,14 +32,12 @@ const initialResults: AnalysisResults = {
   extractedText: null,
   extractionMethod: null,
   extractionConfidence: null,
-  usedLLMExtraction: false,
   document: null,
   parseResponse: null,
 };
 
 const initialStepStatus: StepStatuses = {
   extracting: 'pending',
-  reextracting: 'pending',
   parsing: 'pending',
 };
 
@@ -82,56 +78,15 @@ export function useDocumentAnalysis() {
       });
 
       try {
-        // Step 1: Extract text using doc_processor
-        const base64Content = fileDataUrl.replace(/^data:[^;]+;base64,/, '');
+        let finalText: string;
+        let extractionMethod: ExtractionMethod;
+        let extractionConfidence: number | null = null;
 
-        const docRes = await fetch('/api/documents/process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file: base64Content,
-            filename: fileName,
-          }),
-        });
-
-        const docJson = await docRes.json();
-        const docParsed = DocumentProcessResponseSchema.parse(docJson);
-
-        if (!docParsed.ok || !docParsed.data) {
-          setState((s) => ({
-            ...s,
-            error: docParsed.error ?? 'Failed to extract text',
-            currentStep: 'error',
-            stepStatus: { ...s.stepStatus, extracting: 'error' },
-          }));
-          return;
-        }
-
-        let finalText = docParsed.data.text;
-        setState((s) => ({
-          ...s,
-          results: {
-            ...s.results,
-            extractedText: finalText,
-            extractionMethod: docParsed.data!.method,
-            extractionConfidence: docParsed.data!.confidence ?? null,
-          },
-          stepStatus: { ...s.stepStatus, extracting: 'complete' },
-        }));
-
-        // Step 2: Check if LLM re-extraction is needed
-        const needsReextraction =
-          fileType === 'image' &&
-          docParsed.data.method === 'ocr' &&
-          (docParsed.data.confidence ?? 0) < CONFIDENCE_THRESHOLD;
-
-        if (needsReextraction) {
-          setState((s) => ({
-            ...s,
-            currentStep: 'reextracting',
-            stepStatus: { ...s.stepStatus, reextracting: 'active' },
-          }));
-
+        // Step 1: Extract text
+        // For images: use LLM vision directly
+        // For PDFs: use doc_processor (native + OCR fallback)
+        if (fileType === 'image') {
+          // Use LLM directly for images
           const extractRes = await fetch('/api/vision/extract-text', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -148,31 +103,58 @@ export function useDocumentAnalysis() {
           if (!extractParsed.ok || !extractParsed.data) {
             setState((s) => ({
               ...s,
-              error: extractParsed.error ?? 'Failed to extract text with LLM',
+              error: extractParsed.error ?? 'Failed to extract text from image',
               currentStep: 'error',
-              stepStatus: { ...s.stepStatus, reextracting: 'skipped', parsing: 'pending' },
+              stepStatus: { ...s.stepStatus, extracting: 'error' },
             }));
             return;
           }
 
           finalText = extractParsed.data.extractedText;
-          setState((s) => ({
-            ...s,
-            results: {
-              ...s.results,
-              extractedText: finalText,
-              usedLLMExtraction: true,
-            },
-            stepStatus: { ...s.stepStatus, reextracting: 'complete' },
-          }));
+          extractionMethod = 'llm';
         } else {
-          setState((s) => ({
-            ...s,
-            stepStatus: { ...s.stepStatus, reextracting: 'skipped' },
-          }));
+          // Use doc_processor for PDFs
+          const base64Content = fileDataUrl.replace(/^data:[^;]+;base64,/, '');
+
+          const docRes = await fetch('/api/documents/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              file: base64Content,
+              filename: fileName,
+            }),
+          });
+
+          const docJson = await docRes.json();
+          const docParsed = DocumentProcessResponseSchema.parse(docJson);
+
+          if (!docParsed.ok || !docParsed.data) {
+            setState((s) => ({
+              ...s,
+              error: docParsed.error ?? 'Failed to extract text from PDF',
+              currentStep: 'error',
+              stepStatus: { ...s.stepStatus, extracting: 'error' },
+            }));
+            return;
+          }
+
+          finalText = docParsed.data.text;
+          extractionMethod = docParsed.data.method;
+          extractionConfidence = docParsed.data.confidence ?? null;
         }
 
-        // Step 3: Parse text to JSON
+        setState((s) => ({
+          ...s,
+          results: {
+            ...s.results,
+            extractedText: finalText,
+            extractionMethod,
+            extractionConfidence,
+          },
+          stepStatus: { ...s.stepStatus, extracting: 'complete' },
+        }));
+
+        // Step 2: Parse text to JSON
         setState((s) => ({
           ...s,
           currentStep: 'parsing',
@@ -220,8 +202,6 @@ export function useDocumentAnalysis() {
           currentStep: 'error',
           stepStatus: {
             extracting: s.stepStatus.extracting === 'active' ? 'error' : s.stepStatus.extracting,
-            reextracting:
-              s.stepStatus.reextracting === 'active' ? 'skipped' : s.stepStatus.reextracting,
             parsing: s.stepStatus.parsing === 'active' ? 'error' : s.stepStatus.parsing,
           },
         }));
@@ -230,7 +210,7 @@ export function useDocumentAnalysis() {
     []
   );
 
-  const isProcessing = ['extracting', 'reextracting', 'parsing'].includes(state.currentStep);
+  const isProcessing = ['extracting', 'parsing'].includes(state.currentStep);
 
   return {
     ...state,
