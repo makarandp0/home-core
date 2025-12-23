@@ -4,10 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Collapsible } from '@/components/ui/collapsible';
 import { ErrorDisplay } from '../components/ErrorDisplay';
 import { StepProgress } from '../components/StepProgress';
 import { DocumentDataDisplay } from '../components/DocumentDataDisplay';
 import { ExtractionBadges } from '../components/ExtractionBadges';
+import { JsonDisplay } from '../components/JsonDisplay';
 import { useProviders, useFileUpload, useDocumentAnalysis } from '../hooks';
 
 export function VisionPage() {
@@ -46,13 +48,8 @@ export function VisionPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h2 className="mb-2 text-xl font-semibold">Document Analysis</h2>
-      <p className="mb-6 text-muted-foreground">
-        Upload an image or PDF to extract and parse document data.
-      </p>
-
-      <Card className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <Card className="p-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Provider</Label>
             {providers.loading ? (
@@ -100,33 +97,34 @@ export function VisionPage() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label>
-              Prompt <span className="font-normal text-muted-foreground">(optional)</span>
-            </Label>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Custom instructions for parsing. Leave empty for default document extraction."
-              rows={3}
-            />
-          </div>
+          <Collapsible title="Settings" className="bg-secondary/20">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Custom Prompt</Label>
+                <Textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Custom instructions for parsing. Leave empty for default."
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label>
-              {providerLabel} API Key{' '}
-              <span className="font-normal text-muted-foreground">(optional)</span>
-            </Label>
-            <Input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={keyPlaceholder}
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to use server-configured API key, or enter your own.
-            </p>
-          </div>
+              <div className="space-y-2">
+                <Label className="text-sm">{providerLabel} API Key</Label>
+                <Input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={keyPlaceholder}
+                  className="text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to use server-configured key.
+                </p>
+              </div>
+            </div>
+          </Collapsible>
 
           {displayError && analysis.currentStep !== 'error' && <ErrorDisplay error={displayError} />}
 
@@ -141,60 +139,52 @@ export function VisionPage() {
           >
             {analysis.isProcessing ? 'Processing...' : 'Analyze Document'}
           </Button>
-        </form>
-      </Card>
 
-      {/* Step Progress Indicator */}
-      {analysis.currentStep !== 'idle' && (
-        <div className="mt-8">
-          <StepProgress
-            statuses={analysis.stepStatus}
-            extractionMethod={analysis.extractionMethod}
-          />
+          {/* Step Progress Indicator */}
+          {analysis.currentStep !== 'idle' && (
+            <StepProgress
+              statuses={analysis.stepStatus}
+              extractionMethod={analysis.extractionMethod}
+            />
+          )}
 
           {/* Error display */}
           {analysis.error && analysis.currentStep === 'error' && (
-            <ErrorDisplay error={analysis.error} className="mb-6" />
+            <ErrorDisplay error={analysis.error} />
+          )}
+        </form>
+      </Card>
+
+      {/* Results */}
+      {hasResults && (
+        <div className="mt-6 space-y-3">
+          {/* JSON Response - shown prominently */}
+          {analysis.parseResponse && <JsonDisplay data={analysis.parseResponse} />}
+
+          {/* Extraction info badges */}
+          {analysis.extractedText && (
+            <ExtractionBadges
+              method={analysis.extractionMethod}
+              confidence={analysis.extractionConfidence}
+            />
           )}
 
-          {/* Results */}
-          {hasResults && (
-            <div className="space-y-6">
-              {/* Extraction info */}
-              {analysis.extractedText && (
-                <ExtractionBadges
-                  method={analysis.extractionMethod}
-                  confidence={analysis.extractionConfidence}
-                />
-              )}
+          {/* Extracted text - collapsible */}
+          {analysis.extractedText && (
+            <Collapsible title="Extracted Text">
+              <div className="max-h-48 overflow-y-auto">
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {analysis.extractedText}
+                </p>
+              </div>
+            </Collapsible>
+          )}
 
-              {/* Extracted text */}
-              {analysis.extractedText && (
-                <Card className="p-4">
-                  <h4 className="mb-2 text-sm font-medium">Extracted Text</h4>
-                  <div className="max-h-64 overflow-y-auto rounded-md bg-secondary/50 p-3">
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                      {analysis.extractedText}
-                    </p>
-                  </div>
-                </Card>
-              )}
-
-              {/* Parsed document */}
-              {analysis.document && <DocumentDataDisplay document={analysis.document} />}
-
-              {/* Raw response */}
-              {analysis.parseResponse && (
-                <Card className="p-4">
-                  <h4 className="mb-2 text-sm font-medium">Raw Response</h4>
-                  <div className="max-h-48 overflow-y-auto rounded-md bg-secondary/50 p-3">
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                      {analysis.parseResponse}
-                    </p>
-                  </div>
-                </Card>
-              )}
-            </div>
+          {/* Parsed document - collapsible */}
+          {analysis.document && (
+            <Collapsible title="Document Data">
+              <DocumentDataDisplay document={analysis.document} />
+            </Collapsible>
           )}
         </div>
       )}

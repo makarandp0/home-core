@@ -13,14 +13,14 @@ interface StepProgressProps {
 
 export function StepProgress({ statuses, extractionMethod }: StepProgressProps) {
   return (
-    <div className="mb-6 flex items-center justify-between">
+    <div className="flex items-center gap-2">
       <StepIndicator
-        label="1. Extract Text"
+        label="Extract"
         status={statuses.extracting}
         sublabel={extractionMethod ? `(${extractionMethod})` : undefined}
       />
-      <div className="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700" />
-      <StepIndicator label="2. Parse JSON" status={statuses.parsing} />
+      <div className="h-0.5 w-6 bg-gray-300 dark:bg-gray-600" />
+      <StepIndicator label="Parse" status={statuses.parsing} />
     </div>
   );
 }
