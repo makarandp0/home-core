@@ -1,96 +1,165 @@
-# LLM Operator Guide
+# Contributing
 
-This repository is designed for LLM-driven contributions. Follow these rules to make precise, safe, and helpful changes.
+Development setup, commands, and contribution guidelines for home-core.
 
-**Technical reference:** See `README.md` for complete tech stack, commands, scripts, and environment setup.
+## Requirements
 
-## Mission
+- Node 22.18.0 (see `.nvmrc`)
+- Corepack enabled (`corepack enable`)
+- Python 3.11+ and [uv](https://docs.astral.sh/uv/) (for doc-processor only)
 
-- Make minimal, targeted diffs that solve the task at the root cause.
-- Keep code consistent with the existing style and structure.
-- Prefer clarity and maintainability over cleverness.
+## Setup
 
-## Ground Rules
+```bash
+pnpm install
+```
 
-- Scope: Only change what is required to satisfy the task.
-- Structure: Do not rename or move files unless compelling; follow existing patterns.
-- Styling: Use Tailwind utility classes in UI. Keep React components simple and typed.
-- Types: TS is strict; extend `@home/tsconfig` presets per target (app/library/server).
-- Type assertions: Explicit `as` type assertions (e.g. `x as Foo`) are banned. Prefer safe narrowing, typed generics, or helper functions. Enforcement: root ESLint rule using the `TSAsExpression` selector in `eslint.config.js`.
-- Exports: Do not use default exports in app/library code. Prefer named exports and named imports for clarity and refactor safety. Exception: external tool config files that require default exports (e.g., `vite.config.ts`, `playwright.config.ts`).
-- Packages: Use workspace ranges (`workspace:*`) for internal deps.
-- Linting: Use the root flat config. Do not add per-package `.eslintrc.*` files.
-- Formatting: Always run Prettier on any edits. Before pushing, run `pnpm format` (see README for commands) or enable editor format-on-save with the Prettier extension to keep diffs consistent.
-- Turborepo: Use `tasks` (Turbo v2); do not introduce deprecated `pipeline` keys.
-- No license headers or unrelated refactors.
-- Secrets: Never commit `.env` or credentials.
-- Docs (DRY): Keep documentation DRY. Treat `README.md` as the canonical source for commands, scripts, and environment usage; link to it from `AGENTS.md` instead of duplicating. Use `AGENTS.md` for operator-specific constraints, workflows, and pointers.
+For doc-processor (Python service):
+```bash
+pnpm setup:doc-processor
+```
 
-## Workflow for LLMs
+## Development
 
-1. Understand task and plan small, verifiable steps.
-2. Apply changes surgically. Prefer small patches.
-3. Validate locally (see [Scripts](README.md#scripts) in `README.md` for commands):
-   - Run typecheck, lint, and build from repo root
-   - Note: `typecheck` depends on upstream builds so apps can typecheck against built internal packages
-   - Use dev servers to verify changes; web proxies `/api` to API during development
-4. Update docs when adding packages or features: ensure both `README.md` and `AGENTS.md` reflect the change; keep updates concise and current.
-5. Prepare PR description using the template; list affected paths.
+Run all services in watch mode:
+```bash
+pnpm dev
+```
 
-## Repo Conventions
+Or run individually:
+```bash
+pnpm dev:web           # http://localhost:5173
+pnpm dev:api           # http://localhost:3001
+pnpm dev:doc-processor # http://localhost:8000
+```
 
-- UI: Keep UI components in `apps/web/src/components`.
-- Utils/Types: Keep small, generic helpers in `packages/utils` and shared types in `packages/types`.
-- Shared schemas: Define Zod v4 schemas under `packages/types/src/schemas/*`; export via `packages/types/src/index.ts`.
-- API: Add routes in `apps/api/src`, keep handlers small and typed, return `ApiResponse<T>` and validate/parse using shared Zod schemas.
-- Web: Keep pages and feature code in `apps/web/src`, fetch from `/api/*`, and validate responses with shared Zod schemas using `apiResponse(YourSchema)`.
+The web app proxies `/api/*` to the API during development (see `apps/web/vite.config.ts`).
 
-## Commits
+## Build & Typecheck
 
-- Use clear, conventional-style messages when possible (e.g., `feat:`, `fix:`, `chore:`).
-- Keep diffs small and focused; separate unrelated changes into different commits/PRs.
+```bash
+pnpm build      # Build all apps and packages
+pnpm typecheck  # Type-check all workspaces (depends on build)
+pnpm lint       # Lint all workspaces
+```
+
+Note: `typecheck` depends on upstream builds so apps can typecheck against built internal packages.
+
+## Project Structure
+
+```
+apps/
+  web/          # Vite + React 18 frontend
+  api/          # Fastify (TypeScript) backend
+  doc-processor/# FastAPI (Python) document service
+packages/
+  types/        # Shared Zod v4 schemas (@home/types)
+  utils/        # Shared utilities (@home/utils)
+  tsconfig/     # Shared TypeScript configs
+```
+
+## Code Conventions
+
+- **TypeScript**: Strict mode via shared configs in `packages/tsconfig`
+- **Styling**: Tailwind utility classes in UI
+- **Exports**: Named exports only (no default exports except config files)
+- **Type assertions**: `as` casts are banned; use safe narrowing or typed generics
+- **Internal deps**: Use `"workspace:*"` versions
+
+## Shared Schemas
+
+Zod v4 schemas live in `packages/types/src/schemas/*` and are shared by API and Web:
+- API validates payloads and returns `ApiResponse<T>`
+- Web parses responses with `apiResponse(YourSchema)`
 
 ## Adding Dependencies
 
-See [Working with dependencies](README.md#working-with-dependencies) in `README.md` for pnpm filter commands.
+```bash
+pnpm add <pkg> --filter @home/web   # Web only
+pnpm add <pkg> --filter @home/api   # API only
+pnpm add <pkg> --filter @home/types # Shared package
+pnpm add -D <pkg> --filter ...      # Dev dependency
+```
 
-**Operator rules:**
-- Always use `"workspace:*"` versions for internal packages
-- Verify dependencies are added to the correct workspace
+## Linting & Formatting
 
-## Checks Before PR
+- ESLint v9 flat config at repo root: `eslint.config.js`
+- Prettier config: `.prettierrc.json`
+- Run `pnpm format` before committing
 
-Run standard validation commands (see [Scripts](README.md#scripts) in `README.md`): build, typecheck, and lint.
+## E2E Tests (Playwright)
 
-**Additional checks:**
-- For UI changes: verify visual usage in `apps/web` manually
-- Conventional commit message (e.g., `feat:`, `fix:`, `chore:`)
+```bash
+pnpm e2e:install  # Install browsers (once)
+pnpm test:e2e     # Run headless
+pnpm test:e2e:ui  # Open UI mode
+```
 
-## E2E UI Testing
+Tests auto-start both servers.
 
-- Playwright config lives at the repo root: `playwright.config.ts`.
-- DRY source of truth for commands: see "E2E Tests (Playwright)" in `README.md`.
-- Tests start both API and Web servers and validate UI against API responses.
+## Production Build
 
-## Deployment model
+```bash
+pnpm start:api  # Build and start API on :3001
+pnpm start:web  # Build and preview web on :4173
+```
 
-See [API + Web integration](README.md#api--web-integration) in `README.md` for deployment architecture.
+## Architecture Notes
 
-**Key constraint:** API routes must be namespaced under `/api/*` to avoid conflicts with SPA routing.
+```
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│   Web App   │────▶│   Fastify API    │────▶│   Doc Processor     │
+│  (React)    │     │   (Node.js)      │     │  (Python/FastAPI)   │
+└─────────────┘     └──────────────────┘     └─────────────────────┘
+     :5173               :3001                      :8000
+```
 
-## PR Expectations
+- API routes are namespaced under `/api/*`
+- In production, API serves the web SPA from `apps/web/dist` with SPA fallback
+- In dev, Vite serves the web and proxies `/api` to Fastify
 
-- Summary: What/why and user impact.
-- Scope: Explicitly list touched packages and files.
-- Risk: Call out breaking changes or migrations.
-- Validation: Mention commands run and evidence.
+## Commit Guidelines
 
-## CI
+- Use conventional commits: `feat:`, `fix:`, `chore:`
+- Keep diffs small and focused
+- Never commit `.env` or credentials
 
-- CI runs lint, typecheck, and build on PRs and `main`.
+## PR Checklist
 
-## Non-Goals for LLMs (unless asked)
+- [ ] `pnpm build` passes
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm lint` passes
+- [ ] For UI changes: verified visually
+- [ ] Docs updated if adding features
 
-- Do not add new build tools, compilers, or swap frameworks.
-- Do not mass-rewrite code for style-only changes.
-- Do not introduce testing frameworks without direction.
+## Common Gotchas
+
+- Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
+- Restart dev servers after changing shared schemas in `@home/types`
+<!-- TODO: Add more gotchas as discovered -->
+
+## Debugging
+
+- API logs print to console in dev mode
+- Web: React DevTools + Network tab
+- Doc Processor: uvicorn logs to console
+<!-- TODO: Add more debugging tips -->
+
+## Quick Reference
+
+| Task | Location |
+|------|----------|
+| Add API route | `apps/api/src/routes/` |
+| Add React component | `apps/web/src/components/` |
+| Add shared type/schema | `packages/types/src/schemas/` |
+<!-- TODO: Expand this table -->
+
+## LLM Operators
+
+Additional rules for AI-assisted contributions:
+
+- Make minimal, targeted diffs
+- Only change what's required for the task
+- Do not rename/move files unless necessary
+- Do not add new build tools or frameworks without direction
+- Do not mass-rewrite code for style-only changes

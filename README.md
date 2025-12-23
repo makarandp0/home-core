@@ -1,242 +1,114 @@
 # home-core
 
-Monorepo using Turborepo + pnpm with:
+A self-hosted home management platform. Deploy to your own infrastructure for full control over your data.
 
-- apps/web: Vite + React 18
-- apps/api: Fastify (TypeScript)
-- apps/doc-processor: FastAPI (Python) - Document processing service
-- packages/\*: shared utils, types, and configs
+## What's Included
 
-Includes shared Zod v4 schemas in `packages/types` used by both API and Web.
+- **Web App** — Vite + React 18 frontend
+- **API** — Fastify (TypeScript) backend with vision capabilities
+- **Doc Processor** — FastAPI (Python) service for PDF/image text extraction
 
-## Requirements
+## Quick Start (Docker)
 
-- Node 22.18.0 (see `.nvmrc`)
-- Corepack enabled (`corepack enable`)
-- Python 3.11+ and [uv](https://docs.astral.sh/uv/) (for doc-processor only)
-
-## Install
-
-```
-pnpm install
-```
-
-## Scripts
-
-- `pnpm dev`: run all apps in watch mode (parallel)
-- `pnpm dev:web`: run the web app only (http://localhost:5173)
-- `pnpm dev:api`: run the API only (http://localhost:3001)
-- `pnpm dev:doc-processor`: run the doc-processor only (http://localhost:8000)
-- `pnpm setup:doc-processor`: install Python dependencies for doc-processor
-- `pnpm build`: build all apps and packages
-- `pnpm typecheck`: type-check all workspaces
-- `pnpm lint`: lint all workspaces
-- `pnpm start:web`: build then preview the web app (http://localhost:4173)
-- `pnpm start:api`: build then start the API (http://localhost:3001)
-
-## Develop
-
-Most day-to-day work uses `pnpm dev`.
-
-```
-pnpm dev
-```
-
-Or filter to a single app:
-
-```
-pnpm dev:web
-pnpm dev:api
-pnpm dev:doc-processor
-```
-
-During development, the Web app proxies `/api/*` to the API (see `apps/web/vite.config.ts`).
-
-### Document Processor Setup
-
-The doc-processor is a Python service for PDF and image text extraction. First-time setup:
+The easiest way to deploy is with Docker Compose:
 
 ```bash
-pnpm setup:doc-processor
-```
+# Clone the repo
+git clone https://github.com/your-org/home-core.git
+cd home-core
 
-This installs [uv](https://docs.astral.sh/uv/) (if needed) and Python dependencies. Then run:
-
-```bash
-pnpm dev:doc-processor
-```
-
-The service runs on http://localhost:8000 and provides:
-- `/health` - Health check
-- `/process` - Process uploaded documents (PDF/images)
-- `/process/base64` - Process base64-encoded documents
-
-## Environment
-
-### API (.env)
-
-The API supports environment variables via a `.env` file in `apps/api/`. Copy the example file to get started:
-
-```
+# Configure environment
 cp apps/api/.env.example apps/api/.env
-```
+# Edit apps/api/.env with your API keys
 
-Available variables:
-
-| Variable            | Description                                                               |
-| ------------------- | ------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | [Anthropic](https://console.anthropic.com/) API key for Claude vision (optional if users provide their own) |
-| `OPENAI_API_KEY`    | [OpenAI](https://platform.openai.com/api-keys) API key for GPT-4o vision (optional if users provide their own) |
-| `GEMINI_API_KEY`    | [Google AI Studio](https://aistudio.google.com/apikey) API key for Gemini vision (optional if users provide their own) |
-| `DOC_PROCESSOR_URL` | URL of the doc-processor service (default: `http://localhost:8000`) |
-
-The Vision API (`/api/vision`) will use these keys as defaults. Users can override by providing their own API key in the UI.
-
-The Document API (`/api/documents/process`) forwards requests to the doc-processor service.
-
-### Railway Deployment
-
-For Railway deployments, use the provided template to set environment variables:
-
-```bash
-cp railway-vars.example.txt railway-vars.txt
-# Edit railway-vars.txt with your actual API keys
-railway variables set $(cat railway-vars.txt | xargs)
-```
-
-Note: `railway-vars.txt` is gitignored to prevent committing secrets.
-
-### Web
-
-- `VITE_COMMIT_SHA`: auto-injected by Vite from `COMMIT_SHA` (falls back to `dev`). Available in the Web app via `import.meta.env.VITE_COMMIT_SHA` for diagnostics and cache-busting.
-
-## Linting & Formatting
-
-- ESLint v9 flat config at the repo root: `eslint.config.js`
-- No per-package `.eslintrc.*` files (by design)
-- Prettier config at `.prettierrc.json`
-
-## Typescript
-
-- Strict settings via shared configs in `packages/tsconfig`
-- `typecheck` depends on upstream builds so apps can typecheck against built internal packages
-
-## Build
-
-```
-pnpm build
-```
-
-Outputs go to `dist/` per package/app.
-
-## E2E Tests (Playwright)
-
-- Install browsers once: `pnpm e2e:install`
-- Run headless tests: `pnpm test:e2e`
-- Open UI mode: `pnpm test:e2e:ui`
-
-Notes:
-
-- Tests auto-start both servers: `pnpm dev:api` (http://localhost:3001) and `pnpm dev:web` (http://localhost:5173).
-- The default smoke test verifies the homepage and user details fetched from `/api/user`.
-
-## Run (production-like)
-
-- API:
-
-```
-pnpm start:api   # builds then starts Node on 3001
-```
-
-- Web (static preview):
-
-```
-pnpm start:web   # builds then serves on 4173
-```
-
-## Docker (API + SPA)
-
-You can build and run the API (ESM) and serve the built Web SPA from the same container. The provided Dockerfile is multi‑stage and optimized for Railway.
-
-- Build:
-
-```
-docker build -f apps/api/Dockerfile -t home-api:local .
-```
-
-- Run:
-
-```
-docker run --rm -e PORT=3001 -p 3001:3001 home-api:local
-# Health checks
-curl http://localhost:3001/api/health
-curl http://localhost:3001/api/user
-```
-
-- Run with Vision API keys:
-
-```
-docker run --rm -e PORT=3001 \
-  -e ANTHROPIC_API_KEY=sk-ant-... \
-  -e OPENAI_API_KEY=sk-... \
-  -p 3001:3001 home-api:local
-```
-
-Notes:
-
-- ESM throughout: the API and `@home/types` build as ESM; Node resolves via package `type: module` and explicit file extensions.
-- The image runs the compiled server (`node apps/api/dist/index.js`).
-- `PORT` defaults to `3001`; Railway sets this automatically.
-- Static SPA serving is enabled by default (`SERVE_STATIC=true`); the API will serve the built SPA from `apps/web/dist` with an SPA fallback for non-`/api` routes.
-
-### Docker (Doc Processor)
-
-Build and run the doc-processor service:
-
-```bash
-# Build
-docker build -t doc-processor:local apps/doc-processor/
-
-# Run
-docker run --rm -p 8000:8000 doc-processor:local
-
-# Test
-curl http://localhost:8000/health
-```
-
-### Docker Compose (All Services)
-
-Run all services together:
-
-```bash
+# Run all services
 docker-compose up
 ```
 
-This starts:
-- API on http://localhost:3001
-- Doc Processor on http://localhost:8000
+Services start at:
+- Web + API: http://localhost:3001
+- Doc Processor: http://localhost:8000
 
-The API automatically connects to the doc-processor via `DOC_PROCESSOR_URL=http://doc-processor:8000`.
+## Environment Variables
 
-## API + Web integration
+Create `apps/api/.env` from the example file:
 
-- API routes live under `/api/*`.
-- In non‑dev environments, the API also serves the built Web SPA from `apps/web/dist` with an SPA fallback for non‑`/api` routes.
-- In dev, static serving is disabled; Vite serves the Web app and proxies `/api` to the Fastify server.
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude vision (optional if users provide their own) |
+| `OPENAI_API_KEY` | OpenAI API key for GPT-4o vision (optional if users provide their own) |
+| `GEMINI_API_KEY` | Google AI Studio API key for Gemini vision (optional if users provide their own) |
+| `DOC_PROCESSOR_URL` | URL of doc-processor service (default: `http://localhost:8000`) |
 
-## Shared Zod schemas
+Users can override API keys in the UI if not configured server-side.
 
-- Zod v4 is used for request/response schemas shared via `@home/types`.
-- Location: `packages/types/src/schemas/*`
-- Example exports: `UserSchema`, `apiResponse(UserSchema)`; re‑exported from `packages/types/src/index.ts`.
-- API handlers should validate payloads and return `ApiResponse<T>`; Web should parse API responses using the shared schemas.
+## Deployment Options
 
-## Working with dependencies
+### Docker Compose (Recommended)
 
-- App-only dep: `pnpm add <pkg> --filter @home/web`
-- API-only dep: `pnpm add <pkg> --filter @home/api`
-- Shared package dep: `pnpm add <pkg> --filter @home/types` (or @home/utils)
-- Dev-only dep: add `-D`
-- Internal packages use `"workspace:*"` versions
+```bash
+docker-compose up -d
+```
 
-See `AGENTS.md` for LLM contribution guidance. Commands and scripts are documented here as the canonical source to keep docs DRY.
+Starts both API (serving the web app) and doc-processor services.
+
+### Individual Containers
+
+**API + Web:**
+```bash
+docker build -f apps/api/Dockerfile -t home-api:local .
+docker run --rm -e PORT=3001 \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  -p 3001:3001 home-api:local
+```
+
+**Doc Processor:**
+```bash
+docker build -t doc-processor:local apps/doc-processor/
+docker run --rm -p 8000:8000 doc-processor:local
+```
+
+### Railway
+
+For Railway deployments:
+```bash
+cp railway-vars.example.txt railway-vars.txt
+# Edit with your API keys
+railway variables set $(cat railway-vars.txt | xargs)
+```
+
+## API Endpoints
+
+- `GET /api/health` — Health check
+- `GET /api/user` — User info
+- `POST /api/vision` — Vision API (uses configured or user-provided keys)
+- `POST /api/documents/process` — Document processing (forwards to doc-processor)
+
+The API serves the web app on all non-`/api` routes.
+
+## Requirements
+
+- ~512MB RAM minimum (more for OCR-heavy workloads)
+- Docker 20+ or Node 22 + Python 3.11
+<!-- TODO: Add CPU/storage recommendations -->
+
+## Updating
+
+```bash
+git pull
+docker-compose up --build
+```
+<!-- TODO: Add migration notes if needed -->
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Port already in use | Change port in docker-compose.yml or stop conflicting service |
+| API keys not working | Check `apps/api/.env` format, no quotes needed |
+| Doc processor timeout | Large files may need increased timeout or splitting |
+<!-- TODO: Add more common issues -->
+
+## Contributing
+
+See [AGENTS.md](AGENTS.md) for development setup, build commands, and contribution guidelines.
