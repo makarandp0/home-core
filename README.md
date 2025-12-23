@@ -1,6 +1,18 @@
 # home-core
 
-A self-hosted home management platform. Deploy to your own infrastructure for full control over your data.
+A self-hosted document management platform. Deploy to your own infrastructure for full control over your data.
+
+## Overview
+
+home-core is built for self-hosters who want to organize and search their important documents without relying on cloud services. Upload your PDFs and images, and the system will extract metadata using AI to make everything searchable.
+
+**Key features:**
+- Upload and store important documents (PDFs, images)
+- Browse and search your document library
+- AI-powered metadata extraction for better searchability
+- Bring your own API key (Claude or Gemini) — no data leaves your server except for AI processing
+
+You supply your own Anthropic (Claude) or Google (Gemini) API key. Documents are processed locally, with only the content sent to the AI provider you choose for metadata extraction.
 
 ## What's Included
 
@@ -112,3 +124,7 @@ docker-compose up --build
 ## Contributing
 
 See [AGENTS.md](AGENTS.md) for development setup, build commands, and contribution guidelines.
+
+## License
+
+This project is licensed under the [Elastic License 2.0](LICENSE). You are free to use, modify, and distribute the software, but you may not offer it as a hosted/managed service.
