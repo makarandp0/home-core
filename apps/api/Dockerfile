@@ -48,12 +48,14 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 # Include runtime workspace dependency manifests so pnpm can resolve them
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
+COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
 
 # Install only production dependencies for the API workspace (resolves workspaces)
 RUN pnpm install --frozen-lockfile --prod --filter @home/api...
 
 # Copy built artifacts for API, its workspace deps, and Web (for static serving)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
+COPY --from=builder /app/packages/db/dist ./packages/db/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/web/dist ./apps/web/dist
 # Enable static serving by default
