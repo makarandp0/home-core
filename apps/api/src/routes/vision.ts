@@ -10,7 +10,7 @@ import {
   type ApiResponse,
 } from '@home/types';
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
-import { withCache } from '../services/llm-cache.js';
+import { withAnalyzeCache, withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -45,8 +45,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
       const promptText = prompt ?? '';
 
-      const { result, cached } = await withCache(
-        'analyze',
+      const { result, cached } = await withAnalyzeCache(
         providerId,
         imageData,
         promptText,
@@ -118,11 +117,9 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       try {
         const imageData = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
 
-        const { result, cached } = await withCache(
-          'extract_text',
+        const { result, cached } = await withExtractTextCache(
           providerId,
           imageData,
-          '', // No prompt for extract_text
           () => provider.extractText(apiKey, imageData)
         );
 
@@ -178,8 +175,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
     try {
       const promptText = prompt ?? '';
 
-      const { result, cached } = await withCache(
-        'parse_text',
+      const { result, cached } = await withParseTextCache(
         providerId,
         text,
         promptText,
