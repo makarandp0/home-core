@@ -22,7 +22,7 @@
     "migrate:create": "node-pg-migrate create --migration-file-language ts -m migrations",
     "migrate:up": "dotenv -e .env -- node-pg-migrate up -m migrations",
     "migrate:down": "dotenv -e .env -- node-pg-migrate down -m migrations",
-    "db:introspect": "dotenv -e .env -- drizzle-kit introspect && mv src/schema/schema.ts src/schema/schema.generated.ts && mv src/schema/relations.ts src/schema/relations.generated.ts && sed -i '' 's|from \"./schema\"|from \"./schema.generated\"|g' src/schema/relations.generated.ts",
+    "db:introspect": "dotenv -e .env -- drizzle-kit introspect && ./scripts/post-introspect.sh",
     "db:generate": "dotenv -e .env -- drizzle-kit generate"
   },
   "dependencies": {

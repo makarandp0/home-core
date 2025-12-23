@@ -13,6 +13,7 @@ module.exports = [
       '**/node_modules/**',
       '**/.turbo/**',
       'eslint.config.cjs',
+      '**/*.generated.ts',
     ],
   },
   js.configs.recommended,

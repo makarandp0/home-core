@@ -105,7 +105,6 @@ pnpm --filter @home/db db:introspect
 | `pnpm --filter @home/db migrate:create <name>` | Create new migration |
 | `pnpm --filter @home/db migrate:up` | Run pending migrations |
 | `pnpm --filter @home/db migrate:down` | Rollback last migration |
-| `pnpm --filter @home/db migrate:status` | Show migration status |
 | `pnpm --filter @home/db db:introspect` | Generate schema from DB |
 
 ### Using the Database in API
@@ -192,9 +191,7 @@ pnpm start:web  # Build and preview web on :4173
 
 ## PR Checklist
 
-- [ ] `pnpm build` passes
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
+- [ ] `pnpm check` passes (runs build, typecheck, lint)
 - [ ] For UI changes: verified visually
 - [ ] Docs updated if adding features
 
