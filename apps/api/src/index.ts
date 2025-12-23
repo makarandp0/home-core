@@ -1,12 +1,28 @@
 import Fastify from 'fastify';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 import fastifyStatic from '@fastify/static';
 import { healthRoutes } from './routes/health.js';
 import { userRoutes } from './routes/user.js';
 import { visionRoutes } from './routes/vision.js';
 import { providersRoutes } from './routes/providers.js';
 import { documentsRoutes } from './routes/documents.js';
+
+// Run database migrations on startup
+// TODO: Consider using Railway's release command instead for production deployments
+// TODO: With multiple replicas, concurrent migrations could cause issues - consider using advisory locks
+// TODO: This blocks server startup - for large migrations, use a separate migration job
+if (process.env.DATABASE_URL) {
+  try {
+    console.log('Running database migrations...');
+    execSync('pnpm --filter @home/db migrate:up', { stdio: 'inherit' });
+    console.log('Migrations complete');
+  } catch (err) {
+    console.error('Migration failed:', err);
+    process.exit(1);
+  }
+}
 
 const server = Fastify({
   logger: true,

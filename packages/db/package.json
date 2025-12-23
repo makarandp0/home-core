@@ -1,0 +1,40 @@
+{
+  "name": "@home/db",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "migrate:create": "node-pg-migrate create --migration-file-language ts -m migrations",
+    "migrate:up": "dotenv -e .env -- node-pg-migrate up -m migrations",
+    "migrate:down": "dotenv -e .env -- node-pg-migrate down -m migrations",
+    "db:introspect": "dotenv -e .env -- drizzle-kit introspect && ./scripts/post-introspect.sh",
+    "db:generate": "dotenv -e .env -- drizzle-kit generate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@home/tsconfig": "workspace:*",
+    "@types/pg": "^8.11.0",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.8",
+    "node-pg-migrate": "^7.9.0",
+    "typescript": "^5.6.2"
+  }
+}
