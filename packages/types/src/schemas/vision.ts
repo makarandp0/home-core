@@ -36,6 +36,7 @@ export const VisionResponseSchema = z.object({
       totalTokens: z.number(),
     })
     .optional(),
+  cached: z.boolean().optional(),
 });
 
 export type VisionResponse = z.infer<typeof VisionResponseSchema>;
@@ -58,6 +59,7 @@ export const VisionExtractTextResponseSchema = z.object({
       totalTokens: z.number(),
     })
     .optional(),
+  cached: z.boolean().optional(),
 });
 
 export type VisionExtractTextResponse = z.infer<typeof VisionExtractTextResponseSchema>;
@@ -82,6 +84,7 @@ export const VisionParseResponseSchema = z.object({
       totalTokens: z.number(),
     })
     .optional(),
+  cached: z.boolean().optional(),
 });
 
 export type VisionParseResponse = z.infer<typeof VisionParseResponseSchema>;
