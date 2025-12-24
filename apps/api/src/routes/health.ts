@@ -82,6 +82,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
       ok: true,
       ...(version ? { version } : {}),
       ...(docProcessorVersion ? { docProcessorVersion } : {}),
+      docProcessorUrl: DOC_PROCESSOR_URL,
       database: { connected: dbConnected },
       configuredProviders,
       documentStorage: storageStatus,

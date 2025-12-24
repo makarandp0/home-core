@@ -103,6 +103,7 @@ interface ConfiguredProviders {
 export function VersionPage() {
   const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
   const [docProcessorVersion, setDocProcessorVersion] = React.useState<string | null>(null);
+  const [docProcessorUrl, setDocProcessorUrl] = React.useState<string | null>(null);
   const [databaseConnected, setDatabaseConnected] = React.useState<boolean | null>(null);
   const [configuredProviders, setConfiguredProviders] = React.useState<ConfiguredProviders | null>(
     null
@@ -122,12 +123,14 @@ export function VersionPage() {
         const parsed = HealthSchema.parse(json);
         setBackendVersion(parsed.version ?? null);
         setDocProcessorVersion(parsed.docProcessorVersion ?? null);
+        setDocProcessorUrl(parsed.docProcessorUrl ?? null);
         setDatabaseConnected(parsed.database?.connected ?? null);
         setConfiguredProviders(parsed.configuredProviders ?? null);
         setDocumentStorage(parsed.documentStorage ?? null);
       } catch {
         setBackendVersion(null);
         setDocProcessorVersion(null);
+        setDocProcessorUrl(null);
         setDatabaseConnected(null);
         setConfiguredProviders(null);
         setDocumentStorage(null);
@@ -182,7 +185,26 @@ export function VersionPage() {
           ) : (
             <>
               <CommitLink label="Backend (API)" commit={backendVersion || 'unknown'} />
-              <CommitLink label="Doc Processor" commit={docProcessorVersion || 'unavailable'} />
+              <div className="p-3 bg-secondary/50 rounded-md border border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">Doc Processor</span>
+                  <div className="flex items-center gap-2">
+                    {docProcessorUrl && (
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {docProcessorUrl}
+                      </span>
+                    )}
+                    <span className={cn(
+                      "text-sm font-medium",
+                      docProcessorVersion
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      {docProcessorVersion || 'Unavailable'}
+                    </span>
+                  </div>
+                </div>
+              </div>
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
                 <span className="font-medium text-sm">Database</span>
                 <span className={cn(
