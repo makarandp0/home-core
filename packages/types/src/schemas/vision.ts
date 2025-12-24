@@ -20,7 +20,7 @@ export const DocumentDataSchema = z.object({
   id: z.string().nullish(),
   expiry_date: z.string().nullish(),
   name: z.string().nullish(),
-  fields: z.record(z.string(), z.string()),
+  fields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
   keywords: z.array(z.string()).max(10).optional(),
 });
 
@@ -76,6 +76,8 @@ export const VisionParseRequestSchema = z.object({
   provider: VisionProviderSchema,
   apiKey: z.string().optional(),
   prompt: z.string().optional(),
+  // Document ID to update with parsed metadata
+  documentId: z.string().optional(),
 });
 
 export type VisionParseRequest = z.infer<typeof VisionParseRequestSchema>;

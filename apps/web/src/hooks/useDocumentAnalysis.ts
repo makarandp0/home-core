@@ -81,6 +81,7 @@ export function useDocumentAnalysis() {
         let finalText: string;
         let extractionMethod: ExtractionMethod;
         let extractionConfidence: number | null = null;
+        let documentId: string | undefined;
 
         // Step 1: Extract text
         // For images: use LLM vision directly
@@ -113,6 +114,7 @@ export function useDocumentAnalysis() {
 
           finalText = extractParsed.data.extractedText;
           extractionMethod = 'llm';
+          documentId = extractParsed.data.documentId;
         } else {
           // Use doc_processor for PDFs
           const base64Content = fileDataUrl.replace(/^data:[^;]+;base64,/, '');
@@ -142,6 +144,7 @@ export function useDocumentAnalysis() {
           finalText = docParsed.data.text;
           extractionMethod = docParsed.data.method;
           extractionConfidence = docParsed.data.confidence ?? null;
+          documentId = docParsed.data.documentId;
         }
 
         setState((s) => ({
@@ -170,6 +173,7 @@ export function useDocumentAnalysis() {
             provider,
             ...(apiKey?.trim() && { apiKey: apiKey.trim() }),
             ...(prompt?.trim() && { prompt: prompt.trim() }),
+            ...(documentId && { documentId }),
           }),
         });
 

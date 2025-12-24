@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { getDb, documents } from '@home/db';
+import { getDb, documents, eq } from '@home/db';
 
 export interface DocumentStorageResult {
   id: string;
@@ -107,5 +107,42 @@ export async function storeDocument(
   } catch (err) {
     console.error('Failed to store document:', err);
     return null;
+  }
+}
+
+export interface DocumentMetadataUpdate {
+  documentType?: string;
+  documentOwner?: string;
+  expiryDate?: string;
+}
+
+/**
+ * Update document metadata after LLM parsing.
+ *
+ * @param documentId - The UUID of the document to update
+ * @param metadata - The metadata fields to update
+ * @returns true if update succeeded, false otherwise
+ */
+export async function updateDocumentMetadata(
+  documentId: string,
+  metadata: DocumentMetadataUpdate
+): Promise<boolean> {
+  try {
+    const db = getDb();
+    await db
+      .update(documents)
+      .set({
+        documentType: metadata.documentType,
+        documentOwner: metadata.documentOwner,
+        expiryDate: metadata.expiryDate,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(documents.id, documentId));
+
+    console.log(`Document metadata updated: ${documentId}`);
+    return true;
+  } catch (err) {
+    console.error('Failed to update document metadata:', err);
+    return false;
   }
 }

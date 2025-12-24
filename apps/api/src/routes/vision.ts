@@ -11,7 +11,7 @@ import {
 } from '@home/types';
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 import { withAnalyzeCache, withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
-import { storeDocument } from '../services/document-storage.js';
+import { storeDocument, updateDocumentMetadata } from '../services/document-storage.js';
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -60,6 +60,15 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       // Always return extractedText and response
       // Only include document if it validates correctly
       const documentResult = DocumentDataSchema.safeParse(result.document);
+
+      // Update document with LLM-extracted metadata
+      if (documentId && documentResult.success) {
+        await updateDocumentMetadata(documentId, {
+          documentType: documentResult.data.document_type,
+          documentOwner: documentResult.data.name ?? undefined,
+          expiryDate: documentResult.data.expiry_date ?? undefined,
+        });
+      }
 
       const data: VisionResponse = {
         extractedText: result.extractedText,
@@ -165,7 +174,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       };
     }
 
-    const { text, apiKey: requestApiKey, provider: providerId, prompt } = parseResult.data;
+    const { text, apiKey: requestApiKey, provider: providerId, prompt, documentId } = parseResult.data;
 
     const provider = getProviderById(providerId);
     if (!provider) {
@@ -194,6 +203,21 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
 
       // Validate document if it exists
       const documentResult = result.document ? DocumentDataSchema.safeParse(result.document) : null;
+
+      // Update document with LLM-extracted metadata if documentId provided
+      console.log('[vision/parse] Request body documentId:', documentId || '(not provided)');
+      console.log('[vision/parse] Parse validation success:', documentResult?.success);
+      if (!documentResult?.success && documentResult) {
+        console.log('[vision/parse] Parse validation error:', JSON.stringify(documentResult.error.issues));
+      }
+      if (documentId && documentResult?.success) {
+        console.log('[vision/parse] Updating document with type:', documentResult.data.document_type);
+        await updateDocumentMetadata(documentId, {
+          documentType: documentResult.data.document_type,
+          documentOwner: documentResult.data.name ?? undefined,
+          expiryDate: documentResult.data.expiry_date ?? undefined,
+        });
+      }
 
       const data: VisionParseResponse = {
         document: documentResult?.success ? documentResult.data : undefined,

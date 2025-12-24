@@ -126,7 +126,7 @@ export function DocumentsPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                  {doc.mimeType}
+                  {doc.documentType || '—'}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                   {formatBytes(doc.sizeBytes)}
