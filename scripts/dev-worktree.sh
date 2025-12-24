@@ -39,14 +39,30 @@ if ! docker info &> /dev/null; then
 fi
 
 # Auto-start PostgreSQL if not running
-if ! docker compose ps postgres 2>/dev/null | grep -q "running"; then
-  warn "PostgreSQL not running, starting..."
-  docker compose up postgres -d
-  echo "Waiting for PostgreSQL..."
-  until docker compose exec -T postgres pg_isready -U postgres &> /dev/null; do
-    sleep 1
-  done
-  info "PostgreSQL started"
+if docker compose ps postgres 2>/dev/null | grep -q "running"; then
+  info "PostgreSQL running"
+else
+  # Check if another home-core postgres is running on port 5432
+  EXISTING_PG=$(docker ps --filter "publish=5432" --format "{{.Names}}" 2>/dev/null)
+  if [[ -n "$EXISTING_PG" ]]; then
+    if [[ "$EXISTING_PG" == *"home-core"*"postgres"* ]]; then
+      if docker exec "$EXISTING_PG" pg_isready -U postgres -d home_dev &> /dev/null; then
+        info "Reusing existing home-core PostgreSQL ($EXISTING_PG)"
+      else
+        error "Found home-core postgres ($EXISTING_PG) but cannot connect."
+      fi
+    else
+      error "Port 5432 is in use by a different postgres ($EXISTING_PG). Stop it and try again."
+    fi
+  else
+    warn "PostgreSQL not running, starting..."
+    docker compose up postgres -d
+    echo "Waiting for PostgreSQL..."
+    until docker compose exec -T postgres pg_isready -U postgres &> /dev/null; do
+      sleep 1
+    done
+    info "PostgreSQL started"
+  fi
 fi
 
 OFFSET="${1:-0}"

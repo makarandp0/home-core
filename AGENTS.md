@@ -12,8 +12,10 @@ Development setup, commands, and contribution guidelines for home-core.
 ## Setup
 
 ```bash
-pnpm bootstrap   # Install deps, start Postgres, run migrations, set up Python
+pnpm bootstrap   # Install deps, start Postgres, run migrations, build packages
 ```
+
+The bootstrap script will automatically reuse an existing home-core PostgreSQL container if one is already running (e.g., from another worktree or directory).
 
 <details>
 <summary>Manual setup (if you prefer)</summary>
@@ -23,6 +25,7 @@ pnpm install
 docker compose up postgres -d
 pnpm --filter @home/db migrate:up
 pnpm setup:doc-processor   # Optional: Python service
+pnpm build                 # Required before first pnpm dev
 ```
 </details>
 
@@ -218,7 +221,7 @@ Port offsets (to run multiple worktrees simultaneously):
 - Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
 - Restart dev servers after changing shared schemas in `@home/types`
 - Each worktree needs its own `pnpm install` (packages are hardlinked, disk usage is minimal)
-<!-- TODO: Add more gotchas as discovered -->
+- Multiple home-core directories share the same PostgreSQL container on port 5432 — this is intentional
 
 ## Debugging
 
