@@ -12,8 +12,7 @@ Development setup, commands, and contribution guidelines for home-core.
 ## Setup
 
 ```bash
-pnpm setup              # Install deps, start Postgres, run migrations
-pnpm setup --with-python  # Also set up doc-processor (Python service)
+pnpm bootstrap   # Install deps, start Postgres, run migrations, set up Python
 ```
 
 <details>

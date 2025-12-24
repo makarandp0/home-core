@@ -4,14 +4,14 @@
 # Run once after cloning, or anytime to ensure everything is up to date.
 #
 # Usage:
-#   pnpm setup
+#   pnpm bootstrap
 #
 # What it does:
 #   1. Checks Node version matches .nvmrc
 #   2. Runs pnpm install
 #   3. Starts PostgreSQL (via Docker)
 #   4. Runs database migrations
-#   5. Sets up doc-processor (Python) if --with-python flag is passed
+#   5. Sets up doc-processor (Python)
 #
 
 set -e
@@ -26,14 +26,6 @@ NC='\033[0m' # No Color
 info() { echo -e "${GREEN}✓${NC} $1"; }
 warn() { echo -e "${YELLOW}!${NC} $1"; }
 error() { echo -e "${RED}✗${NC} $1"; exit 1; }
-
-# Parse flags
-WITH_PYTHON=false
-for arg in "$@"; do
-  case $arg in
-    --with-python) WITH_PYTHON=true ;;
-  esac
-done
 
 echo "Setting up home-core development environment..."
 echo ""
@@ -84,13 +76,11 @@ echo "Running database migrations..."
 pnpm --filter @home/db migrate:up
 info "Migrations complete"
 
-# 6. Optional: Set up doc-processor
-if [[ "$WITH_PYTHON" == "true" ]]; then
-  echo ""
-  echo "Setting up doc-processor (Python)..."
-  pnpm setup:doc-processor
-  info "Doc-processor ready"
-fi
+# 6. Set up doc-processor (Python)
+echo ""
+echo "Setting up doc-processor (Python)..."
+pnpm setup:doc-processor
+info "Doc-processor ready"
 
 echo ""
 echo -e "${GREEN}Setup complete!${NC}"
@@ -98,8 +88,3 @@ echo ""
 echo "Next steps:"
 echo "  pnpm dev          # Start all services"
 echo "  pnpm dev -- 10    # Start with port offset (for worktrees)"
-if [[ "$WITH_PYTHON" == "false" ]]; then
-  echo ""
-  echo "To also set up the Python doc-processor:"
-  echo "  pnpm setup --with-python"
-fi

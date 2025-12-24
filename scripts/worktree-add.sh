@@ -50,7 +50,12 @@ info "Worktree created"
 # Install dependencies
 echo "Installing dependencies..."
 (cd "$WORKTREE_PATH" && pnpm install)
-info "Dependencies installed"
+info "Node dependencies installed"
+
+# Set up Python
+echo "Setting up doc-processor (Python)..."
+(cd "$WORKTREE_PATH" && pnpm setup:doc-processor)
+info "Python dependencies installed"
 
 # Calculate suggested port offset based on existing worktrees
 WORKTREE_COUNT=$(git worktree list | wc -l | tr -d ' ')
