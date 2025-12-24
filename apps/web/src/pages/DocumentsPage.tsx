@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { type DocumentMetadata, type DocumentListResponse } from '@home/types';
+import {
+  type DocumentMetadata,
+  DocumentListResponseSchema,
+  apiResponse,
+} from '@home/types';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -32,13 +36,13 @@ export function DocumentsPage() {
         const response = await fetch('/api/documents');
         const json = await response.json();
 
-        if (!json.ok) {
-          setError(json.error ?? 'Failed to fetch documents');
+        const parsed = apiResponse(DocumentListResponseSchema).safeParse(json);
+        if (!parsed.success || !parsed.data.ok || !parsed.data.data) {
+          setError(parsed.data?.error ?? 'Failed to fetch documents');
           return;
         }
 
-        const data = json.data as DocumentListResponse;
-        setDocuments(data.documents);
+        setDocuments(parsed.data.data.documents);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch documents');
       } finally {
