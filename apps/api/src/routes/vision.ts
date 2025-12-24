@@ -205,13 +205,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       const documentResult = result.document ? DocumentDataSchema.safeParse(result.document) : null;
 
       // Update document with LLM-extracted metadata if documentId provided
-      console.log('[vision/parse] Request body documentId:', documentId || '(not provided)');
-      console.log('[vision/parse] Parse validation success:', documentResult?.success);
-      if (!documentResult?.success && documentResult) {
-        console.log('[vision/parse] Parse validation error:', JSON.stringify(documentResult.error.issues));
-      }
       if (documentId && documentResult?.success) {
-        console.log('[vision/parse] Updating document with type:', documentResult.data.document_type);
         await updateDocumentMetadata(documentId, {
           documentType: documentResult.data.document_type,
           documentOwner: documentResult.data.name ?? undefined,
