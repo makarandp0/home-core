@@ -188,22 +188,26 @@ export function VersionPage() {
               <div className="p-3 bg-secondary/50 rounded-md border border-border/50">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">Doc Processor</span>
-                  <div className="flex items-center gap-2">
-                    {docProcessorUrl && (
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {docProcessorUrl}
-                      </span>
-                    )}
-                    <span className={cn(
-                      "text-sm font-medium",
-                      docProcessorVersion
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
-                    )}>
-                      {docProcessorVersion || 'Unavailable'}
+                  {docProcessorVersion ? (
+                    <a
+                      href={`https://github.com/${GITHUB_REPO}/commit/${docProcessorVersion}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
+                    >
+                      {docProcessorVersion.slice(0, 7)}
+                    </a>
+                  ) : (
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                      Unavailable
                     </span>
-                  </div>
+                  )}
                 </div>
+                {docProcessorUrl && (
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                    {docProcessorUrl}
+                  </p>
+                )}
               </div>
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
                 <span className="font-medium text-sm">Database</span>
@@ -217,30 +221,28 @@ export function VersionPage() {
               <div className="p-3 bg-secondary/50 rounded-md border border-border/50">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">Document Storage</span>
-                  <div className="flex items-center gap-2">
-                    {documentStorage?.path && (
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {documentStorage.path}
-                      </span>
-                    )}
-                    <span className={cn(
-                      "text-sm font-medium",
-                      documentStorage?.accessible
-                        ? "text-green-600 dark:text-green-400"
-                        : documentStorage?.path
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-yellow-600 dark:text-yellow-400"
-                    )}>
-                      {documentStorage?.accessible
-                        ? 'Accessible'
-                        : documentStorage?.path
-                          ? 'Error'
-                          : 'Not Configured'}
-                    </span>
-                  </div>
+                  <span className={cn(
+                    "text-sm font-medium",
+                    documentStorage?.accessible
+                      ? "text-green-600 dark:text-green-400"
+                      : documentStorage?.path
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-yellow-600 dark:text-yellow-400"
+                  )}>
+                    {documentStorage?.accessible
+                      ? 'Accessible'
+                      : documentStorage?.path
+                        ? 'Error'
+                        : 'Not Configured'}
+                  </span>
                 </div>
+                {documentStorage?.path && (
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                    {documentStorage.path}
+                  </p>
+                )}
                 {documentStorage?.error && (
-                  <p className="mt-2 text-xs text-red-600 dark:text-red-400 font-mono">
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400 font-mono">
                     {documentStorage.error}
                   </p>
                 )}
