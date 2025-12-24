@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// API port for proxy - defaults to 3001, can be overridden for worktrees
+const apiPort = process.env.VITE_API_PORT ?? '3001';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -21,9 +24,10 @@ export default defineConfig({
     ),
   },
   server: {
+    port: process.env.VITE_PORT ? Number(process.env.VITE_PORT) : 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: `http://localhost:${apiPort}`,
         changeOrigin: true,
       },
     },

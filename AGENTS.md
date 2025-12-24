@@ -12,23 +12,20 @@ Development setup, commands, and contribution guidelines for home-core.
 ## Setup
 
 ```bash
+pnpm setup              # Install deps, start Postgres, run migrations
+pnpm setup --with-python  # Also set up doc-processor (Python service)
+```
+
+<details>
+<summary>Manual setup (if you prefer)</summary>
+
+```bash
 pnpm install
-```
-
-Start PostgreSQL:
-```bash
 docker compose up postgres -d
-```
-
-Run database migrations:
-```bash
 pnpm --filter @home/db migrate:up
+pnpm setup:doc-processor   # Optional: Python service
 ```
-
-For doc-processor (Python service):
-```bash
-pnpm setup:doc-processor
-```
+</details>
 
 ## Development
 
@@ -195,10 +192,33 @@ pnpm start:web  # Build and preview web on :4173
 - [ ] For UI changes: verified visually
 - [ ] Docs updated if adding features
 
+## Git Worktrees
+
+For parallel development across multiple independent branches:
+
+```bash
+pnpm worktree:add my-feature   # Creates ../my-feature, installs deps
+cd ../my-feature
+pnpm dev -- 10                 # Use port offset to avoid conflicts
+```
+
+The script creates a new branch from `main` and sets up the worktree. To track with av:
+```bash
+av adopt   # Optional: register branch for stacked PRs
+```
+
+Port offsets (to run multiple worktrees simultaneously):
+| Offset | Web | API | Doc Processor |
+|--------|------|------|---------------|
+| 0 | 5173 | 3001 | 8000 |
+| 10 | 5183 | 3011 | 8010 |
+| 20 | 5193 | 3021 | 8020 |
+
 ## Common Gotchas
 
 - Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
 - Restart dev servers after changing shared schemas in `@home/types`
+- Each worktree needs its own `pnpm install` (packages are hardlinked, disk usage is minimal)
 <!-- TODO: Add more gotchas as discovered -->
 
 ## Debugging

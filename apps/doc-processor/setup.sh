@@ -23,9 +23,6 @@ echo "Installing Python dependencies..."
 uv sync
 
 echo ""
-echo "Setup complete! To run the service:"
-echo "  cd apps/doc-processor"
-echo "  uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
-echo ""
-echo "Or from repo root:"
-echo "  pnpm dev:doc-processor"
+echo "Setup complete! Run all services from repo root:"
+echo "  pnpm dev           # default ports"
+echo "  pnpm dev -- 10     # offset ports for worktrees"
