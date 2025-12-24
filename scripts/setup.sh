@@ -18,15 +18,7 @@
 set -e
 
 cd "$(dirname "$0")/.."
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
-
-info() { echo -e "${GREEN}✓${NC} $1"; }
-warn() { echo -e "${YELLOW}!${NC} $1"; }
-error() { echo -e "${RED}✗${NC} $1"; exit 1; }
+source scripts/_common.sh
 
 echo "Setting up home-core development environment..."
 echo ""
@@ -89,15 +81,7 @@ else
 fi
 
 # 5. Set up .env files from examples if they don't exist
-echo ""
-echo "Setting up environment files..."
-for example in packages/db/.env.example apps/api/.env.example; do
-  envfile="${example%.example}"
-  if [[ -f "$example" && ! -f "$envfile" ]]; then
-    cp "$example" "$envfile"
-    info "Created $envfile from example"
-  fi
-done
+setup_env_files
 
 # 6. Run migrations
 echo ""

@@ -15,16 +15,7 @@
 set -e
 
 cd "$(dirname "$0")/.."
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-info() { echo -e "${GREEN}✓${NC} $1"; }
-warn() { echo -e "${YELLOW}!${NC} $1"; }
-error() { echo -e "${RED}✗${NC} $1"; exit 1; }
+source scripts/_common.sh
 
 if [[ -z "$1" ]]; then
   error "Usage: pnpm worktree:add <name>"
@@ -57,6 +48,14 @@ echo "Setting up doc-processor (Python)..."
 (cd "$WORKTREE_PATH" && pnpm setup:doc-processor)
 info "Python dependencies installed"
 
+# Set up .env files
+(cd "$WORKTREE_PATH" && setup_env_files)
+
+# Build packages (required for dev)
+echo "Building packages..."
+(cd "$WORKTREE_PATH" && pnpm build)
+info "Build complete"
+
 # Calculate suggested port offset based on existing worktrees
 WORKTREE_COUNT=$(git worktree list | wc -l | tr -d ' ')
 OFFSET=$((WORKTREE_COUNT * 10))
@@ -69,4 +68,4 @@ echo "  cd $WORKTREE_PATH"
 echo "  pnpm dev -- $OFFSET        # Use port offset to avoid conflicts"
 echo ""
 echo -e "${CYAN}Optional:${NC}"
-echo "  av adopt                   # Track branch with av for stacked PRs"
+echo "  av adopt --parent main     # Track branch with av for stacked PRs"
