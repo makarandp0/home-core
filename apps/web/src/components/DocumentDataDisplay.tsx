@@ -37,7 +37,7 @@ export function DocumentDataDisplay({ document }: DocumentDataDisplayProps) {
               {Object.entries(document.fields).map(([key, value]) => (
                 <div key={key} className="flex items-start gap-2">
                   <dt className="w-24 shrink-0 text-muted-foreground">{key}</dt>
-                  <dd>{value}</dd>
+                  <dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
                 </div>
               ))}
             </dl>
