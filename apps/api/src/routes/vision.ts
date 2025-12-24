@@ -25,7 +25,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       };
     }
 
-    const { image, prompt, apiKey: requestApiKey, provider: providerId } = parseResult.data;
+    const { image, fileName, prompt, apiKey: requestApiKey, provider: providerId } = parseResult.data;
 
     const provider = getProviderById(providerId);
     if (!provider) {
@@ -53,12 +53,9 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         () => provider.analyze(apiKey, imageData, promptText)
       );
 
-      // Store document on cache miss (new document)
-      let documentId: string | undefined;
-      if (!cached) {
-        const stored = await storeDocument(imageData);
-        documentId = stored?.id;
-      }
+      // Always store the uploaded document
+      const stored = await storeDocument(imageData, fileName);
+      const documentId = stored?.id ?? '';
 
       // Always return extractedText and response
       // Only include document if it validates correctly
@@ -106,7 +103,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         };
       }
 
-      const { image, apiKey: requestApiKey, provider: providerId } = parseResult.data;
+      const { image, fileName, apiKey: requestApiKey, provider: providerId } = parseResult.data;
 
       const provider = getProviderById(providerId);
       if (!provider) {
@@ -132,12 +129,9 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
           () => provider.extractText(apiKey, imageData)
         );
 
-        // Store document on cache miss (new document)
-        let documentId: string | undefined;
-        if (!cached) {
-          const stored = await storeDocument(imageData);
-          documentId = stored?.id;
-        }
+        // Always store the uploaded document
+        const stored = await storeDocument(imageData, fileName);
+        const documentId = stored?.id ?? '';
 
         return { ok: true, data: { ...result, cached, documentId } };
       } catch (err) {

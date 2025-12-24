@@ -5,6 +5,7 @@ import {
   type ApiResponse,
   type DocumentProcessData,
 } from '@home/types';
+import { storeDocument } from '../services/document-storage.js';
 
 const DOC_PROCESSOR_URL = process.env.DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 
@@ -63,12 +64,18 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         return { ok: false, error: result.error ?? 'Processing failed' };
       }
 
-      // Validate and transform response
+      // Store the document
+      const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
+      const dataUrl = `data:${mimeType};base64,${file}`;
+      const stored = await storeDocument(dataUrl, filename);
+
+      // Build and validate response
       const processedData: DocumentProcessData = {
         text: result.data.text,
         pageCount: result.data.page_count,
         method: result.data.method,
         confidence: result.data.confidence,
+        documentId: stored?.id ?? '',
       };
 
       const validated = DocumentProcessResponseSchema.safeParse({

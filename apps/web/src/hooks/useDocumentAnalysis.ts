@@ -92,6 +92,7 @@ export function useDocumentAnalysis() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               image: fileDataUrl,
+              fileName,
               provider,
               ...(apiKey?.trim() && { apiKey: apiKey.trim() }),
             }),

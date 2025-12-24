@@ -18,6 +18,7 @@ export const DocumentProcessDataSchema = z.object({
   pageCount: z.number(),
   method: ExtractionMethodSchema,
   confidence: z.number().nullish(), // OCR confidence (0-1), only for OCR method. nullish allows null from Python None
+  documentId: z.string(), // ID of stored document
 });
 
 export type DocumentProcessData = z.infer<typeof DocumentProcessDataSchema>;
