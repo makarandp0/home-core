@@ -25,7 +25,7 @@
     "release": "changeset publish",
     "start:web": "pnpm --filter @home/web build && pnpm --filter @home/web preview",
     "start:api": "pnpm --filter @home/api build && pnpm --filter @home/api start",
-    "prepare": "husky"
+    "prepare": "husky  || true"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
