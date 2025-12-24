@@ -30,7 +30,7 @@ error() { echo -e "${RED}✗${NC} $1"; exit 1; }
 
 # Pre-flight checks
 if [[ ! -d "node_modules" ]]; then
-  error "node_modules not found. Run: pnpm setup"
+  error "node_modules not found. Run: pnpm bootstrap"
 fi
 
 # Ensure Docker is running
