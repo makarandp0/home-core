@@ -11,6 +11,18 @@ import { DocumentDetailPage } from './pages/DocumentDetailPage';
 import { Home as HomeIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
+const branchColors = [
+  'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700',
+  'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 border-sky-300 dark:border-sky-700',
+  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700',
+  'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-300 dark:border-purple-700',
+];
+
+function getBranchColor(branch: string): string {
+  const hash = branch.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return branchColors[hash % branchColors.length];
+}
+
 export function App() {
   return (
     <ThemeProvider>
@@ -21,7 +33,9 @@ export function App() {
               <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
               <span>home-core web</span>
               {typeof window !== 'undefined' && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) && (
-                <Badge variant="secondary" className="ml-1">LOCAL</Badge>
+                <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>
+                  Local{import.meta.env.VITE_GIT_BRANCH ? `:${import.meta.env.VITE_GIT_BRANCH}` : ''}
+                </Badge>
               )}
             </h1>
             <div className="flex items-center gap-2">
