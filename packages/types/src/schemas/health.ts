@@ -6,6 +6,8 @@ export const HealthSchema = z.object({
   version: z.string().optional(),
   // Optional doc-processor service version (short SHA)
   docProcessorVersion: z.string().optional(),
+  // Doc-processor URL being used
+  docProcessorUrl: z.string().optional(),
   // Database connection status
   database: z
     .object({
