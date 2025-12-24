@@ -70,13 +70,24 @@ else
   info "PostgreSQL started"
 fi
 
-# 5. Run migrations
+# 5. Set up .env files from examples if they don't exist
+echo ""
+echo "Setting up environment files..."
+for example in packages/db/.env.example apps/api/.env.example; do
+  envfile="${example%.example}"
+  if [[ -f "$example" && ! -f "$envfile" ]]; then
+    cp "$example" "$envfile"
+    info "Created $envfile from example"
+  fi
+done
+
+# 6. Run migrations
 echo ""
 echo "Running database migrations..."
 pnpm --filter @home/db migrate:up
 info "Migrations complete"
 
-# 6. Set up doc-processor (Python)
+# 7. Set up doc-processor (Python)
 echo ""
 echo "Setting up doc-processor (Python)..."
 pnpm setup:doc-processor
