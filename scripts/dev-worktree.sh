@@ -65,7 +65,12 @@ else
   fi
 fi
 
-OFFSET="${1:-0}"
+# Handle pnpm passing "--" as first arg
+if [[ "$1" == "--" ]]; then
+  OFFSET="${2:-0}"
+else
+  OFFSET="${1:-0}"
+fi
 
 # Calculate ports
 WEB_PORT=$((5173 + OFFSET))
