@@ -31,3 +31,27 @@ export const DocumentProcessResponseSchema = z.object({
 });
 
 export type DocumentProcessResponse = z.infer<typeof DocumentProcessResponseSchema>;
+
+// Document metadata (for listing documents)
+export const DocumentMetadataSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  originalFilename: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number(),
+  documentType: z.string().nullable(),
+  documentOwner: z.string().nullable(),
+  expiryDate: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type DocumentMetadata = z.infer<typeof DocumentMetadataSchema>;
+
+// List documents response
+export const DocumentListResponseSchema = z.object({
+  documents: z.array(DocumentMetadataSchema),
+  total: z.number(),
+});
+
+export type DocumentListResponse = z.infer<typeof DocumentListResponseSchema>;
