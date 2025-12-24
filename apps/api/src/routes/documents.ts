@@ -1,10 +1,15 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import {
   DocumentProcessRequestSchema,
   DocumentProcessResponseSchema,
   type ApiResponse,
   type DocumentProcessData,
+  type DocumentListResponse,
+  type DocumentMetadata,
 } from '@home/types';
+import { getDb, documents, desc, eq } from '@home/db';
 import { storeDocument } from '../services/document-storage.js';
 
 const DOC_PROCESSOR_URL = process.env.DOC_PROCESSOR_URL ?? 'http://localhost:8000';
@@ -126,6 +131,133 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
     } catch {
       return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
+    }
+  });
+
+  /**
+   * GET /api/documents
+   * List all stored documents with metadata.
+   */
+  fastify.get<{
+    Reply: ApiResponse<DocumentListResponse>;
+  }>('/documents', async (request, reply) => {
+    try {
+      const db = getDb();
+      const docs = await db
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+          originalFilename: documents.originalFilename,
+          mimeType: documents.mimeType,
+          sizeBytes: documents.sizeBytes,
+          documentType: documents.documentType,
+          documentOwner: documents.documentOwner,
+          expiryDate: documents.expiryDate,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
+        .orderBy(desc(documents.createdAt));
+
+      return {
+        ok: true,
+        data: {
+          documents: docs,
+          total: docs.length,
+        },
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      reply.code(500);
+      return { ok: false, error: `Failed to list documents: ${errorMessage}` };
+    }
+  });
+
+  /**
+   * GET /api/documents/:id
+   * Get document metadata by ID.
+   */
+  fastify.get<{
+    Params: { id: string };
+    Reply: ApiResponse<DocumentMetadata>;
+  }>('/documents/:id', async (request, reply) => {
+    const { id } = request.params;
+
+    try {
+      const db = getDb();
+      const [doc] = await db
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+          originalFilename: documents.originalFilename,
+          mimeType: documents.mimeType,
+          sizeBytes: documents.sizeBytes,
+          documentType: documents.documentType,
+          documentOwner: documents.documentOwner,
+          expiryDate: documents.expiryDate,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
+        .where(eq(documents.id, id))
+        .limit(1);
+
+      if (!doc) {
+        reply.code(404);
+        return { ok: false, error: 'Document not found' };
+      }
+
+      return { ok: true, data: doc };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      reply.code(500);
+      return { ok: false, error: `Failed to get document: ${errorMessage}` };
+    }
+  });
+
+  /**
+   * GET /api/documents/:id/file
+   * Serve the actual document file.
+   */
+  fastify.get<{
+    Params: { id: string };
+  }>('/documents/:id/file', async (request, reply) => {
+    const { id } = request.params;
+
+    try {
+      const db = getDb();
+      const [doc] = await db
+        .select({
+          storagePath: documents.storagePath,
+          mimeType: documents.mimeType,
+          originalFilename: documents.originalFilename,
+        })
+        .from(documents)
+        .where(eq(documents.id, id))
+        .limit(1);
+
+      if (!doc) {
+        reply.code(404);
+        return { ok: false, error: 'Document not found' };
+      }
+
+      // Check if file exists
+      try {
+        await stat(doc.storagePath);
+      } catch {
+        reply.code(404);
+        return { ok: false, error: 'Document file not found on disk' };
+      }
+
+      // Stream the file
+      const stream = createReadStream(doc.storagePath);
+      reply.header('Content-Type', doc.mimeType);
+      reply.header('Content-Disposition', `inline; filename="${doc.originalFilename}"`);
+      return reply.send(stream);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      reply.code(500);
+      return { ok: false, error: `Failed to serve document: ${errorMessage}` };
     }
   });
 };

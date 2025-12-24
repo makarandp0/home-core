@@ -6,6 +6,8 @@ import { HamburgerMenu } from './components/HamburgerMenu';
 import { HomePage } from './pages/HomePage';
 import { VersionPage } from './pages/VersionPage';
 import { VisionPage } from './pages/VisionPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { DocumentDetailPage } from './pages/DocumentDetailPage';
 
 export function App() {
   return (
@@ -23,6 +25,8 @@ export function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/version" element={<VersionPage />} />
             <Route path="/vision" element={<VisionPage />} />
+            <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/documents/:id" element={<DocumentDetailPage />} />
           </Routes>
         </div>
       </BrowserRouter>
