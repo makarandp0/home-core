@@ -107,6 +107,11 @@ export function VersionPage() {
   const [configuredProviders, setConfiguredProviders] = React.useState<ConfiguredProviders | null>(
     null
   );
+  const [documentStorage, setDocumentStorage] = React.useState<{
+    path: string | null;
+    accessible: boolean;
+    error?: string;
+  } | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -119,11 +124,13 @@ export function VersionPage() {
         setDocProcessorVersion(parsed.docProcessorVersion ?? null);
         setDatabaseConnected(parsed.database?.connected ?? null);
         setConfiguredProviders(parsed.configuredProviders ?? null);
+        setDocumentStorage(parsed.documentStorage ?? null);
       } catch {
         setBackendVersion(null);
         setDocProcessorVersion(null);
         setDatabaseConnected(null);
         setConfiguredProviders(null);
+        setDocumentStorage(null);
       } finally {
         setLoading(false);
       }
@@ -167,6 +174,10 @@ export function VersionPage() {
                 <span className="font-medium text-sm">Database</span>
                 <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Document Storage</span>
+                <span className="text-sm text-muted-foreground">Loading...</span>
+              </div>
             </>
           ) : (
             <>
@@ -180,6 +191,37 @@ export function VersionPage() {
                 )}>
                   {databaseConnected ? 'Connected' : 'Not Connected'}
                 </span>
+              </div>
+              <div className="p-3 bg-secondary/50 rounded-md border border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">Document Storage</span>
+                  <div className="flex items-center gap-2">
+                    {documentStorage?.path && (
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {documentStorage.path}
+                      </span>
+                    )}
+                    <span className={cn(
+                      "text-sm font-medium",
+                      documentStorage?.accessible
+                        ? "text-green-600 dark:text-green-400"
+                        : documentStorage?.path
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-yellow-600 dark:text-yellow-400"
+                    )}>
+                      {documentStorage?.accessible
+                        ? 'Accessible'
+                        : documentStorage?.path
+                          ? 'Error'
+                          : 'Not Configured'}
+                    </span>
+                  </div>
+                </div>
+                {documentStorage?.error && (
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400 font-mono">
+                    {documentStorage.error}
+                  </p>
+                )}
               </div>
             </>
           )}

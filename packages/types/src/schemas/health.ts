@@ -20,6 +20,14 @@ export const HealthSchema = z.object({
       gemini: z.string().nullable(),
     })
     .optional(),
+  // Document storage status
+  documentStorage: z
+    .object({
+      path: z.string().nullable(),
+      accessible: z.boolean(),
+      error: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type Health = z.infer<typeof HealthSchema>;

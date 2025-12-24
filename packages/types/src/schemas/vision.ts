@@ -37,6 +37,8 @@ export const VisionResponseSchema = z.object({
     })
     .optional(),
   cached: z.boolean().optional(),
+  // ID of the stored document (only set on cache miss when storage is configured)
+  documentId: z.string().optional(),
 });
 
 export type VisionResponse = z.infer<typeof VisionResponseSchema>;
@@ -60,6 +62,8 @@ export const VisionExtractTextResponseSchema = z.object({
     })
     .optional(),
   cached: z.boolean().optional(),
+  // ID of the stored document (only set on cache miss when storage is configured)
+  documentId: z.string().optional(),
 });
 
 export type VisionExtractTextResponse = z.infer<typeof VisionExtractTextResponseSchema>;

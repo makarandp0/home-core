@@ -11,6 +11,7 @@ import {
 } from '@home/types';
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 import { withAnalyzeCache, withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
+import { storeDocument } from '../services/document-storage.js';
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -52,6 +53,13 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         () => provider.analyze(apiKey, imageData, promptText)
       );
 
+      // Store document on cache miss (new document)
+      let documentId: string | undefined;
+      if (!cached) {
+        const stored = await storeDocument(imageData);
+        documentId = stored?.id;
+      }
+
       // Always return extractedText and response
       // Only include document if it validates correctly
       const documentResult = DocumentDataSchema.safeParse(result.document);
@@ -62,6 +70,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         document: documentResult.success ? documentResult.data : undefined,
         usage: result.usage,
         cached,
+        documentId,
       };
 
       return { ok: true, data };
@@ -123,7 +132,14 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
           () => provider.extractText(apiKey, imageData)
         );
 
-        return { ok: true, data: { ...result, cached } };
+        // Store document on cache miss (new document)
+        let documentId: string | undefined;
+        if (!cached) {
+          const stored = await storeDocument(imageData);
+          documentId = stored?.id;
+        }
+
+        return { ok: true, data: { ...result, cached, documentId } };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
 
