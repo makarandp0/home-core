@@ -11,6 +11,7 @@ export interface FileUploadState {
   fileDataUrl: string | null;
   error: string | null;
   isProcessing: boolean;
+  showCropModal: boolean;
 }
 
 export function useFileUpload() {
@@ -21,6 +22,7 @@ export function useFileUpload() {
     fileDataUrl: null,
     error: null,
     isProcessing: false,
+    showCropModal: false,
   });
 
   const processFile = React.useCallback(async (selectedFile: File) => {
@@ -40,6 +42,7 @@ export function useFileUpload() {
       fileDataUrl: null,
       error: null,
       isProcessing: true,
+      showCropModal: false,
     });
 
     if (isImage) {
@@ -96,6 +99,7 @@ export function useFileUpload() {
       fileDataUrl: null,
       error: null,
       isProcessing: false,
+      showCropModal: false,
     });
   }, []);
 
@@ -117,7 +121,25 @@ export function useFileUpload() {
       fileDataUrl: dataUrl,
       error: null,
       isProcessing: false,
+      showCropModal: false,
     });
+  }, []);
+
+  const openCropModal = React.useCallback(() => {
+    setState((s) => ({ ...s, showCropModal: true }));
+  }, []);
+
+  const closeCropModal = React.useCallback(() => {
+    setState((s) => ({ ...s, showCropModal: false }));
+  }, []);
+
+  const applyCrop = React.useCallback((croppedImageUrl: string) => {
+    setState((s) => ({
+      ...s,
+      filePreview: croppedImageUrl,
+      fileDataUrl: croppedImageUrl,
+      showCropModal: false,
+    }));
   }, []);
 
   return {
@@ -127,5 +149,8 @@ export function useFileUpload() {
     handleCameraCapture,
     reset,
     clearError,
+    openCropModal,
+    closeCropModal,
+    applyCrop,
   };
 }
