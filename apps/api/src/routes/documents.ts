@@ -10,7 +10,7 @@ import {
   type DocumentMetadata,
 } from '@home/types';
 import { getDb, documents, desc, eq } from '@home/db';
-import { storeDocument } from '../services/document-storage.js';
+import { storeDocument, deleteDocument } from '../services/document-storage.js';
 
 const DOC_PROCESSOR_URL = process.env.DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 
@@ -258,6 +258,32 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       reply.code(500);
       return { ok: false, error: `Failed to serve document: ${errorMessage}` };
+    }
+  });
+
+  /**
+   * DELETE /api/documents/:id
+   * Delete a document by ID (removes both file and database entry).
+   */
+  fastify.delete<{
+    Params: { id: string };
+    Reply: ApiResponse<{ deleted: boolean }>;
+  }>('/documents/:id', async (request, reply) => {
+    const { id } = request.params;
+
+    try {
+      const success = await deleteDocument(id);
+
+      if (!success) {
+        reply.code(404);
+        return { ok: false, error: 'Document not found or could not be deleted' };
+      }
+
+      return { ok: true, data: { deleted: true } };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      reply.code(500);
+      return { ok: false, error: `Failed to delete document: ${errorMessage}` };
     }
   });
 };

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { getDb, documents, eq } from '@home/db';
 
@@ -143,6 +143,48 @@ export async function updateDocumentMetadata(
     return true;
   } catch (err) {
     console.error('Failed to update document metadata:', err);
+    return false;
+  }
+}
+
+/**
+ * Delete a document from disk and database.
+ *
+ * @param documentId - The UUID of the document to delete
+ * @returns true if deletion succeeded, false otherwise
+ */
+export async function deleteDocument(documentId: string): Promise<boolean> {
+  try {
+    const db = getDb();
+
+    // First, get the storage path
+    const [doc] = await db
+      .select({ storagePath: documents.storagePath })
+      .from(documents)
+      .where(eq(documents.id, documentId))
+      .limit(1);
+
+    if (!doc) {
+      console.error(`Document not found: ${documentId}`);
+      return false;
+    }
+
+    // Delete the file from disk
+    try {
+      await unlink(doc.storagePath);
+      console.log(`Document file deleted: ${doc.storagePath}`);
+    } catch (err) {
+      // Log but continue - file might already be deleted
+      console.warn(`Could not delete file (may not exist): ${doc.storagePath}`, err);
+    }
+
+    // Delete from database
+    await db.delete(documents).where(eq(documents.id, documentId));
+
+    console.log(`Document deleted: ${documentId}`);
+    return true;
+  } catch (err) {
+    console.error('Failed to delete document:', err);
     return false;
   }
 }

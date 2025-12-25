@@ -29,6 +29,8 @@ export function DocumentsPage() {
   const [documents, setDocuments] = React.useState<DocumentMetadata[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [confirmState, setConfirmState] = React.useState<{ id: string; countdown: number } | null>(null);
 
   React.useEffect(() => {
     async function fetchDocuments() {
@@ -52,6 +54,45 @@ export function DocumentsPage() {
 
     fetchDocuments();
   }, []);
+
+  React.useEffect(() => {
+    if (!confirmState || confirmState.countdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setConfirmState((s) => (s && s.countdown > 1 ? { ...s, countdown: s.countdown - 1 } : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [confirmState?.id, confirmState && confirmState.countdown > 0]);
+
+  async function handleDelete(doc: DocumentMetadata, e: React.MouseEvent) {
+    e.stopPropagation();
+
+    if (!confirmState || confirmState.id !== doc.id) {
+      setConfirmState({ id: doc.id, countdown: 3 });
+      return;
+    }
+
+    setDeletingId(doc.id);
+    try {
+      const response = await fetch(`/api/documents/${doc.id}`, {
+        method: 'DELETE',
+      });
+      const json = await response.json();
+
+      if (!json.ok) {
+        setError(json.error ?? 'Failed to delete document');
+        return;
+      }
+
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete document');
+    } finally {
+      setDeletingId(null);
+      setConfirmState(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -108,6 +149,9 @@ export function DocumentsPage() {
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
                 Created
               </th>
+              <th className="px-4 py-2 text-right text-sm font-medium text-gray-600 dark:text-gray-400">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -133,6 +177,23 @@ export function DocumentsPage() {
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                   {formatDate(doc.createdAt)}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={(e) => handleDelete(doc, e)}
+                    disabled={deletingId === doc.id}
+                    className={`text-sm transition-colors disabled:opacity-50 ${
+                      confirmState?.id === doc.id
+                        ? 'text-red-700 dark:text-red-300 font-medium'
+                        : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+                    }`}
+                  >
+                    {deletingId === doc.id
+                      ? 'Deleting...'
+                      : confirmState?.id === doc.id
+                        ? `Confirm? (${confirmState.countdown})`
+                        : 'Delete'}
+                  </button>
                 </td>
               </tr>
             ))}
