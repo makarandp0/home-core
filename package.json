@@ -7,9 +7,9 @@
     "node": "22.18.0"
   },
   "scripts": {
-    "bootstrap": "./scripts/setup.sh",
+    "bootstrap": "./scripts/bootstrap.sh",
     "worktree:add": "./scripts/worktree-add.sh",
-    "dev": "./scripts/dev-worktree.sh",
+    "dev": "./scripts/dev.sh",
     "dev:web": "COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) VITE_COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) pnpm --filter @home/web dev",
     "dev:api": "COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) pnpm --filter @home/api dev",
     "dev:doc-processor": "pnpm --filter @home/doc-processor dev",

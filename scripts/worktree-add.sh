@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 #
-# Create a new git worktree for independent parallel work.
+# Create a new git worktree for parallel development.
 #
 # Usage:
 #   pnpm worktree:add <name>
 #
 # Example:
 #   pnpm worktree:add my-feature
-#   # Creates ../my-feature worktree, installs deps
+#   cd ../my-feature && pnpm dev
 #
-# The worktree branches from main. To track with av:
-#   cd ../my-feature && av adopt
 
 set -e
 
@@ -24,48 +22,42 @@ fi
 NAME="$1"
 WORKTREE_PATH="../$NAME"
 
-# Check if worktree already exists
 if [[ -d "$WORKTREE_PATH" ]]; then
   error "Directory $WORKTREE_PATH already exists"
 fi
 
-# Ensure we have latest main
+# Fetch and create worktree
 echo "Fetching latest from origin..."
 git fetch origin main:main 2>/dev/null || git fetch origin main || true
 
-# Create worktree with new branch from main
-echo "Creating worktree at $WORKTREE_PATH..."
+echo "Creating worktree..."
 git worktree add -b "$NAME" "$WORKTREE_PATH" main
-info "Worktree created"
+info "Worktree created at $WORKTREE_PATH"
+
+# Show assigned ports
+OFFSET=$(get_port_offset "$NAME")
+info "Ports: web:$((5173 + OFFSET)) api:$((3001 + OFFSET)) doc:$((8000 + OFFSET))"
 
 # Install dependencies
-echo "Installing dependencies..."
+echo ""
 (cd "$WORKTREE_PATH" && pnpm install)
-info "Node dependencies installed"
+info "Dependencies installed"
 
-# Set up Python
-echo "Setting up doc-processor (Python)..."
+# Set up doc-processor
 (cd "$WORKTREE_PATH" && pnpm setup:doc-processor)
-info "Python dependencies installed"
+info "Doc-processor ready"
 
-# Set up .env files
-(cd "$WORKTREE_PATH" && setup_env_files)
+# Copy .env
+if [[ -f ".env" ]]; then
+  cp ".env" "$WORKTREE_PATH/.env"
+  info "Copied .env"
+fi
 
-# Build packages (required for dev)
-echo "Building packages..."
+# Build
 (cd "$WORKTREE_PATH" && pnpm build)
 info "Build complete"
 
-# Calculate suggested port offset based on existing worktrees
-WORKTREE_COUNT=$(git worktree list | wc -l | tr -d ' ')
-OFFSET=$((WORKTREE_COUNT * 10))
-
 echo ""
-echo -e "${GREEN}Worktree ready!${NC}"
-echo ""
-echo -e "${CYAN}Next steps:${NC}"
+echo -e "${GREEN}Ready!${NC}"
 echo "  cd $WORKTREE_PATH"
-echo "  pnpm dev -- $OFFSET        # Use port offset to avoid conflicts"
-echo ""
-echo -e "${CYAN}Optional:${NC}"
-echo "  av adopt --parent main     # Track branch with av for stacked PRs"
+echo "  pnpm dev"

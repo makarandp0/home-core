@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // API port for proxy - defaults to 3001, can be overridden for worktrees
-const apiPort = process.env.VITE_API_PORT ?? '3001';
+const apiPort = process.env.HOME_API_PORT ?? process.env.VITE_API_PORT ?? '3001';
 
 // Get git branch name at build time
 function getGitBranch(): string {
@@ -35,7 +35,7 @@ export default defineConfig({
     'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
   },
   server: {
-    port: process.env.VITE_PORT ? Number(process.env.VITE_PORT) : 5173,
+    port: Number(process.env.HOME_WEB_PORT ?? process.env.VITE_PORT ?? 5173),
     proxy: {
       '/api': {
         target: `http://localhost:${apiPort}`,

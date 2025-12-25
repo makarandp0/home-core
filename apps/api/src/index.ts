@@ -66,7 +66,7 @@ server.setNotFoundHandler((req, reply) => {
   reply.code(404).send({ ok: false, error: 'Not Found' });
 });
 
-const port = Number(process.env.PORT ?? 3001);
+const port = Number(process.env.HOME_API_PORT ?? process.env.PORT ?? 3001);
 server
   .listen({ port, host: '0.0.0.0' })
   .then((address) => {

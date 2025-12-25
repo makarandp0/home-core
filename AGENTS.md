@@ -196,32 +196,22 @@ pnpm start:web  # Build and preview web on :4173
 
 ## Git Worktrees
 
-For parallel development across multiple independent branches:
+For parallel development across multiple branches:
 
 ```bash
-pnpm worktree:add my-feature   # Creates ../my-feature, installs deps
+pnpm worktree:add my-feature   # Creates ../my-feature, installs deps, copies .env
 cd ../my-feature
-pnpm dev -- 10                 # Use port offset to avoid conflicts
+pnpm dev                       # Ports auto-assigned based on branch name
 ```
 
-The script creates a new branch from `main` and sets up the worktree. To track with av:
-```bash
-av adopt   # Optional: register branch for stacked PRs
-```
-
-Port offsets (to run multiple worktrees simultaneously):
-| Offset | Web | API | Doc Processor |
-|--------|------|------|---------------|
-| 0 | 5173 | 3001 | 8000 |
-| 10 | 5183 | 3011 | 8010 |
-| 20 | 5193 | 3021 | 8020 |
+Ports are calculated from a hash of the branch name - each branch gets consistent, unique ports without any registry file.
 
 ## Common Gotchas
 
 - Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
 - Restart dev servers after changing shared schemas in `@home/types`
-- Each worktree needs its own `pnpm install` (packages are hardlinked, disk usage is minimal)
-- Multiple home-core directories share the same PostgreSQL container on port 5432 — this is intentional
+- All worktrees share the same PostgreSQL container on port 5432
+- Each worktree has its own `.env` (copied when created)
 
 ## Debugging
 

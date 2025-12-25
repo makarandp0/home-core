@@ -5,7 +5,7 @@ import { HealthSchema, type Health } from '@home/types';
 import { getDb, sql } from '@home/db';
 import { providerList } from '../providers/index.js';
 
-const DOC_PROCESSOR_URL = process.env.DOC_PROCESSOR_URL ?? 'http://localhost:8000';
+const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 const DOCUMENT_STORAGE_PATH = process.env.DOCUMENT_STORAGE_PATH || null;
 
 function redactKey(key: string | undefined): string | null {

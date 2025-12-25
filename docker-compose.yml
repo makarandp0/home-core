@@ -1,15 +1,22 @@
-# Local development with multiple services
-# Usage: docker-compose up
+# Docker Compose for home-core
+#
+# Self-hosting (pulls pre-built images):
+#   cp .env.example .env && docker compose up -d
+#
+# Development (builds locally):
+#   docker compose up --build
+#
 
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${HOME_POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: home_dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${HOME_POSTGRES_DB:-home}
+      POSTGRES_USER: ${HOME_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${HOME_POSTGRES_PASSWORD:-postgres}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -19,17 +26,23 @@ services:
       retries: 5
 
   api:
+    image: ghcr.io/makarandp0/home-core/api:${VERSION:-latest}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "${HOME_API_PORT:-3001}:${HOME_API_PORT:-3001}"
     environment:
-      - NODE_ENV=development
-      - PORT=3001
-      - DOC_PROCESSOR_URL=http://doc-processor:8000
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/home_dev
-      - SERVE_STATIC=false
+      - NODE_ENV=production
+      - HOME_API_PORT=${HOME_API_PORT:-3001}
+      - DATABASE_URL=postgres://${HOME_POSTGRES_USER:-postgres}:${HOME_POSTGRES_PASSWORD:-postgres}@postgres:5432/${HOME_POSTGRES_DB:-home}
+      - HOME_DOC_PROCESSOR_URL=http://doc-processor:${HOME_DOC_PROCESSOR_PORT:-8000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - documents:/app/documents
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,13 +50,16 @@ services:
         condition: service_started
 
   doc-processor:
+    image: ghcr.io/makarandp0/home-core/doc-processor:${VERSION:-latest}
     build:
       context: apps/doc-processor
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${HOME_DOC_PROCESSOR_PORT:-8000}:${HOME_DOC_PROCESSOR_PORT:-8000}"
     environment:
-      - PORT=8000
+      - HOME_DOC_PROCESSOR_PORT=${HOME_DOC_PROCESSOR_PORT:-8000}
 
 volumes:
   pgdata:
+  documents:
