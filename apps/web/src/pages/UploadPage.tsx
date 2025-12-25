@@ -7,6 +7,7 @@ import { ErrorDisplay } from '../components/ErrorDisplay';
 import { DocumentDataDisplay } from '../components/DocumentDataDisplay';
 import { JsonDisplay } from '../components/JsonDisplay';
 import { DropZone } from '../components/DropZone';
+import { ImageCropModal } from '../components/ImageCropModal';
 import { useSettings, useFileUpload, useDocumentAnalysis } from '../hooks';
 import { Settings as SettingsIcon, Sparkles, CheckCircle2 } from 'lucide-react';
 
@@ -113,8 +114,17 @@ export function UploadPage() {
                 onDrop={fileUpload.handleDrop}
                 onCameraCapture={fileUpload.handleCameraCapture}
                 onReset={fileUpload.reset}
+                onCropClick={fileUpload.openCropModal}
                 disabled={analysis.isProcessing}
               />
+
+              {fileUpload.showCropModal && fileUpload.filePreview && (
+                <ImageCropModal
+                  imageUrl={fileUpload.filePreview}
+                  onCrop={fileUpload.applyCrop}
+                  onCancel={fileUpload.closeCropModal}
+                />
+              )}
 
               {displayError && <ErrorDisplay error={displayError} />}
 

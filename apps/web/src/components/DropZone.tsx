@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Upload, FileText, Image, X, Camera } from 'lucide-react';
+import { Upload, FileText, Image, X, Camera, Crop } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CameraCapture } from './CameraCapture';
@@ -13,6 +13,7 @@ interface DropZoneProps {
   onDrop: (e: React.DragEvent<HTMLElement>) => void;
   onCameraCapture: (dataUrl: string) => void;
   onReset: () => void;
+  onCropClick?: () => void;
   disabled?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function DropZone({
   onDrop,
   onCameraCapture,
   onReset,
+  onCropClick,
   disabled,
 }: DropZoneProps) {
   const [isDragging, setIsDragging] = React.useState(false);
@@ -102,16 +104,30 @@ export function DropZone({
               </span>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onReset}
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Remove file</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            {fileType === 'image' && onCropClick && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onCropClick}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Crop className="h-4 w-4" />
+                <span className="sr-only">Crop image</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onReset}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Remove file</span>
+            </Button>
+          </div>
         </div>
       </div>
     );
