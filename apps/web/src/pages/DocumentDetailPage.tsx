@@ -30,6 +30,8 @@ export function DocumentDetailPage() {
   const [document, setDocument] = React.useState<DocumentMetadata | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+  const [confirmCountdown, setConfirmCountdown] = React.useState(0);
 
   React.useEffect(() => {
     async function fetchDocument() {
@@ -55,6 +57,45 @@ export function DocumentDetailPage() {
 
     fetchDocument();
   }, [id]);
+
+  React.useEffect(() => {
+    if (confirmCountdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setConfirmCountdown((c) => c - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [confirmCountdown > 0]);
+
+  async function handleDelete() {
+    if (!document) return;
+
+    if (confirmCountdown === 0) {
+      setConfirmCountdown(3);
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/documents/${document.id}`, {
+        method: 'DELETE',
+      });
+      const json = await response.json();
+
+      if (!json.ok) {
+        setError(json.error ?? 'Failed to delete document');
+        return;
+      }
+
+      navigate('/documents');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete document');
+    } finally {
+      setDeleting(false);
+      setConfirmCountdown(0);
+    }
+  }
 
   if (loading) {
     return (
@@ -171,6 +212,18 @@ export function DocumentDetailPage() {
           >
             Download
           </a>
+
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className={`block w-full text-center px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+              confirmCountdown > 0
+                ? 'bg-red-700 text-white hover:bg-red-800'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-600 hover:text-white dark:hover:bg-red-600'
+            }`}
+          >
+            {deleting ? 'Deleting...' : confirmCountdown > 0 ? `Confirm? (${confirmCountdown})` : 'Delete'}
+          </button>
         </div>
       </div>
     </div>
