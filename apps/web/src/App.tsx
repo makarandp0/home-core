@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider } from './hooks/useTheme';
 import { SettingsProvider } from './hooks';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -33,8 +33,10 @@ export function App() {
         <div className="min-h-screen bg-background text-foreground p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
-              <span>home-core web</span>
+              <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
+                <span>home-core web</span>
+              </Link>
               {typeof window !== 'undefined' && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) && (
                 <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>
                   Local{import.meta.env.VITE_GIT_BRANCH ? `:${import.meta.env.VITE_GIT_BRANCH}` : ''}
