@@ -111,6 +111,7 @@ export function UploadPage() {
                 isProcessing={fileUpload.isProcessing}
                 onFileChange={fileUpload.handleFileChange}
                 onDrop={fileUpload.handleDrop}
+                onCameraCapture={fileUpload.handleCameraCapture}
                 onReset={fileUpload.reset}
                 disabled={analysis.isProcessing}
               />
