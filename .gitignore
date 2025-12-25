@@ -27,6 +27,7 @@ pnpm-debug.log*
 
 # Env
 .env
+.env.bak
 .env.local
 .env.*.local
 railway-vars.txt
