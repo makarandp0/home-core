@@ -127,17 +127,9 @@ export function DocumentDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/documents')}
-          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-        >
-          ← Back
-        </button>
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-          {document.originalFilename}
-        </h2>
-      </div>
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+        {document.originalFilename}
+      </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Document preview */}
@@ -223,6 +215,13 @@ export function DocumentDetailPage() {
             }`}
           >
             {deleting ? 'Deleting...' : confirmCountdown > 0 ? `Confirm? (${confirmCountdown})` : 'Delete'}
+          </button>
+
+          <button
+            onClick={() => navigate('/documents')}
+            className="block w-full text-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            ← Back to Documents
           </button>
         </div>
       </div>
