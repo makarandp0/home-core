@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './hooks/useTheme';
+import { SettingsProvider } from './hooks';
 import { ThemeToggle } from './components/ThemeToggle';
 import { HamburgerMenu } from './components/HamburgerMenu';
 import { HomePage } from './pages/HomePage';
 import { VersionPage } from './pages/VersionPage';
-import { VisionPage } from './pages/VisionPage';
+import { UploadPage } from './pages/UploadPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { DocumentDetailPage } from './pages/DocumentDetailPage';
 import { Home as HomeIcon } from 'lucide-react';
@@ -27,6 +29,7 @@ export function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <SettingsProvider>
         <div className="min-h-screen bg-background text-foreground p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold flex items-center gap-2">
@@ -46,11 +49,13 @@ export function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/version" element={<VersionPage />} />
-            <Route path="/vision" element={<VisionPage />} />
+            <Route path="/upload" element={<UploadPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/documents/:id" element={<DocumentDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
+        </SettingsProvider>
       </BrowserRouter>
     </ThemeProvider>
   );

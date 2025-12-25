@@ -6,3 +6,4 @@ export {
   type AnalysisResults,
   type AnalysisState,
 } from './useDocumentAnalysis';
+export { SettingsProvider, useSettings } from './useSettings';

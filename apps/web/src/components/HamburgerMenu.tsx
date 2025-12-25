@@ -15,14 +15,19 @@ export const HamburgerMenu: React.FC = () => {
     navigate('/version');
   };
 
-  const handleVisionClick = () => {
+  const handleUploadClick = () => {
     setIsOpen(false);
-    navigate('/vision');
+    navigate('/upload');
   };
 
   const handleDocumentsClick = () => {
     setIsOpen(false);
     navigate('/documents');
+  };
+
+  const handleSettingsClick = () => {
+    setIsOpen(false);
+    navigate('/settings');
   };
 
   return (
@@ -58,16 +63,22 @@ export const HamburgerMenu: React.FC = () => {
                 Version
               </button>
               <button
-                onClick={handleVisionClick}
+                onClick={handleUploadClick}
                 className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                Vision
+                Upload
               </button>
               <button
                 onClick={handleDocumentsClick}
                 className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Documents
+              </button>
+              <button
+                onClick={handleSettingsClick}
+                className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Settings
               </button>
             </nav>
           </div>
