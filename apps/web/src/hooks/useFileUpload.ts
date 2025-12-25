@@ -103,10 +103,28 @@ export function useFileUpload() {
     setState((s) => ({ ...s, error: null }));
   }, []);
 
+  const handleCameraCapture = React.useCallback((dataUrl: string) => {
+    // Create a synthetic file object for camera captures
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const syntheticFile = new File([], `camera-capture-${timestamp}.jpg`, {
+      type: 'image/jpeg',
+    });
+
+    setState({
+      file: syntheticFile,
+      fileType: 'image',
+      filePreview: dataUrl,
+      fileDataUrl: dataUrl,
+      error: null,
+      isProcessing: false,
+    });
+  }, []);
+
   return {
     ...state,
     handleFileChange,
     handleDrop,
+    handleCameraCapture,
     reset,
     clearError,
   };

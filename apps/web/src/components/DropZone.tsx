@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { Upload, FileText, Image, X } from 'lucide-react';
+import { Upload, FileText, Image, X, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CameraCapture } from './CameraCapture';
 
 interface DropZoneProps {
   file: File | null;
@@ -10,6 +11,7 @@ interface DropZoneProps {
   isProcessing: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent<HTMLElement>) => void;
+  onCameraCapture: (dataUrl: string) => void;
   onReset: () => void;
   disabled?: boolean;
 }
@@ -21,11 +23,18 @@ export function DropZone({
   isProcessing,
   onFileChange,
   onDrop,
+  onCameraCapture,
   onReset,
   disabled,
 }: DropZoneProps) {
   const [isDragging, setIsDragging] = React.useState(false);
+  const [showCamera, setShowCamera] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleCameraCapture = (dataUrl: string) => {
+    onCameraCapture(dataUrl);
+    setShowCamera(false);
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
@@ -138,6 +147,11 @@ export function DropZone({
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary" />
           <span className="text-sm text-muted-foreground">Processing file...</span>
         </div>
+      ) : showCamera ? (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onClose={() => setShowCamera(false)}
+        />
       ) : (
         <>
           <div
@@ -159,6 +173,20 @@ export function DropZone({
           <p className="text-xs text-muted-foreground">
             or click to browse
           </p>
+          <div className="mt-4 flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowCamera(true);
+              }}
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              Use Camera
+            </Button>
+          </div>
           <p className="mt-3 text-xs text-muted-foreground/70">
             Supports images and PDF documents
           </p>
