@@ -1,106 +1,215 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { apiResponse, ProvidersResponseSchema, type ProviderInfo } from '@home/types';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import {
+  apiResponse,
+  ProvidersResponseSchema,
+  SettingsResponseSchema,
+  ProviderConfigSchema,
+  type ProviderInfo,
+  type ProviderConfig,
+  type ProviderConfigCreate,
+  type ProviderConfigUpdate,
+} from '@home/types';
 
 interface SettingsContextValue {
-  // Provider
-  providers: ProviderInfo[];
-  providersLoading: boolean;
-  selectedProvider: string;
-  setSelectedProvider: (provider: string) => void;
-  selectedMeta: ProviderInfo | undefined;
-  // Settings
-  apiKey: string;
-  setApiKey: (key: string) => void;
-  prompt: string;
-  setPrompt: (prompt: string) => void;
+  // Available provider types (for dropdown when adding)
+  providerTypes: ProviderInfo[];
+  providerTypesLoading: boolean;
+
+  // Configured providers
+  providers: ProviderConfig[];
+  activeProviderId: string | null;
+  activeProvider: ProviderConfig | null; // Derived from providers
+
+  // Loading state
+  loading: boolean;
+  error: string | null;
+
+  // Actions
+  addProvider: (data: ProviderConfigCreate) => Promise<ProviderConfig | null>;
+  updateProvider: (id: string, data: ProviderConfigUpdate) => Promise<ProviderConfig | null>;
+  deleteProvider: (id: string) => Promise<boolean>;
+  activateProvider: (id: string) => Promise<ProviderConfig | null>;
+  refresh: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
-function getStoredValue(key: string, defaultValue: string): string {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    return localStorage.getItem(key) ?? defaultValue;
-  } catch (_e) {
-    return defaultValue;
-  }
-}
-
-function storeValue(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch (_e) {
-    // localStorage might be disabled
-  }
-}
-
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [providersLoading, setProvidersLoading] = useState(true);
-  const [selectedProvider, setSelectedProviderState] = useState<string>(() =>
-    getStoredValue('settings.selectedProvider', '')
-  );
-  const [apiKey, setApiKeyState] = useState<string>(() =>
-    getStoredValue('settings.apiKey', '')
-  );
-  const [prompt, setPromptState] = useState<string>(() =>
-    getStoredValue('settings.prompt', '')
-  );
+  // Provider types (openai, anthropic, gemini)
+  const [providerTypes, setProviderTypes] = useState<ProviderInfo[]>([]);
+  const [providerTypesLoading, setProviderTypesLoading] = useState(true);
 
-  // Fetch providers on mount
+  // Settings state
+  const [providers, setProviders] = useState<ProviderConfig[]>([]);
+  const [activeProviderId, setActiveProviderId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Derive activeProvider from providers
+  const activeProvider = providers.find((p) => p.id === activeProviderId) ?? null;
+
+  // Fetch provider types on mount
   useEffect(() => {
-    async function fetchProviders() {
+    async function fetchProviderTypes() {
       try {
         const res = await fetch('/api/providers');
         const json = await res.json();
         const parsed = apiResponse(ProvidersResponseSchema).parse(json);
         if (parsed.ok && parsed.data) {
-          setProviders(parsed.data.providers);
-          // Auto-select first provider if none stored
-          if (!selectedProvider && parsed.data.providers.length > 0) {
-            const firstProvider = parsed.data.providers[0].id;
-            setSelectedProviderState(firstProvider);
-            storeValue('settings.selectedProvider', firstProvider);
-          }
+          setProviderTypes(parsed.data.providers);
         }
       } catch (err) {
-        console.error('Failed to fetch providers:', err);
+        console.error('Failed to fetch provider types:', err);
       } finally {
-        setProvidersLoading(false);
+        setProviderTypesLoading(false);
       }
     }
-    fetchProviders();
+    fetchProviderTypes();
   }, []);
 
-  const selectedMeta = providers.find((p) => p.id === selectedProvider);
+  // Fetch settings
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/settings');
+      const json = await res.json();
+      const parsed = apiResponse(SettingsResponseSchema).parse(json);
+      if (parsed.ok && parsed.data) {
+        setProviders(parsed.data.providers);
+        setActiveProviderId(parsed.data.activeProviderId);
+      } else {
+        setError(parsed.error?.toString() ?? 'Failed to load settings');
+      }
+    } catch (err) {
+      console.error('Failed to fetch settings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const setSelectedProvider = (provider: string) => {
-    setSelectedProviderState(provider);
-    storeValue('settings.selectedProvider', provider);
-  };
+  // Fetch settings on mount
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
-  const setApiKey = (key: string) => {
-    setApiKeyState(key);
-    storeValue('settings.apiKey', key);
-  };
+  // Add a new provider
+  const addProvider = useCallback(
+    async (data: ProviderConfigCreate): Promise<ProviderConfig | null> => {
+      try {
+        const res = await fetch('/api/settings/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        const parsed = apiResponse(ProviderConfigSchema).parse(json);
+        if (parsed.ok && parsed.data) {
+          setProviders((prev) => [...prev, parsed.data!]);
+          return parsed.data;
+        }
+        setError(parsed.error?.toString() ?? 'Failed to add provider');
+        return null;
+      } catch (err) {
+        console.error('Failed to add provider:', err);
+        setError(err instanceof Error ? err.message : 'Failed to add provider');
+        return null;
+      }
+    },
+    [],
+  );
 
-  const setPrompt = (newPrompt: string) => {
-    setPromptState(newPrompt);
-    storeValue('settings.prompt', newPrompt);
-  };
+  // Update a provider
+  const updateProvider = useCallback(
+    async (id: string, data: ProviderConfigUpdate): Promise<ProviderConfig | null> => {
+      try {
+        const res = await fetch(`/api/settings/providers/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        const parsed = apiResponse(ProviderConfigSchema).parse(json);
+        if (parsed.ok && parsed.data) {
+          setProviders((prev) => prev.map((p) => (p.id === id ? parsed.data! : p)));
+          return parsed.data;
+        }
+        setError(parsed.error?.toString() ?? 'Failed to update provider');
+        return null;
+      } catch (err) {
+        console.error('Failed to update provider:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update provider');
+        return null;
+      }
+    },
+    [],
+  );
+
+  // Delete a provider
+  const deleteProvider = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/settings/providers/${id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setProviders((prev) => prev.filter((p) => p.id !== id));
+        setActiveProviderId((prev) => (prev === id ? null : prev));
+        return true;
+      }
+      setError(json.error?.toString() ?? 'Failed to delete provider');
+      return false;
+    } catch (err) {
+      console.error('Failed to delete provider:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete provider');
+      return false;
+    }
+  }, []);
+
+  // Activate a provider
+  const activateProvider = useCallback(async (id: string): Promise<ProviderConfig | null> => {
+    try {
+      const res = await fetch(`/api/settings/providers/${id}/activate`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      const parsed = apiResponse(ProviderConfigSchema).parse(json);
+      if (parsed.ok && parsed.data) {
+        // Update providers list to reflect new active state
+        setProviders((prev) =>
+          prev.map((p) => ({
+            ...p,
+            isActive: p.id === id,
+          })),
+        );
+        setActiveProviderId(id);
+        return parsed.data;
+      }
+      setError(parsed.error?.toString() ?? 'Failed to activate provider');
+      return null;
+    } catch (err) {
+      console.error('Failed to activate provider:', err);
+      setError(err instanceof Error ? err.message : 'Failed to activate provider');
+      return null;
+    }
+  }, []);
 
   return (
     <SettingsContext.Provider
       value={{
+        providerTypes,
+        providerTypesLoading,
         providers,
-        providersLoading,
-        selectedProvider,
-        setSelectedProvider,
-        selectedMeta,
-        apiKey,
-        setApiKey,
-        prompt,
-        setPrompt,
+        activeProviderId,
+        activeProvider,
+        loading,
+        error,
+        addProvider,
+        updateProvider,
+        deleteProvider,
+        activateProvider,
+        refresh: fetchSettings,
       }}
     >
       {children}

@@ -23,6 +23,10 @@ export function UploadPage() {
       return;
     }
 
+    if (!settings.activeProvider) {
+      return;
+    }
+
     fileUpload.clearError();
     analysis.reset();
 
@@ -30,9 +34,8 @@ export function UploadPage() {
       fileDataUrl: fileUpload.fileDataUrl,
       fileName: fileUpload.file.name,
       fileType: fileUpload.fileType,
-      provider: settings.selectedProvider,
-      apiKey: settings.apiKey.trim() || undefined,
-      prompt: settings.prompt.trim() || undefined,
+      provider: settings.activeProvider.providerType,
+      // apiKey is now retrieved server-side from database
     });
   };
 
@@ -40,6 +43,7 @@ export function UploadPage() {
   const hasResults = analysis.document || analysis.parseResponse;
   const isReady = fileUpload.file && fileUpload.fileDataUrl && !fileUpload.isProcessing;
   const isComplete = hasResults && !analysis.isProcessing;
+  const isConfigured = settings.activeProvider !== null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -49,7 +53,7 @@ export function UploadPage() {
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Upload Document</h2>
               <Badge variant="secondary" className="text-xs">
-                {settings.selectedMeta?.label ?? 'No provider'}
+                {settings.activeProvider?.name ?? 'No provider configured'}
               </Badge>
             </div>
             <Link
@@ -135,8 +139,8 @@ export function UploadPage() {
                 disabled={
                   analysis.isProcessing ||
                   !isReady ||
-                  !settings.selectedProvider ||
-                  settings.providersLoading
+                  !isConfigured ||
+                  settings.loading
                 }
               >
                 {analysis.isProcessing ? (

@@ -12,6 +12,7 @@ import {
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 import { withAnalyzeCache, withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
 import { storeDocument, updateDocumentMetadata } from '../services/document-storage.js';
+import { getApiKey } from '../services/settings-service.js';
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -33,12 +34,12 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       return { ok: false, error: `Unknown provider: ${providerId}` };
     }
 
-    const apiKey = requestApiKey || process.env[provider.envVar] || null;
+    const apiKey = requestApiKey || (await getApiKey(providerId));
     if (!apiKey) {
       reply.code(400);
       return {
         ok: false,
-        error: `No API key provided. Either pass an API key or set ${provider.envVar} environment variable.`,
+        error: 'Provider not configured. Set API key in Settings.',
       };
     }
 
@@ -120,12 +121,12 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         return { ok: false, error: `Unknown provider: ${providerId}` };
       }
 
-      const apiKey = requestApiKey || process.env[provider.envVar] || null;
+      const apiKey = requestApiKey || (await getApiKey(providerId));
       if (!apiKey) {
         reply.code(400);
         return {
           ok: false,
-          error: `No API key provided. Either pass an API key or set ${provider.envVar} environment variable.`,
+          error: 'Provider not configured. Set API key in Settings.',
         };
       }
 
@@ -182,12 +183,12 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       return { ok: false, error: `Unknown provider: ${providerId}` };
     }
 
-    const apiKey = requestApiKey || process.env[provider.envVar] || null;
+    const apiKey = requestApiKey || (await getApiKey(providerId));
     if (!apiKey) {
       reply.code(400);
       return {
         ok: false,
-        error: `No API key provided. Either pass an API key or set ${provider.envVar} environment variable.`,
+        error: 'Provider not configured. Set API key in Settings.',
       };
     }
 

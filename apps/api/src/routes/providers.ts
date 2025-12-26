@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { type ApiResponse, type ProvidersResponse } from '@home/types';
-import { providerList, isProviderConfigured } from '../providers/index.js';
+import { providerList } from '../providers/index.js';
 
 export const providersRoutes: FastifyPluginAsync = async (app) => {
   app.get('/providers', async (): Promise<ApiResponse<ProvidersResponse>> => {
@@ -8,7 +8,6 @@ export const providersRoutes: FastifyPluginAsync = async (app) => {
       id: p.id,
       label: p.label,
       placeholder: p.placeholder,
-      configured: isProviderConfigured(p),
     }));
 
     return {

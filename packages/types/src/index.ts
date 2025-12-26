@@ -30,3 +30,4 @@ export * from './schemas/health.js';
 export * from './schemas/vision.js';
 export * from './schemas/providers.js';
 export * from './schemas/documents.js';
+export * from './schemas/settings.js';
