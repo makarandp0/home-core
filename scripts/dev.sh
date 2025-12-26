@@ -65,4 +65,15 @@ export HOME_DOC_PROCESSOR_URL="http://localhost:$HOME_DOC_PROCESSOR_PORT"
 export COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export VITE_COMMIT_SHA="$COMMIT_SHA"
 
+# Open browser after servers start (background with delay)
+WEB_URL="http://localhost:$HOME_WEB_PORT"
+(
+  sleep 3
+  if command -v open &> /dev/null; then
+    open "$WEB_URL"  # macOS
+  elif command -v xdg-open &> /dev/null; then
+    xdg-open "$WEB_URL"  # Linux
+  fi
+) &
+
 exec pnpm turbo run dev --parallel

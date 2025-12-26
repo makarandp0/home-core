@@ -31,10 +31,12 @@ pnpm build                 # Required before first pnpm dev
 
 ## Development
 
-Run all services in watch mode:
+Run all services (web, API, and doc-processor) in watch mode:
 ```bash
 pnpm dev
 ```
+
+Ports are automatically offset based on branch name for parallel development across worktrees.
 
 Or run individually:
 ```bash
