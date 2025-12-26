@@ -63,7 +63,7 @@ async function checkDocumentStorage(): Promise<{ path: string | null; accessible
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get('/health', async (): Promise<Health> => {
-    const version = process.env.COMMIT_SHA;
+    const version = process.env.COMMIT_SHA || 'dev';
 
     // Build configuredProviders dynamically from the registry
     const configuredProviders: Record<string, string | null> = {};
@@ -80,7 +80,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
 
     const payload = {
       ok: true,
-      ...(version ? { version } : {}),
+      version,
       ...(docProcessorVersion ? { docProcessorVersion } : {}),
       docProcessorUrl: DOC_PROCESSOR_URL,
       database: { connected: dbConnected },

@@ -7,6 +7,7 @@ A self-hosted document management platform. Deploy to your own infrastructure fo
 home-core is built for self-hosters who want to organize and search their important documents without relying on cloud services. Upload your PDFs and images, and the system will extract metadata using AI to make everything searchable.
 
 **Key features:**
+
 - Upload and store important documents (PDFs, images)
 - Browse and search your document library
 - AI-powered metadata extraction for better searchability
@@ -31,16 +32,16 @@ git clone https://github.com/your-org/home-core.git
 cd home-core
 
 # Configure environment
-cp apps/api/.env.example apps/api/.env
+cp .env.example .env
 ```
 
-Edit `apps/api/.env` with your API keys:
+Edit `.env` with your API keys:
 
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Anthropic API key for Claude vision |
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4o vision |
-| `GEMINI_API_KEY` | Google AI Studio API key for Gemini vision |
+| Variable            | Description                                |
+| ------------------- | ------------------------------------------ |
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude vision        |
+| `OPENAI_API_KEY`    | OpenAI API key for GPT-4o vision           |
+| `GEMINI_API_KEY`    | Google AI Studio API key for Gemini vision |
 
 At least one AI provider key is required. Users can also provide their own keys via the UI.
 
@@ -50,6 +51,7 @@ docker-compose up -d
 ```
 
 Services start at:
+
 - Web + API: http://localhost:3001
 - PostgreSQL: localhost:5432
 - Doc Processor: http://localhost:8000
@@ -93,12 +95,12 @@ Database migrations run automatically on startup.
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Port already in use | Change port in docker-compose.yml or stop conflicting service |
-| API keys not working | Check `apps/api/.env` format, no quotes needed |
-| Database connection failed | Ensure PostgreSQL is running and `DATABASE_URL` is correct |
-| Doc processor timeout | Large files may need increased timeout or splitting |
+| Issue                      | Solution                                                      |
+| -------------------------- | ------------------------------------------------------------- |
+| Port already in use        | Change port in docker-compose.yml or stop conflicting service |
+| API keys not working       | Check `apps/api/.env` format, no quotes needed                |
+| Database connection failed | Ensure PostgreSQL is running and `DATABASE_URL` is correct    |
+| Doc processor timeout      | Large files may need increased timeout or splitting           |
 
 ## Contributing
 

@@ -12,7 +12,7 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "${HOME_POSTGRES_PORT:-5432}:5432"
+      - '${HOME_POSTGRES_PORT:-5432}:5432'
     environment:
       POSTGRES_DB: ${HOME_POSTGRES_DB:-home_dev}
       POSTGRES_USER: ${HOME_POSTGRES_USER:-postgres}
@@ -20,7 +20,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -32,11 +32,12 @@ services:
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     ports:
-      - "${HOME_API_PORT:-3001}:3001"
+      - '${HOME_API_PORT:-3001}:3001'
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgres://${HOME_POSTGRES_USER:-postgres}:${HOME_POSTGRES_PASSWORD:-postgres}@postgres:5432/${HOME_POSTGRES_DB:-home_dev}
       - HOME_DOC_PROCESSOR_URL=http://doc-processor:8000
+      - DOCUMENT_STORAGE_PATH=/app/documents
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -55,7 +56,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "${HOME_DOC_PROCESSOR_PORT:-8000}:8000"
+      - '${HOME_DOC_PROCESSOR_PORT:-8000}:8000'
 
 volumes:
   pgdata:
