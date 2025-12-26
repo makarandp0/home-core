@@ -72,8 +72,8 @@ jobs:
           push: false
           build-args: |
             COMMIT_SHA=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
 
       - name: Build doc-processor image
         uses: docker/build-push-action@v6
@@ -83,5 +83,5 @@ jobs:
           push: false
           build-args: |
             COMMIT_SHA=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=doc-processor
+          cache-to: type=gha,mode=max,scope=doc-processor
