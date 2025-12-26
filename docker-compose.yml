@@ -14,9 +14,9 @@ services:
     ports:
       - '${HOME_POSTGRES_PORT:-5432}:5432'
     environment:
-      POSTGRES_DB: ${HOME_POSTGRES_DB:-home_dev}
-      POSTGRES_USER: ${HOME_POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${HOME_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: home_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -35,7 +35,7 @@ services:
       - '${HOME_API_PORT:-3001}:3001'
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgres://${HOME_POSTGRES_USER:-postgres}:${HOME_POSTGRES_PASSWORD:-postgres}@postgres:5432/${HOME_POSTGRES_DB:-home_dev}
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/home_dev
       - HOME_DOC_PROCESSOR_URL=http://doc-processor:8000
       - DOCUMENT_STORAGE_PATH=/app/documents
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
