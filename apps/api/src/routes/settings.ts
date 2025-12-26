@@ -12,6 +12,7 @@ import {
   updateProviderConfig,
   deleteProviderConfig,
   setActiveProvider,
+  getActiveProvider,
 } from '../services/settings-service.js';
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
@@ -62,6 +63,13 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/settings/providers/:id - Delete provider config
   app.delete<{ Params: { id: string } }>('/settings/providers/:id', async (request, reply): Promise<ApiResponse<{ deleted: boolean }>> => {
     const { id } = request.params;
+
+    // Prevent deleting the active provider
+    const activeProvider = await getActiveProvider();
+    if (activeProvider && activeProvider.id === id) {
+      reply.code(400);
+      return { ok: false, error: 'Cannot delete the active provider. Please activate another provider first.' };
+    }
 
     const deleted = await deleteProviderConfig(id);
     if (!deleted) {

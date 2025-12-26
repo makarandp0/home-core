@@ -3,11 +3,24 @@ import type { ProviderId, ProviderConfig, ProviderConfigCreate, ProviderConfigUp
 import { ProviderIdSchema } from '@home/types';
 
 /**
- * Redact an API key for display (show first 6 and last 4 chars).
+ * Redact an API key for display.
+ * Shows first 4 chars, and last 4 chars only if the key is long enough.
  */
 function redactKey(key: string): string {
-  if (key.length < 10) return '***';
-  return `${key.slice(0, 6)}...${key.slice(-4)}`;
+  if (!key) return '***';
+
+  const visiblePrefixLength = 4;
+  const visibleSuffixLength = 4;
+  const minLengthForSuffix = visiblePrefixLength + visibleSuffixLength + 4;
+
+  const prefix = key.slice(0, visiblePrefixLength);
+
+  if (key.length < minLengthForSuffix) {
+    return `${prefix}...****`;
+  }
+
+  const suffix = key.slice(-visibleSuffixLength);
+  return `${prefix}...${suffix}`;
 }
 
 /**
@@ -159,24 +172,29 @@ export async function deleteProviderConfig(id: string): Promise<boolean> {
 
 /**
  * Set a provider as active (deactivates all others).
+ * Uses a transaction to ensure atomicity.
  */
 export async function setActiveProvider(id: string): Promise<ProviderConfig | null> {
   const db = getDb();
   const now = new Date().toISOString();
 
-  // First, deactivate all providers
-  await db
-    .update(providerConfigs)
-    .set({ isActive: false, updatedAt: now });
+  const result = await db.transaction(async (tx) => {
+    // First, deactivate all providers
+    await tx
+      .update(providerConfigs)
+      .set({ isActive: false, updatedAt: now });
 
-  // Then, activate the specified provider
-  const [row] = await db
-    .update(providerConfigs)
-    .set({ isActive: true, updatedAt: now })
-    .where(eq(providerConfigs.id, id))
-    .returning();
+    // Then, activate the specified provider
+    const [row] = await tx
+      .update(providerConfigs)
+      .set({ isActive: true, updatedAt: now })
+      .where(eq(providerConfigs.id, id))
+      .returning();
 
-  return row ? toProviderConfig(row) : null;
+    return row ?? null;
+  });
+
+  return result ? toProviderConfig(result) : null;
 }
 
 /**

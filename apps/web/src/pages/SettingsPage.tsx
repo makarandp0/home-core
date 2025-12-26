@@ -141,15 +141,21 @@ export function SettingsPage() {
   };
 
   const handleActivate = async (id: string) => {
-    await activateProvider(id);
+    const result = await activateProvider(id);
+    if (!result) {
+      setFormError('Failed to activate provider');
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     setDeleting(true);
-    await deleteProvider(deleteConfirm.id);
+    const success = await deleteProvider(deleteConfirm.id);
     setDeleting(false);
-    setDeleteConfirm(null);
+    if (success) {
+      setDeleteConfirm(null);
+    }
+    // Error is already set by deleteProvider in useSettings
   };
 
   const getProviderTypeLabel = (typeId: ProviderId) => {
@@ -225,7 +231,7 @@ export function SettingsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditModal(provider)}
-                        title="Edit"
+                        aria-label={`Edit ${provider.name}`}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -233,7 +239,7 @@ export function SettingsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setDeleteConfirm(provider)}
-                        title="Delete"
+                        aria-label={`Delete ${provider.name}`}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -281,7 +287,7 @@ export function SettingsPage() {
 
             {modalMode === 'add' && (
               <div className="space-y-2">
-                <Label>Provider Type</Label>
+                <Label id="provider-type-label">Provider Type</Label>
                 {providerTypesLoading ? (
                   <div className="text-sm text-muted-foreground">Loading...</div>
                 ) : (
@@ -293,7 +299,7 @@ export function SettingsPage() {
                       }
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-labelledby="provider-type-label">
                       <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>

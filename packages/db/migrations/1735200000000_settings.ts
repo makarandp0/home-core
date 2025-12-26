@@ -40,8 +40,16 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       default: pgm.func('now()'),
     },
   });
+
+  // Ensure only one provider can be active at a time at the database level
+  pgm.createIndex('provider_configs', ['is_active'], {
+    unique: true,
+    where: 'is_active = true',
+    name: 'provider_configs_unique_active',
+  });
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
+  pgm.dropIndex('provider_configs', ['is_active'], { name: 'provider_configs_unique_active' });
   pgm.dropTable('provider_configs');
 }

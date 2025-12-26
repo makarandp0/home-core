@@ -103,6 +103,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          setError(json.error?.toString() ?? `Failed to add provider (${res.status})`);
+          return null;
+        }
         const json = await res.json();
         const parsed = apiResponse(ProviderConfigSchema).parse(json);
         if (parsed.ok && parsed.data) {
@@ -129,6 +134,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          setError(json.error?.toString() ?? `Failed to update provider (${res.status})`);
+          return null;
+        }
         const json = await res.json();
         const parsed = apiResponse(ProviderConfigSchema).parse(json);
         if (parsed.ok && parsed.data) {
@@ -152,6 +162,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/settings/providers/${id}`, {
         method: 'DELETE',
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error?.toString() ?? `Failed to delete provider (${res.status})`);
+        return false;
+      }
       const json = await res.json();
       if (json.ok) {
         setProviders((prev) => prev.filter((p) => p.id !== id));
@@ -173,6 +188,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/settings/providers/${id}/activate`, {
         method: 'POST',
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error?.toString() ?? `Failed to activate provider (${res.status})`);
+        return null;
+      }
       const json = await res.json();
       const parsed = apiResponse(ProviderConfigSchema).parse(json);
       if (parsed.ok && parsed.data) {
