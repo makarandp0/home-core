@@ -30,13 +30,13 @@ load_env() {
 }
 
 # Calculate port offset from branch name (deterministic hash)
-# Returns offset in increments of 10 (0, 10, 20, ... 490)
+# Returns offset in increments of 10 (0, 10, 20, ... 990)
 get_port_offset() {
   local branch="${1:-main}"
   if [[ "$branch" == "main" || "$branch" == "master" ]]; then
     echo "0"
   else
-    echo $(( $(echo "$branch" | cksum | cut -d' ' -f1) % 50 * 10 ))
+    echo $(( $(echo "$branch" | cksum | cut -d' ' -f1) % 100 * 10 ))
   fi
 }
 
