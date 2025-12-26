@@ -25,4 +25,3 @@ uv sync
 echo ""
 echo "Setup complete! Run all services from repo root:"
 echo "  pnpm dev           # default ports"
-echo "  pnpm dev -- 10     # offset ports for worktrees"

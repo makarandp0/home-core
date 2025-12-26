@@ -20,11 +20,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "migrate:create": "node-pg-migrate create --migration-file-language ts -m migrations",
-    "migrate:up": "dotenv -e .env -- node-pg-migrate up -m migrations",
+    "migrate:up": "../../scripts/with-env.sh npx node-pg-migrate up -m migrations",
     "migrate:up:prod": "node-pg-migrate up -m migrations",
-    "migrate:down": "dotenv -e .env -- node-pg-migrate down -m migrations",
-    "db:introspect": "dotenv -e .env -- drizzle-kit introspect && ./scripts/post-introspect.sh",
-    "db:generate": "dotenv -e .env -- drizzle-kit generate"
+    "migrate:down": "../../scripts/with-env.sh npx node-pg-migrate down -m migrations",
+    "db:introspect": "../../scripts/with-env.sh npx drizzle-kit introspect && ./scripts/post-introspect.sh",
+    "db:generate": "../../scripts/with-env.sh npx drizzle-kit generate"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
@@ -35,7 +35,6 @@
   "devDependencies": {
     "@home/tsconfig": "workspace:*",
     "@types/pg": "^8.11.0",
-    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.6.2"
   }

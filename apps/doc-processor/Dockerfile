@@ -23,7 +23,11 @@ COPY src/ src/
 
 # Pre-download EasyOCR model during build (English only, ~100MB)
 # This avoids download delay on first request
-RUN .venv/bin/python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
+# Retry logic handles flaky network connections in CI
+RUN for i in 1 2 3; do \
+      .venv/bin/python -c "import easyocr; easyocr.Reader(['en'], gpu=False)" && break || \
+      { echo "Attempt $i failed, retrying in 5s..." && sleep 5; }; \
+    done
 
 # Runtime stage
 FROM python:3.11-slim

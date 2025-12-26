@@ -2,12 +2,13 @@
   "$schema": "https://turbo.build/schema.json",
   "globalPassThroughEnv": [
     "COMMIT_SHA",
-    "PORT",
-    "VITE_PORT",
-    "VITE_API_PORT",
     "VITE_COMMIT_SHA",
-    "DOC_PROCESSOR_PORT",
-    "DOC_PROCESSOR_URL"
+    "DATABASE_URL",
+    "DOCUMENT_STORAGE_PATH",
+    "HOME_API_PORT",
+    "HOME_WEB_PORT",
+    "HOME_DOC_PROCESSOR_PORT",
+    "HOME_DOC_PROCESSOR_URL"
   ],
   "tasks": {
     "build": {

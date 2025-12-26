@@ -12,7 +12,7 @@ import {
 import { getDb, documents, desc, eq } from '@home/db';
 import { storeDocument, deleteDocument } from '../services/document-storage.js';
 
-const DOC_PROCESSOR_URL = process.env.DOC_PROCESSOR_URL ?? 'http://localhost:8000';
+const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 
 interface PythonServiceResponse {
   ok: boolean;
