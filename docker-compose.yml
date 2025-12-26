@@ -14,7 +14,7 @@ services:
     ports:
       - "${HOME_POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: ${HOME_POSTGRES_DB:-home}
+      POSTGRES_DB: ${HOME_POSTGRES_DB:-home_dev}
       POSTGRES_USER: ${HOME_POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${HOME_POSTGRES_PASSWORD:-postgres}
     volumes:
@@ -32,12 +32,11 @@ services:
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     ports:
-      - "${HOME_API_PORT:-3001}:${HOME_API_PORT:-3001}"
+      - "${HOME_API_PORT:-3001}:3001"
     environment:
       - NODE_ENV=production
-      - HOME_API_PORT=${HOME_API_PORT:-3001}
-      - DATABASE_URL=postgres://${HOME_POSTGRES_USER:-postgres}:${HOME_POSTGRES_PASSWORD:-postgres}@postgres:5432/${HOME_POSTGRES_DB:-home}
-      - HOME_DOC_PROCESSOR_URL=http://doc-processor:${HOME_DOC_PROCESSOR_PORT:-8000}
+      - DATABASE_URL=postgres://${HOME_POSTGRES_USER:-postgres}:${HOME_POSTGRES_PASSWORD:-postgres}@postgres:5432/${HOME_POSTGRES_DB:-home_dev}
+      - HOME_DOC_PROCESSOR_URL=http://doc-processor:8000
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -56,9 +55,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "${HOME_DOC_PROCESSOR_PORT:-8000}:${HOME_DOC_PROCESSOR_PORT:-8000}"
-    environment:
-      - HOME_DOC_PROCESSOR_PORT=${HOME_DOC_PROCESSOR_PORT:-8000}
+      - "${HOME_DOC_PROCESSOR_PORT:-8000}:8000"
 
 volumes:
   pgdata:

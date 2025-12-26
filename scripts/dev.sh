@@ -48,7 +48,10 @@ fi
 
 # Calculate ports from branch name
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-OFFSET=$(calculate_ports "$BRANCH")
+OFFSET=$(get_port_offset "$BRANCH")
+export HOME_WEB_PORT=$((5173 + OFFSET))
+export HOME_API_PORT=$((3001 + OFFSET))
+export HOME_DOC_PROCESSOR_PORT=$((8000 + OFFSET))
 
 info "Branch '$BRANCH' → offset $OFFSET"
 echo ""
