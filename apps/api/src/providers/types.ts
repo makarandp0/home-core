@@ -48,7 +48,6 @@ export interface ProviderDefinition extends VisionProvider {
   readonly id: string;
   readonly label: string;
   readonly placeholder: string;
-  readonly envVar: string;
 }
 
 // Shared system prompts - used by all providers

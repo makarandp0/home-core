@@ -19,7 +19,6 @@ export const geminiProvider: ProviderDefinition = {
   id: 'gemini',
   label: 'Google (Gemini)',
   placeholder: 'AIza...',
-  envVar: 'GEMINI_API_KEY',
 
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const genAI = new GoogleGenerativeAI(apiKey);

@@ -22,11 +22,6 @@ export function getProviderById(id: string): ProviderDefinition | undefined {
   return providerRegistry[id];
 }
 
-// Helper to check if provider is configured (has API key in env)
-export function isProviderConfigured(provider: ProviderDefinition): boolean {
-  return !!process.env[provider.envVar];
-}
-
 // Get all provider IDs
 export function getProviderIds(): string[] {
   return providers.map((p) => p.id);

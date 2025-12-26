@@ -40,11 +40,8 @@ Edit `.env` with your settings:
 | Variable                | Description                                |
 | ----------------------- | ------------------------------------------ |
 | `DOCUMENT_STORAGE_PATH` | Directory for storing uploaded documents   |
-| `ANTHROPIC_API_KEY`     | Anthropic API key for Claude vision        |
-| `OPENAI_API_KEY`        | OpenAI API key for GPT-4o vision           |
-| `GEMINI_API_KEY`        | Google AI Studio API key for Gemini vision |
 
-At least one AI provider key is required for metadata extraction. Users can also provide their own keys via the UI.
+API keys for AI providers (Anthropic, OpenAI, Gemini) are configured via the Settings page in the UI.
 
 ```bash
 # Run all services
@@ -62,13 +59,8 @@ Services start at:
 For Railway deployments:
 
 1. Add a PostgreSQL database from the Railway dashboard
-2. Set environment variables:
-
-```bash
-cp railway-vars.example.txt railway-vars.txt
-# Edit with your API keys (DATABASE_URL is auto-set by Railway Postgres)
-railway variables set $(cat railway-vars.txt | xargs)
-```
+2. Deploy the app (DATABASE_URL is auto-set by Railway Postgres)
+3. Configure API keys via the Settings page in the UI
 
 ## API Endpoints
 

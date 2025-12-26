@@ -18,7 +18,6 @@ export const openaiProvider: ProviderDefinition = {
   id: 'openai',
   label: 'OpenAI (GPT-4o)',
   placeholder: 'sk-...',
-  envVar: 'OPENAI_API_KEY',
 
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const openai = new OpenAI({ apiKey });

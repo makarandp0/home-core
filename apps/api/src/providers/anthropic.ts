@@ -42,7 +42,6 @@ export const anthropicProvider: ProviderDefinition = {
   id: 'anthropic',
   label: 'Anthropic (Claude)',
   placeholder: 'sk-ant-...',
-  envVar: 'ANTHROPIC_API_KEY',
 
   async analyze(apiKey: string, imageData: string, prompt: string): Promise<VisionResult> {
     const anthropic = new Anthropic({ apiKey });
