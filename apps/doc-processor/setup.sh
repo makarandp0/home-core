@@ -18,9 +18,9 @@ echo "uv version: $(uv --version)"
 # Navigate to doc-processor directory
 cd "$(dirname "$0")"
 
-# Install dependencies
+# Install dependencies (including dev tools like ruff, pytest)
 echo "Installing Python dependencies..."
-uv sync
+uv sync --extra dev
 
 echo ""
 echo "Setup complete! Run all services from repo root:"
