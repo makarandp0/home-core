@@ -4,6 +4,7 @@ import {
   ProvidersResponseSchema,
   SettingsResponseSchema,
   ProviderConfigSchema,
+  DeleteResponseSchema,
   type ProviderInfo,
   type ProviderConfig,
   type ProviderConfigCreate,
@@ -103,18 +104,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          setError(json.error?.toString() ?? `Failed to add provider (${res.status})`);
+        const json = await res.json();
+        const parsed = apiResponse(ProviderConfigSchema).safeParse(json);
+        if (!parsed.success) {
+          setError('Invalid response from server');
           return null;
         }
-        const json = await res.json();
-        const parsed = apiResponse(ProviderConfigSchema).parse(json);
-        if (parsed.ok && parsed.data) {
-          setProviders((prev) => [...prev, parsed.data!]);
-          return parsed.data;
+        if (parsed.data.ok && parsed.data.data) {
+          setProviders((prev) => [...prev, parsed.data.data!]);
+          return parsed.data.data;
         }
-        setError(parsed.error?.toString() ?? 'Failed to add provider');
+        setError(parsed.data.error ?? 'Failed to add provider');
         return null;
       } catch (err) {
         console.error('Failed to add provider:', err);
@@ -134,18 +134,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          setError(json.error?.toString() ?? `Failed to update provider (${res.status})`);
+        const json = await res.json();
+        const parsed = apiResponse(ProviderConfigSchema).safeParse(json);
+        if (!parsed.success) {
+          setError('Invalid response from server');
           return null;
         }
-        const json = await res.json();
-        const parsed = apiResponse(ProviderConfigSchema).parse(json);
-        if (parsed.ok && parsed.data) {
-          setProviders((prev) => prev.map((p) => (p.id === id ? parsed.data! : p)));
-          return parsed.data;
+        if (parsed.data.ok && parsed.data.data) {
+          setProviders((prev) => prev.map((p) => (p.id === id ? parsed.data.data! : p)));
+          return parsed.data.data;
         }
-        setError(parsed.error?.toString() ?? 'Failed to update provider');
+        setError(parsed.data.error ?? 'Failed to update provider');
         return null;
       } catch (err) {
         console.error('Failed to update provider:', err);
@@ -162,18 +161,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/settings/providers/${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        setError(json.error?.toString() ?? `Failed to delete provider (${res.status})`);
+      const json = await res.json();
+      const parsed = apiResponse(DeleteResponseSchema).safeParse(json);
+      if (!parsed.success) {
+        setError('Invalid response from server');
         return false;
       }
-      const json = await res.json();
-      if (json.ok) {
+      if (parsed.data.ok && parsed.data.data) {
         setProviders((prev) => prev.filter((p) => p.id !== id));
         setActiveProviderId((prev) => (prev === id ? null : prev));
         return true;
       }
-      setError(json.error?.toString() ?? 'Failed to delete provider');
+      setError(parsed.data.error ?? 'Failed to delete provider');
       return false;
     } catch (err) {
       console.error('Failed to delete provider:', err);
@@ -188,14 +187,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/settings/providers/${id}/activate`, {
         method: 'POST',
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        setError(json.error?.toString() ?? `Failed to activate provider (${res.status})`);
+      const json = await res.json();
+      const parsed = apiResponse(ProviderConfigSchema).safeParse(json);
+      if (!parsed.success) {
+        setError('Invalid response from server');
         return null;
       }
-      const json = await res.json();
-      const parsed = apiResponse(ProviderConfigSchema).parse(json);
-      if (parsed.ok && parsed.data) {
+      if (parsed.data.ok && parsed.data.data) {
         // Update providers list to reflect new active state
         setProviders((prev) =>
           prev.map((p) => ({
@@ -204,9 +202,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           })),
         );
         setActiveProviderId(id);
-        return parsed.data;
+        return parsed.data.data;
       }
-      setError(parsed.error?.toString() ?? 'Failed to activate provider');
+      setError(parsed.data.error ?? 'Failed to activate provider');
       return null;
     } catch (err) {
       console.error('Failed to activate provider:', err);
