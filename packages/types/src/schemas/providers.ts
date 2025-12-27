@@ -5,7 +5,6 @@ export const ProviderInfoSchema = z.object({
   id: z.string(),
   label: z.string(),
   placeholder: z.string(),
-  configured: z.boolean(),
 });
 
 export type ProviderInfo = z.infer<typeof ProviderInfoSchema>;

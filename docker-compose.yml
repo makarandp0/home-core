@@ -38,9 +38,6 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/home_dev
       - HOME_DOC_PROCESSOR_URL=http://doc-processor:8000
       - DOCUMENT_STORAGE_PATH=/app/documents
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       - documents:/app/documents
     depends_on:

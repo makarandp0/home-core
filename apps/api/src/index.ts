@@ -8,6 +8,7 @@ import { userRoutes } from './routes/user.js';
 import { visionRoutes } from './routes/vision.js';
 import { providersRoutes } from './routes/providers.js';
 import { documentsRoutes } from './routes/documents.js';
+import { settingsRoutes } from './routes/settings.js';
 
 // Run database migrations on startup
 // TODO: Consider using Railway's release command instead for production deployments
@@ -57,6 +58,7 @@ server.register(userRoutes, { prefix: '/api' });
 server.register(visionRoutes, { prefix: '/api' });
 server.register(providersRoutes, { prefix: '/api' });
 server.register(documentsRoutes, { prefix: '/api' });
+server.register(settingsRoutes, { prefix: '/api' });
 
 // SPA fallback: serve index.html for non-API routes when static is enabled
 server.setNotFoundHandler((req, reply) => {

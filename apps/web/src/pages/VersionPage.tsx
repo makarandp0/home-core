@@ -2,7 +2,6 @@ import React from 'react';
 import { HealthSchema } from '@home/types';
 import { FRONTEND_VERSION } from '../version';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface PrInfo {
@@ -95,19 +94,11 @@ function CommitLink({ commit, label }: { commit: string; label: string }) {
   );
 }
 
-interface ConfiguredProviders {
-  anthropic: string | null;
-  openai: string | null;
-}
-
 export function VersionPage() {
   const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
   const [docProcessorVersion, setDocProcessorVersion] = React.useState<string | null>(null);
   const [docProcessorUrl, setDocProcessorUrl] = React.useState<string | null>(null);
   const [databaseConnected, setDatabaseConnected] = React.useState<boolean | null>(null);
-  const [configuredProviders, setConfiguredProviders] = React.useState<ConfiguredProviders | null>(
-    null
-  );
   const [documentStorage, setDocumentStorage] = React.useState<{
     path: string | null;
     accessible: boolean;
@@ -125,14 +116,12 @@ export function VersionPage() {
         setDocProcessorVersion(parsed.docProcessorVersion ?? null);
         setDocProcessorUrl(parsed.docProcessorUrl ?? null);
         setDatabaseConnected(parsed.database?.connected ?? null);
-        setConfiguredProviders(parsed.configuredProviders ?? null);
         setDocumentStorage(parsed.documentStorage ?? null);
       } catch {
         setBackendVersion(null);
         setDocProcessorVersion(null);
         setDocProcessorUrl(null);
         setDatabaseConnected(null);
-        setConfiguredProviders(null);
         setDocumentStorage(null);
       } finally {
         setLoading(false);
@@ -140,21 +129,6 @@ export function VersionPage() {
     };
     run();
   }, []);
-
-  const missingProviders = configuredProviders
-    ? [
-        !configuredProviders.anthropic && 'Anthropic',
-        !configuredProviders.openai && 'OpenAI',
-      ].filter(Boolean)
-    : [];
-
-  const configuredList: Array<{ name: string; key: string }> = [];
-  if (configuredProviders?.anthropic) {
-    configuredList.push({ name: 'Anthropic', key: configuredProviders.anthropic });
-  }
-  if (configuredProviders?.openai) {
-    configuredList.push({ name: 'OpenAI', key: configuredProviders.openai });
-  }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -255,60 +229,6 @@ export function VersionPage() {
           Click on a PR link to view it on GitHub
         </p>
       </Card>
-
-      {!loading && missingProviders.length > 0 && (
-        <Card className={cn(
-          "mt-6 p-4 border-yellow-500/30",
-          "bg-yellow-500/10"
-        )}>
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="border-yellow-500/50 text-yellow-600 dark:text-yellow-400">
-              Warning
-            </Badge>
-            <div>
-              <h3 className="text-sm font-medium">
-                Vision API Configuration
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                The following providers are not configured on the server:{' '}
-                <strong className="text-foreground">{missingProviders.join(', ')}</strong>
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Users will need to provide their own API keys in the Vision page, or set the
-                environment variables on the server.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {!loading && configuredList.length > 0 && (
-        <Card className={cn(
-          "mt-6 p-4 border-green-500/30",
-          "bg-green-500/10"
-        )}>
-          <div className="flex items-start gap-3">
-            <Badge variant="outline" className="border-green-500/50 text-green-600 dark:text-green-400">
-              Active
-            </Badge>
-            <div>
-              <h3 className="text-sm font-medium">
-                Configured Providers
-              </h3>
-              <ul className="mt-2 space-y-1">
-                {configuredList.map((provider) => (
-                  <li key={provider.name} className="text-sm text-muted-foreground">
-                    {provider.name}:{' '}
-                    <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
-                      {provider.key}
-                    </code>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

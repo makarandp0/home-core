@@ -14,14 +14,6 @@ export const HealthSchema = z.object({
       connected: z.boolean(),
     })
     .optional(),
-  // Which vision providers have API keys configured (redacted key or null)
-  configuredProviders: z
-    .object({
-      anthropic: z.string().nullable(),
-      openai: z.string().nullable(),
-      gemini: z.string().nullable(),
-    })
-    .optional(),
   // Document storage status
   documentStorage: z
     .object({
