@@ -5,7 +5,16 @@
       "Bash(npx tsc:*)",
       "Bash(npm run build:*)",
       "Bash(pnpm check:*)",
-      "Bash(pnpm lint:*)"
+      "Bash(pnpm lint:*)",
+      "Bash(../../scripts/with-env.sh node:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/with-env.sh:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(../../scripts/with-env.sh pnpm exec tsx:*)",
+      "Bash(pnpm process-docs:*)",
+      "Bash(pnpm build:*)",
+      "Bash(curl:*)",
+      "Bash(gh pr view:*)"
     ]
   }
 }

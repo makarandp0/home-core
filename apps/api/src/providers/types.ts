@@ -17,11 +17,11 @@ export interface DocumentData {
     state?: string;
     postal_code?: string;
     country?: string;
-  };
+  } | null;
   amount?: {
-    value: number;
-    currency: string;
-  };
+    value: number | null;
+    currency: string | null;
+  } | null;
   language?: string;
   fields: Record<string, unknown>;
   keywords?: string[];
@@ -170,7 +170,7 @@ CATEGORY MAPPING (set category based on document_type):
 - other: photo, certificate, membership_card, unknown
 
 CRITICAL RULES:
-- document_type must be EXACTLY one of the values listed above (e.g., "passport" not "Identity: passport")
+- document_type must be EXACTLY one of the values listed above. Use "passport", not "Identity: passport" or any other format
 - category must be one of: identity, financial, legal, medical, property, vehicle, education, insurance, correspondence, other
 - All dates MUST be in YYYY-MM-DD format (e.g., 2025-12-31)
 - Use null for fields not found in the document

@@ -32,7 +32,8 @@ function buildMetadataUpdate(doc: DocumentData): DocumentMetadataUpdate {
     category: doc.category ?? undefined,
     issueDate: doc.issue_date ?? undefined,
     country: doc.country ?? undefined,
-    amountValue: doc.amount?.value ?? undefined,
+    // Convert number to string for numeric column precision
+    amountValue: doc.amount?.value != null ? String(doc.amount.value) : undefined,
     amountCurrency: doc.amount?.currency ?? undefined,
   };
 

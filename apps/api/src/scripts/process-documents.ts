@@ -4,6 +4,7 @@
  * Uses the same HTTP API endpoints as the frontend for consistency.
  *
  * IMPORTANT: Requires the API server to be running.
+ * NOTE: The --clear-cache option requires direct database access (DATABASE_URL).
  *
  * Usage:
  *   pnpm process-docs <directory> [options]
@@ -11,7 +12,7 @@
  * Options:
  *   --provider <name>   Provider to use: gemini, openai, anthropic (default: gemini)
  *   --api-url <url>     API base URL (default: http://localhost:3000)
- *   --clear-cache       Clear LLM cache before processing
+ *   --clear-cache       Clear LLM cache before processing (requires DATABASE_URL)
  *   --dry-run           Show what would be processed without actually processing
  *
  * Examples:
@@ -88,11 +89,12 @@ function parseArgs(): { directory: string; options: ProcessOptions } {
 Usage: process-documents.ts <directory> [options]
 
 IMPORTANT: Requires the API server to be running (pnpm dev:api)
+NOTE: The --clear-cache option requires direct database access (DATABASE_URL)
 
 Options:
   --provider <name>   Provider to use: gemini, openai, anthropic (default: gemini)
   --api-url <url>     API base URL (default: http://localhost:3000)
-  --clear-cache       Clear LLM cache before processing
+  --clear-cache       Clear LLM cache before processing (requires DATABASE_URL)
   --dry-run           Show what would be processed without actually processing
   -h, --help          Show this help message
 
@@ -291,8 +293,11 @@ async function processFile(
 }
 
 async function clearCache(_apiUrl: string): Promise<boolean> {
-  // Note: This requires a cache clear endpoint or direct DB access
-  // For now, we'll use direct DB access since there's no API endpoint
+  // Note: Cache clearing requires direct database access since there's no API endpoint.
+  // The _apiUrl parameter is intentionally unused but kept for:
+  // 1. Future support of an API-based cache clear endpoint
+  // 2. Consistency with other functions that use the apiUrl option
+  // This means --clear-cache requires DATABASE_URL to be set in addition to the API server.
   const { getDb, llmCache } = await import('@home/db');
   const db = getDb();
   await db.delete(llmCache);

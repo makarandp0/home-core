@@ -47,11 +47,14 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createIndex('documents', 'document_type');
 
   // Create GIN index on metadata JSONB for efficient JSON queries
-  pgm.sql('CREATE INDEX documents_metadata_gin ON documents USING GIN (metadata)');
+  pgm.createIndex('documents', 'metadata', {
+    name: 'documents_metadata_gin',
+    method: 'gin',
+  });
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.sql('DROP INDEX IF EXISTS documents_metadata_gin');
+  pgm.dropIndex('documents', 'metadata', { name: 'documents_metadata_gin' });
   pgm.dropIndex('documents', 'document_type');
   pgm.dropIndex('documents', 'issue_date');
   pgm.dropIndex('documents', 'country');

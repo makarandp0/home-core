@@ -18,7 +18,7 @@ import { storeDocument, deleteDocument } from '../services/document-storage.js';
  * Safely parse JSONB metadata from database.
  * Returns null if parsing fails (defensive for legacy data).
  */
-function parseMetadata(raw: unknown): DocumentJsonMetadata {
+function parseMetadata(raw: unknown): DocumentJsonMetadata | null {
   const result = DocumentJsonMetadataSchema.safeParse(raw);
   return result.success ? result.data : null;
 }

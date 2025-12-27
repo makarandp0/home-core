@@ -23,6 +23,7 @@
     "migrate:up": "../../scripts/with-env.sh npx node-pg-migrate up -m migrations",
     "migrate:up:prod": "node-pg-migrate up -m migrations",
     "migrate:down": "../../scripts/with-env.sh npx node-pg-migrate down -m migrations",
+    "db:reset": "../../scripts/with-env.sh npx tsx scripts/reset-db.ts && pnpm migrate:up",
     "db:introspect": "../../scripts/with-env.sh npx drizzle-kit introspect && ./scripts/post-introspect.sh",
     "db:generate": "../../scripts/with-env.sh npx drizzle-kit generate"
   },
