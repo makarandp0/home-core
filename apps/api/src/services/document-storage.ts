@@ -2,11 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { getDb, documents, eq } from '@home/db';
+import { parseDataUrl } from '../utils/data-url.js';
 
 export interface DocumentStorageResult {
   id: string;
   filename: string;
   storagePath: string;
+}
+
+export interface RawFileResult {
+  filename: string;
+  storagePath: string;
+  sizeBytes: number;
 }
 
 /**
@@ -15,15 +22,6 @@ export interface DocumentStorageResult {
  */
 function getStoragePath(): string | null {
   return process.env.DOCUMENT_STORAGE_PATH || null;
-}
-
-/**
- * Extract mime type and base64 data from a data URL.
- */
-function parseDataUrl(dataUrl: string): { mimeType: string; base64Data: string } | null {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) return null;
-  return { mimeType: match[1], base64Data: match[2] };
 }
 
 /**
@@ -41,18 +39,68 @@ function getExtensionFromMimeType(mimeType: string): string {
 }
 
 /**
+ * Store a raw file to disk without creating a database entry.
+ * Useful for storing original/alternate versions of documents.
+ *
+ * @param imageData - The base64 data URL of the file
+ * @param baseFilename - Base filename (without extension) to use
+ * @param suffix - Suffix to add to filename (e.g., '_original')
+ * @returns RawFileResult or null if storage is not configured
+ */
+export async function storeRawFile(
+  imageData: string,
+  baseFilename: string,
+  suffix: string
+): Promise<RawFileResult | null> {
+  const storagePath = getStoragePath();
+  if (!storagePath) {
+    return null;
+  }
+
+  const parsed = parseDataUrl(imageData);
+  if (!parsed) {
+    console.error('Invalid data URL format');
+    return null;
+  }
+
+  const { mimeType, base64Data } = parsed;
+  const extension = getExtensionFromMimeType(mimeType);
+  const filename = `${baseFilename}${suffix}${extension}`;
+  const fullPath = join(storagePath, filename);
+
+  try {
+    await mkdir(dirname(fullPath), { recursive: true });
+    const buffer = Buffer.from(base64Data, 'base64');
+    await writeFile(fullPath, buffer);
+
+    console.log(`Raw file stored: ${filename} (${buffer.length} bytes)`);
+
+    return {
+      filename,
+      storagePath: fullPath,
+      sizeBytes: buffer.length,
+    };
+  } catch (err) {
+    console.error('Failed to store raw file:', err);
+    return null;
+  }
+}
+
+/**
  * Store a document to disk and create a database entry.
  * Only call this on cache miss (new document).
  *
  * @param imageData - The base64 data URL of the document
  * @param originalFilename - The original filename (optional)
  * @param metadata - Optional metadata to store with the document
+ * @param options - Optional settings: baseUuid for consistent naming, suffix for filename
  * @returns DocumentStorageResult or null if storage is not configured
  */
 export async function storeDocument(
   imageData: string,
   originalFilename?: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  options?: { baseUuid?: string; suffix?: string }
 ): Promise<DocumentStorageResult | null> {
   const storagePath = getStoragePath();
   if (!storagePath) {
@@ -68,8 +116,9 @@ export async function storeDocument(
 
   const { mimeType, base64Data } = parsed;
   const extension = getExtensionFromMimeType(mimeType);
-  const uuid = randomUUID();
-  const filename = `${uuid}${extension}`;
+  const uuid = options?.baseUuid ?? randomUUID();
+  const suffix = options?.suffix ?? '';
+  const filename = `${uuid}${suffix}${extension}`;
   const fullPath = join(storagePath, filename);
 
   try {

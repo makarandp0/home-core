@@ -21,7 +21,8 @@
     "@home/db": "workspace:*",
     "@home/types": "workspace:*",
     "fastify": "^4.26.2",
-    "openai": "^6.15.0"
+    "openai": "^6.15.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@home/tsconfig": "workspace:*",

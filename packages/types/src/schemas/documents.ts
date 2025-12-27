@@ -1,36 +1,9 @@
 import { z } from 'zod';
-
-// Document processing request (base64 input)
-export const DocumentProcessRequestSchema = z.object({
-  file: z.string().min(1), // base64-encoded file content
-  filename: z.string().min(1), // original filename for type detection
-});
-
-export type DocumentProcessRequest = z.infer<typeof DocumentProcessRequestSchema>;
+import { VisionProviderSchema, DocumentDataSchema } from './vision.js';
 
 // Extraction method used
 export const ExtractionMethodSchema = z.enum(['native', 'ocr', 'llm']);
 export type ExtractionMethod = z.infer<typeof ExtractionMethodSchema>;
-
-// Document processing result data
-export const DocumentProcessDataSchema = z.object({
-  text: z.string(),
-  pageCount: z.number(),
-  method: ExtractionMethodSchema,
-  confidence: z.number().nullish(), // OCR confidence (0-1), only for OCR method. nullish allows null from Python None
-  documentId: z.string(), // ID of stored document
-});
-
-export type DocumentProcessData = z.infer<typeof DocumentProcessDataSchema>;
-
-// Full API response for document processing
-export const DocumentProcessResponseSchema = z.object({
-  ok: z.boolean(),
-  data: DocumentProcessDataSchema.optional(),
-  error: z.string().optional(),
-});
-
-export type DocumentProcessResponse = z.infer<typeof DocumentProcessResponseSchema>;
 
 // JSONB metadata stored with documents (for client-side filtering)
 export const DocumentJsonMetadataSchema = z
@@ -92,3 +65,41 @@ export const DocumentListResponseSchema = z.object({
 });
 
 export type DocumentListResponse = z.infer<typeof DocumentListResponseSchema>;
+
+// Unified document upload request (combines extract + parse)
+export const DocumentUploadRequestSchema = z.object({
+  file: z.string().min(1), // base64 data URL
+  filename: z.string().min(1),
+  provider: VisionProviderSchema.optional(), // uses active provider if not specified
+});
+
+export type DocumentUploadRequest = z.infer<typeof DocumentUploadRequestSchema>;
+
+// Unified document upload response data
+export const DocumentUploadDataSchema = z.object({
+  documentId: z.string(),
+  extractedText: z.string(),
+  extractionMethod: ExtractionMethodSchema,
+  extractionConfidence: z.number().nullish(),
+  document: DocumentDataSchema.optional(),
+  response: z.string(), // raw LLM parse response
+  usage: z
+    .object({
+      promptTokens: z.number(),
+      completionTokens: z.number(),
+      totalTokens: z.number(),
+    })
+    .optional(),
+  cached: z.boolean().optional(),
+});
+
+export type DocumentUploadData = z.infer<typeof DocumentUploadDataSchema>;
+
+// Full API response for document upload
+export const DocumentUploadResponseSchema = z.object({
+  ok: z.boolean(),
+  data: DocumentUploadDataSchema.optional(),
+  error: z.string().optional(),
+});
+
+export type DocumentUploadResponse = z.infer<typeof DocumentUploadResponseSchema>;

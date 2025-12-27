@@ -5,7 +5,6 @@ import { execSync } from 'node:child_process';
 import fastifyStatic from '@fastify/static';
 import { healthRoutes } from './routes/health.js';
 import { userRoutes } from './routes/user.js';
-import { visionRoutes } from './routes/vision.js';
 import { providersRoutes } from './routes/providers.js';
 import { documentsRoutes } from './routes/documents.js';
 import { settingsRoutes } from './routes/settings.js';
@@ -55,7 +54,6 @@ if (serveStatic) {
 // Register API routes under "/api" prefix
 server.register(healthRoutes, { prefix: '/api' });
 server.register(userRoutes, { prefix: '/api' });
-server.register(visionRoutes, { prefix: '/api' });
 server.register(providersRoutes, { prefix: '/api' });
 server.register(documentsRoutes, { prefix: '/api' });
 server.register(settingsRoutes, { prefix: '/api' });

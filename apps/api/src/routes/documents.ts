@@ -1,18 +1,32 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import {
-  DocumentProcessRequestSchema,
-  DocumentProcessResponseSchema,
   DocumentJsonMetadataSchema,
+  DocumentUploadRequestSchema,
+  DocumentDataSchema,
   type ApiResponse,
-  type DocumentProcessData,
   type DocumentListResponse,
   type DocumentMetadata,
   type DocumentJsonMetadata,
+  type DocumentUploadData,
+  type DocumentUploadRequest,
+  type DocumentData,
+  type ExtractionMethod,
 } from '@home/types';
 import { getDb, documents, desc, eq } from '@home/db';
-import { storeDocument, deleteDocument } from '../services/document-storage.js';
+import {
+  storeDocument,
+  storeRawFile,
+  deleteDocument,
+  updateDocumentMetadata,
+  type DocumentMetadataUpdate,
+} from '../services/document-storage.js';
+import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
+import { withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
+import { getApiKeyForProvider, getActiveApiKey } from '../services/settings-service.js';
+import { resizeImageIfNeeded } from '../services/image-resize.js';
 
 /**
  * Safely parse JSONB metadata from database.
@@ -21,6 +35,59 @@ import { storeDocument, deleteDocument } from '../services/document-storage.js';
 function parseMetadata(raw: unknown): DocumentJsonMetadata | null {
   const result = DocumentJsonMetadataSchema.safeParse(raw);
   return result.success ? result.data : null;
+}
+
+/**
+ * Build metadata update from LLM-extracted document data.
+ * Maps top-level fields to database columns and stores the rest in JSONB.
+ */
+function buildMetadataUpdate(doc: DocumentData): DocumentMetadataUpdate {
+  const update: DocumentMetadataUpdate = {
+    documentType: doc.document_type,
+    documentOwner: doc.name ?? undefined,
+    expiryDate: doc.expiry_date ?? undefined,
+    category: doc.category ?? undefined,
+    issueDate: doc.issue_date ?? undefined,
+    country: doc.country ?? undefined,
+    amountValue: doc.amount?.value != null ? String(doc.amount.value) : undefined,
+    amountCurrency: doc.amount?.currency ?? undefined,
+  };
+
+  const jsonbMetadata: Record<string, unknown> = {};
+
+  if (doc.id) jsonbMetadata.id = doc.id;
+  if (doc.reference_numbers?.length) jsonbMetadata.reference_numbers = doc.reference_numbers;
+  if (doc.parties?.length) jsonbMetadata.parties = doc.parties;
+  if (doc.date_of_birth) jsonbMetadata.date_of_birth = doc.date_of_birth;
+  if (doc.issuing_authority) jsonbMetadata.issuing_authority = doc.issuing_authority;
+  if (doc.state_province) jsonbMetadata.state_province = doc.state_province;
+  if (doc.address) jsonbMetadata.address = doc.address;
+  if (doc.language) jsonbMetadata.language = doc.language;
+  if (doc.keywords?.length) jsonbMetadata.keywords = doc.keywords;
+  if (doc.confidence) jsonbMetadata.confidence = doc.confidence;
+  if (Object.keys(doc.fields).length) jsonbMetadata.fields = doc.fields;
+
+  if (Object.keys(jsonbMetadata).length > 0) {
+    update.metadata = jsonbMetadata;
+  }
+
+  return update;
+}
+
+/**
+ * Check if a filename indicates an image file.
+ */
+function isImageFile(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  const dotIndex = lower.lastIndexOf('.');
+
+  // Require a non-leading dot and a non-empty extension (e.g. "image.jpg", not "jpeg" or ".jpg" or "file.")
+  if (dotIndex <= 0 || dotIndex === lower.length - 1) {
+    return false;
+  }
+
+  const ext = lower.slice(dotIndex + 1);
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'].includes(ext);
 }
 
 const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
@@ -38,79 +105,202 @@ interface PythonServiceResponse {
 
 export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
   /**
-   * POST /api/documents/process
-   * Process a document (PDF or image) and extract text.
-   * Forwards the request to the Python doc-processor service.
+   * POST /api/documents/upload
+   * Unified document upload: extracts text and parses to JSON in one call.
+   * Handles both images (via LLM) and PDFs (via doc-processor).
    */
   fastify.post<{
-    Body: { file: string; filename: string };
-    Reply: ApiResponse<DocumentProcessData>;
-  }>('/documents/process', async (request, reply) => {
-    // Validate request body
-    const parsed = DocumentProcessRequestSchema.safeParse(request.body);
+    Body: DocumentUploadRequest;
+    Reply: ApiResponse<DocumentUploadData>;
+  }>('/documents/upload', async (request, reply) => {
+    // Validate request
+    const parsed = DocumentUploadRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       reply.code(400);
-      return { ok: false, error: 'Invalid request: file and filename are required' };
+      return {
+        ok: false,
+        error: `Validation error: ${parsed.error.issues.map((e) => e.message).join(', ')}`,
+      };
     }
 
-    const { file, filename } = parsed.data;
+    const { file, filename, provider: requestedProvider } = parsed.data;
 
-    try {
-      // Forward to Python service
-      const response = await fetch(`${DOC_PROCESSOR_URL}/process/base64`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          file_data: file,
-          filename: filename,
-        }),
-      });
+    // Get provider and API key (use active provider if not specified)
+    let providerId: string;
+    let apiKey: string;
 
-      if (!response.ok) {
-        reply.code(response.status);
-        return { ok: false, error: `Doc processor error: ${response.statusText}` };
-      }
-
-      const result: PythonServiceResponse = await response.json();
-
-      if (!result.ok || !result.data) {
+    if (requestedProvider) {
+      providerId = requestedProvider;
+      const key = await getApiKeyForProvider(providerId);
+      if (!key) {
         reply.code(400);
-        return { ok: false, error: result.error ?? 'Processing failed' };
-      }
-
-      // Store the document
-      const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
-      const dataUrl = `data:${mimeType};base64,${file}`;
-      const stored = await storeDocument(dataUrl, filename);
-
-      // Build and validate response
-      const processedData: DocumentProcessData = {
-        text: result.data.text,
-        pageCount: result.data.page_count,
-        method: result.data.method,
-        confidence: result.data.confidence,
-        documentId: stored?.id ?? '',
-      };
-
-      const validated = DocumentProcessResponseSchema.safeParse({
-        ok: true,
-        data: processedData,
-      });
-
-      if (!validated.success) {
-        console.error('Doc processor validation failed:', validated.error.issues);
-        reply.code(500);
         return {
           ok: false,
-          error: `Invalid response from doc processor: ${validated.error.issues.map((i) => i.message).join(', ')}`,
+          error: `Provider ${providerId} not configured. Set API key in Settings.`,
         };
       }
+      apiKey = key;
+    } else {
+      const active = await getActiveApiKey();
+      if (!active) {
+        reply.code(400);
+        return {
+          ok: false,
+          error: 'No active provider configured. Set up a provider in Settings.',
+        };
+      }
+      providerId = active.providerType;
+      apiKey = active.apiKey;
+    }
 
-      return { ok: true, data: processedData };
+    const provider = getProviderById(providerId);
+    if (!provider) {
+      reply.code(400);
+      return { ok: false, error: `Unknown provider: ${providerId}` };
+    }
+
+    try {
+      let extractedText: string;
+      let extractionMethod: ExtractionMethod;
+      let extractionConfidence: number | null = null;
+      let documentId: string;
+      let extractCached = false;
+
+      // Step 1: Extract text based on file type
+      if (isImageFile(filename)) {
+        // For images: use LLM vision
+        const originalImageData = file.startsWith('data:') ? file : `data:image/jpeg;base64,${file}`;
+
+        // Resize to 3.5 MiB (binary) limit (~4.7 MiB base64) regardless of provider
+        const resizeResult = await resizeImageIfNeeded(originalImageData);
+        const imageData = resizeResult.imageData;
+
+        // Generate a consistent UUID for file storage
+        const docUuid = randomUUID();
+
+        if (resizeResult.resized) {
+          request.log.info({
+            msg: 'Image resized for upload',
+            originalSize: resizeResult.originalSize,
+            finalSize: resizeResult.finalSize,
+          });
+
+          // Store both original and resized versions
+          await storeRawFile(originalImageData, docUuid, '_original');
+          const stored = await storeDocument(imageData, filename, undefined, {
+            baseUuid: docUuid,
+            suffix: '_resized',
+          });
+          if (!stored) {
+            reply.code(500);
+            return { ok: false, error: 'Document storage is not configured on the server' };
+          }
+          documentId = stored.id;
+        } else {
+          // No resizing needed - store single copy without suffix
+          const stored = await storeDocument(imageData, filename, undefined, {
+            baseUuid: docUuid,
+          });
+          if (!stored) {
+            reply.code(500);
+            return { ok: false, error: 'Document storage is not configured on the server' };
+          }
+          documentId = stored.id;
+        }
+
+        const { result, cached } = await withExtractTextCache(
+          providerId,
+          imageData,
+          () => provider.extractText(apiKey, imageData)
+        );
+
+        extractedText = result.extractedText;
+        extractionMethod = 'llm';
+        extractCached = cached;
+      } else {
+        // For PDFs: use doc-processor
+        const base64Content = file.startsWith('data:')
+          ? file.replace(/^data:[^;]+;base64,/, '')
+          : file;
+
+        const response = await fetch(`${DOC_PROCESSOR_URL}/process/base64`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_data: base64Content,
+            filename: filename,
+          }),
+        });
+
+        if (!response.ok) {
+          reply.code(response.status);
+          return { ok: false, error: `Doc processor error: ${response.statusText}` };
+        }
+
+        const result: PythonServiceResponse = await response.json();
+
+        if (!result.ok || !result.data) {
+          reply.code(400);
+          return { ok: false, error: result.error ?? 'Processing failed' };
+        }
+
+        extractedText = result.data.text;
+        extractionMethod = result.data.method;
+        extractionConfidence = result.data.confidence ?? null;
+
+        // Store the document
+        const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
+        const dataUrl = `data:${mimeType};base64,${base64Content}`;
+        const stored = await storeDocument(dataUrl, filename);
+        if (!stored) {
+          reply.code(500);
+          return { ok: false, error: 'Document storage is not configured on the server' };
+        }
+        documentId = stored.id;
+      }
+
+      // Step 2: Parse text to JSON
+      const { result: parseResult, cached: parseCached } = await withParseTextCache(
+        providerId,
+        extractedText,
+        '',
+        () => provider.parseText(apiKey, extractedText, '')
+      );
+
+      // Validate document if it exists
+      const documentResult = parseResult.document
+        ? DocumentDataSchema.safeParse(parseResult.document)
+        : null;
+
+      // Update document with LLM-extracted metadata
+      if (documentId && documentResult?.success) {
+        await updateDocumentMetadata(documentId, buildMetadataUpdate(documentResult.data));
+      }
+
+      const data: DocumentUploadData = {
+        documentId,
+        extractedText,
+        extractionMethod,
+        extractionConfidence,
+        document: documentResult?.success ? documentResult.data : undefined,
+        response: parseResult.response,
+        usage: parseResult.usage,
+        cached: extractCached && parseCached,
+      };
+
+      return { ok: true, data };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+
+      if (err instanceof OpenAI.APIError) {
+        reply.code(err.status ?? 500);
+        return { ok: false, error: `OpenAI API error: ${err.message}` };
+      }
+
+      if (err instanceof Anthropic.APIError) {
+        reply.code(err.status ?? 500);
+        return { ok: false, error: `Anthropic API error: ${err.message}` };
+      }
 
       // Check if it's a connection error
       if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
@@ -119,7 +309,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       reply.code(500);
-      return { ok: false, error: `Document processing failed: ${errorMessage}` };
+      return { ok: false, error: errorMessage };
     }
   });
 
