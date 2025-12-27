@@ -5,16 +5,6 @@ import { z } from 'zod';
 export const VisionProviderSchema = z.string().min(1);
 export type VisionProvider = z.infer<typeof VisionProviderSchema>;
 
-export const VisionRequestSchema = z.object({
-  image: z.string().min(1),
-  fileName: z.string().optional(),
-  prompt: z.string().optional(),
-  apiKey: z.string().optional(),
-  provider: VisionProviderSchema,
-});
-
-export type VisionRequest = z.infer<typeof VisionRequestSchema>;
-
 // Allow any JSON value in fields (strings, numbers, booleans, nulls, arrays, objects)
 const JsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
   z.union([
@@ -107,74 +97,3 @@ export const DocumentDataSchema = z.object({
 });
 
 export type DocumentData = z.infer<typeof DocumentDataSchema>;
-
-export const VisionResponseSchema = z.object({
-  extractedText: z.string(),
-  response: z.string(),
-  document: DocumentDataSchema.optional(),
-  usage: z
-    .object({
-      promptTokens: z.number(),
-      completionTokens: z.number(),
-      totalTokens: z.number(),
-    })
-    .optional(),
-  cached: z.boolean().optional(),
-  // ID of the stored document
-  documentId: z.string(),
-});
-
-export type VisionResponse = z.infer<typeof VisionResponseSchema>;
-
-// Schema for text extraction from images (Step 2 - LLM re-extraction for low confidence)
-export const VisionExtractTextRequestSchema = z.object({
-  image: z.string().min(1),
-  fileName: z.string().optional(),
-  provider: VisionProviderSchema,
-  apiKey: z.string().optional(),
-});
-
-export type VisionExtractTextRequest = z.infer<typeof VisionExtractTextRequestSchema>;
-
-export const VisionExtractTextResponseSchema = z.object({
-  extractedText: z.string(),
-  usage: z
-    .object({
-      promptTokens: z.number(),
-      completionTokens: z.number(),
-      totalTokens: z.number(),
-    })
-    .optional(),
-  cached: z.boolean().optional(),
-  // ID of the stored document
-  documentId: z.string(),
-});
-
-export type VisionExtractTextResponse = z.infer<typeof VisionExtractTextResponseSchema>;
-
-// Schema for parsing text to JSON document (Step 3)
-export const VisionParseRequestSchema = z.object({
-  text: z.string().min(1),
-  provider: VisionProviderSchema,
-  apiKey: z.string().optional(),
-  prompt: z.string().optional(),
-  // Document ID to update with parsed metadata
-  documentId: z.string().optional(),
-});
-
-export type VisionParseRequest = z.infer<typeof VisionParseRequestSchema>;
-
-export const VisionParseResponseSchema = z.object({
-  document: DocumentDataSchema.optional(),
-  response: z.string(),
-  usage: z
-    .object({
-      promptTokens: z.number(),
-      completionTokens: z.number(),
-      totalTokens: z.number(),
-    })
-    .optional(),
-  cached: z.boolean().optional(),
-});
-
-export type VisionParseResponse = z.infer<typeof VisionParseResponseSchema>;

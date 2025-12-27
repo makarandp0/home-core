@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { makAssert } from '@home/utils';
-import { compressImage } from '../utils/compressImage';
 
 export type FileType = 'image' | 'pdf' | null;
 
@@ -45,31 +44,26 @@ export function useFileUpload() {
       showCropModal: false,
     });
 
-    if (isImage) {
-      try {
-        const compressed = await compressImage(selectedFile);
-        setState((s) => ({
-          ...s,
-          filePreview: compressed,
-          fileDataUrl: compressed,
-          isProcessing: false,
-        }));
-      } catch {
-        setState((s) => ({ ...s, error: 'Failed to process image file', isProcessing: false }));
-      }
-    } else {
-      // For PDFs, read as base64
-      const reader = new FileReader();
-      reader.onload = () => {
-        makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
-        const dataUrl = reader.result;
-        setState((s) => ({ ...s, fileDataUrl: dataUrl, isProcessing: false }));
-      };
-      reader.onerror = () => {
-        setState((s) => ({ ...s, error: 'Failed to read PDF file', isProcessing: false }));
-      };
-      reader.readAsDataURL(selectedFile);
-    }
+    // Read file as data URL (server handles resizing if needed)
+    const reader = new FileReader();
+    reader.onload = () => {
+      makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
+      const dataUrl = reader.result;
+      setState((s) => ({
+        ...s,
+        filePreview: isImage ? dataUrl : null,
+        fileDataUrl: dataUrl,
+        isProcessing: false,
+      }));
+    };
+    reader.onerror = () => {
+      setState((s) => ({
+        ...s,
+        error: `Failed to read ${isImage ? 'image' : 'PDF'} file`,
+        isProcessing: false,
+      }));
+    };
+    reader.readAsDataURL(selectedFile);
   }, []);
 
   const handleFileChange = React.useCallback(

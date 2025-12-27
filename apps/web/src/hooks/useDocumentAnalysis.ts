@@ -1,17 +1,14 @@
 import * as React from 'react';
 import {
   apiResponse,
-  VisionExtractTextResponseSchema,
-  VisionParseResponseSchema,
-  DocumentProcessResponseSchema,
+  DocumentUploadDataSchema,
   type DocumentData,
   type ExtractionMethod,
   type ApiError,
 } from '@home/types';
-import { type StepStatuses } from '../components/StepProgress';
 import { type FileType } from './useFileUpload';
 
-export type ProcessingStep = 'idle' | 'extracting' | 'parsing' | 'complete' | 'error';
+export type ProcessingStep = 'idle' | 'processing' | 'complete' | 'error';
 
 export interface AnalysisResults {
   extractedText: string | null;
@@ -23,7 +20,6 @@ export interface AnalysisResults {
 
 export interface AnalysisState {
   currentStep: ProcessingStep;
-  stepStatus: StepStatuses;
   results: AnalysisResults;
   error: ApiError | null;
 }
@@ -36,15 +32,9 @@ const initialResults: AnalysisResults = {
   parseResponse: null,
 };
 
-const initialStepStatus: StepStatuses = {
-  extracting: 'pending',
-  parsing: 'pending',
-};
-
 export function useDocumentAnalysis() {
   const [state, setState] = React.useState<AnalysisState>({
     currentStep: 'idle',
-    stepStatus: initialStepStatus,
     results: initialResults,
     error: null,
   });
@@ -52,7 +42,6 @@ export function useDocumentAnalysis() {
   const reset = React.useCallback(() => {
     setState({
       currentStep: 'idle',
-      stepStatus: initialStepStatus,
       results: initialResults,
       error: null,
     });
@@ -67,155 +56,65 @@ export function useDocumentAnalysis() {
       apiKey?: string;
       prompt?: string;
     }) => {
-      const { fileDataUrl, fileName, fileType, provider, apiKey, prompt } = params;
+      const { fileDataUrl, fileName, provider, apiKey, prompt } = params;
 
-      // Reset and start
+      // Reset and start processing
       setState({
-        currentStep: 'extracting',
-        stepStatus: { ...initialStepStatus, extracting: 'active' },
+        currentStep: 'processing',
         results: initialResults,
         error: null,
       });
 
       try {
-        let finalText: string;
-        let extractionMethod: ExtractionMethod;
-        let extractionConfidence: number | null = null;
-        let documentId: string | undefined;
-
-        // Step 1: Extract text
-        // For images: use LLM vision directly
-        // For PDFs: use doc_processor (native + OCR fallback)
-        if (fileType === 'image') {
-          // Use LLM directly for images
-          const extractRes = await fetch('/api/vision/extract-text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              image: fileDataUrl,
-              fileName,
-              provider,
-              ...(apiKey?.trim() && { apiKey: apiKey.trim() }),
-            }),
-          });
-
-          const extractJson = await extractRes.json();
-          const extractParsed = apiResponse(VisionExtractTextResponseSchema).parse(extractJson);
-
-          if (!extractParsed.ok || !extractParsed.data) {
-            setState((s) => ({
-              ...s,
-              error: extractParsed.error ?? 'Failed to extract text from image',
-              currentStep: 'error',
-              stepStatus: { ...s.stepStatus, extracting: 'error' },
-            }));
-            return;
-          }
-
-          finalText = extractParsed.data.extractedText;
-          extractionMethod = 'llm';
-          documentId = extractParsed.data.documentId;
-        } else {
-          // Use doc_processor for PDFs
-          const base64Content = fileDataUrl.replace(/^data:[^;]+;base64,/, '');
-
-          const docRes = await fetch('/api/documents/process', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              file: base64Content,
-              filename: fileName,
-            }),
-          });
-
-          const docJson = await docRes.json();
-          const docParsed = DocumentProcessResponseSchema.parse(docJson);
-
-          if (!docParsed.ok || !docParsed.data) {
-            setState((s) => ({
-              ...s,
-              error: docParsed.error ?? 'Failed to extract text from PDF',
-              currentStep: 'error',
-              stepStatus: { ...s.stepStatus, extracting: 'error' },
-            }));
-            return;
-          }
-
-          finalText = docParsed.data.text;
-          extractionMethod = docParsed.data.method;
-          extractionConfidence = docParsed.data.confidence ?? null;
-          documentId = docParsed.data.documentId;
-        }
-
-        setState((s) => ({
-          ...s,
-          results: {
-            ...s.results,
-            extractedText: finalText,
-            extractionMethod,
-            extractionConfidence,
-          },
-          stepStatus: { ...s.stepStatus, extracting: 'complete' },
-        }));
-
-        // Step 2: Parse text to JSON
-        setState((s) => ({
-          ...s,
-          currentStep: 'parsing',
-          stepStatus: { ...s.stepStatus, parsing: 'active' },
-        }));
-
-        const parseRes = await fetch('/api/vision/parse', {
+        // Single API call for extract + parse
+        const response = await fetch('/api/documents/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: finalText,
+            file: fileDataUrl,
+            filename: fileName,
             provider,
             ...(apiKey?.trim() && { apiKey: apiKey.trim() }),
             ...(prompt?.trim() && { prompt: prompt.trim() }),
-            ...(documentId && { documentId }),
           }),
         });
 
-        const parseJson = await parseRes.json();
-        const parseParsed = apiResponse(VisionParseResponseSchema).parse(parseJson);
+        const json = await response.json();
+        const parsed = apiResponse(DocumentUploadDataSchema).parse(json);
 
-        if (!parseParsed.ok || !parseParsed.data) {
-          setState((s) => ({
-            ...s,
-            error: parseParsed.error ?? 'Failed to parse document',
+        if (!parsed.ok || !parsed.data) {
+          setState({
             currentStep: 'error',
-            stepStatus: { ...s.stepStatus, parsing: 'error' },
-          }));
+            results: initialResults,
+            error: parsed.error ?? 'Failed to process document',
+          });
           return;
         }
 
-        setState((s) => ({
-          ...s,
-          results: {
-            ...s.results,
-            document: parseParsed.data!.document ?? null,
-            parseResponse: parseParsed.data!.response,
-          },
-          stepStatus: { ...s.stepStatus, parsing: 'complete' },
+        const data = parsed.data;
+        setState({
           currentStep: 'complete',
-        }));
-      } catch (err) {
-        setState((s) => ({
-          ...s,
-          error: err instanceof Error ? err.message : 'An error occurred',
-          currentStep: 'error',
-          stepStatus: {
-            extracting: s.stepStatus.extracting === 'active' ? 'error' : s.stepStatus.extracting,
-            parsing: s.stepStatus.parsing === 'active' ? 'error' : s.stepStatus.parsing,
+          results: {
+            extractedText: data.extractedText,
+            extractionMethod: data.extractionMethod,
+            extractionConfidence: data.extractionConfidence ?? null,
+            document: data.document ?? null,
+            parseResponse: data.response,
           },
-        }));
+          error: null,
+        });
+      } catch (err) {
+        setState({
+          currentStep: 'error',
+          results: initialResults,
+          error: err instanceof Error ? err.message : 'An error occurred',
+        });
       }
     },
     []
   );
 
-  const isProcessing = ['extracting', 'parsing'].includes(state.currentStep);
+  const isProcessing = state.currentStep === 'processing';
 
   return {
     ...state,
