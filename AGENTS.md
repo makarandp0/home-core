@@ -12,26 +12,29 @@ Development setup, commands, and contribution guidelines for home-core.
 ## Setup
 
 ```bash
-pnpm bootstrap   # Install deps, start Postgres, run migrations, build packages
+pnpm bootstrap   # Install deps, start Postgres, run migrations, set up doc-processor, build
 ```
 
 The bootstrap script will automatically reuse an existing home-core PostgreSQL container if one is already running (e.g., from another worktree or directory).
 
-<details>
-<summary>Manual setup (if you prefer)</summary>
-
-```bash
-pnpm install
-docker compose up postgres -d
-pnpm --filter @home/db migrate:up
-pnpm setup:doc-processor   # Optional: Python service
-pnpm build                 # Required before first pnpm dev
-```
-</details>
-
 ## Development
 
+### Starting a New Feature
+
+The typical development flow starts by creating a git worktree:
+
+```bash
+pnpm worktree:add feature_name   # Creates ../feature_name with full setup (deps, build, .env)
+cd ../feature_name
+pnpm dev                          # Ports auto-assigned based on branch name
+```
+
+This creates an isolated workspace sharing the same git history and PostgreSQL container.
+
+### Running Services
+
 Run all services (web, API, and doc-processor) in watch mode:
+
 ```bash
 pnpm dev
 ```
@@ -39,6 +42,7 @@ pnpm dev
 Ports are automatically offset based on branch name for parallel development across worktrees.
 
 Or run individually:
+
 ```bash
 pnpm dev:web           # http://localhost:5173
 pnpm dev:api           # http://localhost:3001
@@ -73,16 +77,9 @@ packages/
 
 ## Database
 
-PostgreSQL with Drizzle ORM for type-safe queries and node-pg-migrate for migrations.
+PostgreSQL with Drizzle ORM for type-safe queries and node-pg-migrate for migrations. Bootstrap handles starting Postgres and running migrations.
 
-### Local Development
-
-```bash
-docker compose up postgres -d              # Start Postgres
-pnpm --filter @home/db migrate:up          # Run migrations
-```
-
-### Migration Workflow
+### Creating Migrations
 
 ```bash
 # Create a new migration
@@ -101,12 +98,12 @@ pnpm --filter @home/db db:introspect
 
 ### Migration Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm --filter @home/db migrate:create <name>` | Create new migration |
-| `pnpm --filter @home/db migrate:up` | Run pending migrations |
-| `pnpm --filter @home/db migrate:down` | Rollback last migration |
-| `pnpm --filter @home/db db:introspect` | Generate schema from DB |
+| Command                                        | Description             |
+| ---------------------------------------------- | ----------------------- |
+| `pnpm --filter @home/db migrate:create <name>` | Create new migration    |
+| `pnpm --filter @home/db migrate:up`            | Run pending migrations  |
+| `pnpm --filter @home/db migrate:down`          | Rollback last migration |
+| `pnpm --filter @home/db db:introspect`         | Generate schema from DB |
 
 ### Using the Database in API
 
@@ -129,6 +126,7 @@ const docs = await db.select().from(documents).where(eq(documents.id, id));
 ## Shared Schemas
 
 Zod v4 schemas live in `packages/types/src/schemas/*` and are shared by API and Web:
+
 - API validates payloads and returns `ApiResponse<T>`
 - Web parses responses with `apiResponse(YourSchema)`
 
@@ -196,18 +194,6 @@ pnpm start:web  # Build and preview web on :4173
 - [ ] For UI changes: verified visually
 - [ ] Docs updated if adding features
 
-## Git Worktrees
-
-For parallel development across multiple branches:
-
-```bash
-pnpm worktree:add my-feature   # Creates ../my-feature, installs deps, copies .env
-cd ../my-feature
-pnpm dev                       # Ports auto-assigned based on branch name
-```
-
-Ports are calculated from a hash of the branch name - each branch gets consistent, unique ports without any registry file.
-
 ## Common Gotchas
 
 - Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
@@ -224,13 +210,13 @@ Ports are calculated from a hash of the branch name - each branch gets consisten
 
 ## Quick Reference
 
-| Task | Location |
-|------|----------|
-| Add API route | `apps/api/src/routes/` |
-| Add React component | `apps/web/src/components/` |
+| Task                   | Location                      |
+| ---------------------- | ----------------------------- |
+| Add API route          | `apps/api/src/routes/`        |
+| Add React component    | `apps/web/src/components/`    |
 | Add shared type/schema | `packages/types/src/schemas/` |
-| Add database migration | `packages/db/migrations/` |
-| Add database table | `packages/db/src/schema/` |
+| Add database migration | `packages/db/migrations/`     |
+| Add database table     | `packages/db/src/schema/`     |
 
 ## LLM Operators
 
