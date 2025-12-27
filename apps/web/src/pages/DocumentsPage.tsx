@@ -47,6 +47,9 @@ interface FilterOptions {
   owners: string[];
   documentTypes: string[];
   categories: string[];
+  hasNullOwner: boolean;
+  hasNullType: boolean;
+  hasNullCategory: boolean;
 }
 
 function getSizeRange(bytes: number): SizeRange {
@@ -120,30 +123,72 @@ export function DocumentsPage() {
     const owners = new Set<string>();
     const documentTypes = new Set<string>();
     const categories = new Set<string>();
+    let hasNullOwner = false;
+    let hasNullType = false;
+    let hasNullCategory = false;
 
     documents.forEach((doc) => {
-      if (doc.documentOwner) owners.add(doc.documentOwner);
-      if (doc.documentType) documentTypes.add(doc.documentType);
-      if (doc.category) categories.add(doc.category);
+      if (doc.documentOwner) {
+        owners.add(doc.documentOwner);
+      } else {
+        hasNullOwner = true;
+      }
+      if (doc.documentType) {
+        documentTypes.add(doc.documentType);
+      } else {
+        hasNullType = true;
+      }
+      if (doc.category) {
+        categories.add(doc.category);
+      } else {
+        hasNullCategory = true;
+      }
     });
 
     return {
       owners: Array.from(owners).sort(),
       documentTypes: Array.from(documentTypes).sort(),
       categories: Array.from(categories).sort(),
+      hasNullOwner,
+      hasNullType,
+      hasNullCategory,
     };
   }, [documents]);
 
-  // Apply filters
+  // Apply filters and compute expiry status once per document
   const filteredDocuments = React.useMemo(() => {
-    return documents.filter((doc) => {
-      if (filters.owner !== 'all' && doc.documentOwner !== filters.owner) return false;
-      if (filters.documentType !== 'all' && doc.documentType !== filters.documentType) return false;
-      if (filters.category !== 'all' && doc.category !== filters.category) return false;
-      if (filters.sizeRange !== 'all' && getSizeRange(doc.sizeBytes) !== filters.sizeRange) return false;
-      if (filters.expiryStatus !== 'all' && getExpiryStatus(doc.expiryDate) !== filters.expiryStatus) return false;
-      return true;
-    });
+    return documents
+      .map((doc) => ({
+        ...doc,
+        _expiryStatus: getExpiryStatus(doc.expiryDate),
+      }))
+      .filter((doc) => {
+        // Handle "(not-set)" filter for null values
+        if (filters.owner !== 'all') {
+          if (filters.owner === '(not-set)') {
+            if (doc.documentOwner) return false;
+          } else if (doc.documentOwner !== filters.owner) {
+            return false;
+          }
+        }
+        if (filters.documentType !== 'all') {
+          if (filters.documentType === '(not-set)') {
+            if (doc.documentType) return false;
+          } else if (doc.documentType !== filters.documentType) {
+            return false;
+          }
+        }
+        if (filters.category !== 'all') {
+          if (filters.category === '(not-set)') {
+            if (doc.category) return false;
+          } else if (doc.category !== filters.category) {
+            return false;
+          }
+        }
+        if (filters.sizeRange !== 'all' && getSizeRange(doc.sizeBytes) !== filters.sizeRange) return false;
+        if (filters.expiryStatus !== 'all' && doc._expiryStatus !== filters.expiryStatus) return false;
+        return true;
+      });
   }, [documents, filters]);
 
   const activeFilterCount = Object.values(filters).filter((v) => v !== 'all').length;
@@ -248,6 +293,9 @@ export function DocumentsPage() {
             className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           >
             <option value="all">All owners</option>
+            {filterOptions.hasNullOwner && (
+              <option value="(not-set)">(Not set)</option>
+            )}
             {filterOptions.owners.map((owner) => (
               <option key={owner} value={owner}>
                 {owner}
@@ -267,6 +315,9 @@ export function DocumentsPage() {
             className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           >
             <option value="all">All types</option>
+            {filterOptions.hasNullType && (
+              <option value="(not-set)">(Not set)</option>
+            )}
             {filterOptions.documentTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -286,6 +337,9 @@ export function DocumentsPage() {
             className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           >
             <option value="all">All categories</option>
+            {filterOptions.hasNullCategory && (
+              <option value="(not-set)">(Not set)</option>
+            )}
             {filterOptions.categories.map((category) => (
               <option key={category} value={category}>
                 {category}
@@ -369,7 +423,7 @@ export function DocumentsPage() {
               </tr>
             ) : (
               filteredDocuments.map((doc) => {
-                const expiryStatus = getExpiryStatus(doc.expiryDate);
+                const expiryStatus = doc._expiryStatus;
                 return (
                   <tr
                     key={doc.id}
