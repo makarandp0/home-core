@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -55,9 +55,9 @@ export function SettingsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSaving, setFormSaving] = useState(false);
 
-  // Delete confirmation state
-  const [deleteConfirm, setDeleteConfirm] = useState<ProviderConfig | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  // Delete confirmation state (inline countdown pattern)
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{ id: string; countdown: number } | null>(null);
 
   const openAddModal = () => {
     setModalMode('add');
@@ -82,6 +82,17 @@ export function SettingsPage() {
     setEditingProvider(null);
     setFormError(null);
   };
+
+  // Countdown timer for delete confirmation
+  useEffect(() => {
+    if (!confirmState || confirmState.countdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setConfirmState((s) => (s && s.countdown > 1 ? { ...s, countdown: s.countdown - 1 } : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [confirmState?.id, confirmState && confirmState.countdown > 0]);
 
   const handleSaveProvider = async () => {
     setFormError(null);
@@ -147,14 +158,18 @@ export function SettingsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteConfirm) return;
-    setDeleting(true);
-    const success = await deleteProvider(deleteConfirm.id);
-    setDeleting(false);
-    if (success) {
-      setDeleteConfirm(null);
+  const handleDelete = async (provider: ProviderConfig) => {
+    // First click: start countdown
+    if (!confirmState || confirmState.id !== provider.id) {
+      setConfirmState({ id: provider.id, countdown: 3 });
+      return;
     }
+
+    // Second click during countdown: perform delete
+    setDeletingId(provider.id);
+    await deleteProvider(provider.id);
+    setDeletingId(null);
+    setConfirmState(null);
     // Error is already set by deleteProvider in useSettings
   };
 
@@ -238,11 +253,30 @@ export function SettingsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setDeleteConfirm(provider)}
+                        onClick={() => handleDelete(provider)}
+                        disabled={
+                          deletingId === provider.id ||
+                          (provider.isActive && providers.length > 1)
+                        }
                         aria-label={`Delete ${provider.name}`}
-                        className="text-destructive hover:text-destructive"
+                        title={
+                          provider.isActive && providers.length > 1
+                            ? 'Activate another provider first'
+                            : undefined
+                        }
+                        className={cn(
+                          confirmState?.id === provider.id
+                            ? 'text-destructive hover:text-destructive font-medium'
+                            : 'text-destructive hover:text-destructive',
+                        )}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingId === provider.id ? (
+                          'Deleting...'
+                        ) : confirmState?.id === provider.id ? (
+                          `Confirm? (${confirmState.countdown})`
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -367,29 +401,6 @@ export function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteConfirm !== null}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Provider</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete &quot;{deleteConfirm?.name}&quot;? This action cannot
-              be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -64,11 +64,14 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.delete<{ Params: { id: string } }>('/settings/providers/:id', async (request, reply): Promise<ApiResponse<{ deleted: boolean }>> => {
     const { id } = request.params;
 
-    // Prevent deleting the active provider
+    // Prevent deleting the active provider if there are other providers to switch to
     const activeProvider = await getActiveProvider();
     if (activeProvider && activeProvider.id === id) {
-      reply.code(400);
-      return { ok: false, error: 'Cannot delete the active provider. Please activate another provider first.' };
+      const settings = await getSettingsResponse();
+      if (settings.providers.length > 1) {
+        reply.code(400);
+        return { ok: false, error: 'Cannot delete the active provider. Please activate another provider first.' };
+      }
     }
 
     const deleted = await deleteProviderConfig(id);
