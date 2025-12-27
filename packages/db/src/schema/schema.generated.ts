@@ -22,10 +22,20 @@ export const documents = pgTable("documents", {
 	expiryDate: date("expiry_date"),
 	documentType: varchar("document_type", { length: 100 }),
 	documentOwner: varchar("document_owner", { length: 255 }),
+	// New fields for enhanced document extraction
+	category: varchar({ length: 50 }),
+	issueDate: date("issue_date"),
+	country: varchar({ length: 2 }),
+	amountValue: varchar("amount_value", { length: 20 }), // stored as string to preserve precision
+	amountCurrency: varchar("amount_currency", { length: 3 }),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index().using("btree", table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	index().using("btree", table.category.asc().nullsLast().op("text_ops")),
+	index().using("btree", table.country.asc().nullsLast().op("text_ops")),
+	index().using("btree", table.issueDate.asc().nullsLast().op("date_ops")),
+	index().using("btree", table.documentType.asc().nullsLast().op("text_ops")),
 ]);
 
 export const llmCache = pgTable("llm_cache", {

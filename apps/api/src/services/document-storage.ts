@@ -114,6 +114,14 @@ export interface DocumentMetadataUpdate {
   documentType?: string;
   documentOwner?: string;
   expiryDate?: string;
+  // New fields
+  category?: string;
+  issueDate?: string;
+  country?: string;
+  amountValue?: number;
+  amountCurrency?: string;
+  // Fields to store in JSONB metadata
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -125,19 +133,27 @@ export interface DocumentMetadataUpdate {
  */
 export async function updateDocumentMetadata(
   documentId: string,
-  metadata: DocumentMetadataUpdate
+  update: DocumentMetadataUpdate
 ): Promise<boolean> {
   try {
     const db = getDb();
-    await db
-      .update(documents)
-      .set({
-        documentType: metadata.documentType,
-        documentOwner: metadata.documentOwner,
-        expiryDate: metadata.expiryDate,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(documents.id, documentId));
+
+    // Build update object with only defined fields
+    const setValues: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (update.documentType !== undefined) setValues.documentType = update.documentType;
+    if (update.documentOwner !== undefined) setValues.documentOwner = update.documentOwner;
+    if (update.expiryDate !== undefined) setValues.expiryDate = update.expiryDate;
+    if (update.category !== undefined) setValues.category = update.category;
+    if (update.issueDate !== undefined) setValues.issueDate = update.issueDate;
+    if (update.country !== undefined) setValues.country = update.country;
+    if (update.amountValue !== undefined) setValues.amountValue = update.amountValue;
+    if (update.amountCurrency !== undefined) setValues.amountCurrency = update.amountCurrency;
+    if (update.metadata !== undefined) setValues.metadata = update.metadata;
+
+    await db.update(documents).set(setValues).where(eq(documents.id, documentId));
 
     console.log(`Document metadata updated: ${documentId}`);
     return true;
