@@ -38,3 +38,6 @@ packages/db/src/schema/*.sql
 
 # Generated documents on localhost.
 apps/api/documents/*
+
+# Local seed scripts with API keys
+scripts/seed-providers.ts
