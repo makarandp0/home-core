@@ -78,7 +78,15 @@ function buildMetadataUpdate(doc: DocumentData): DocumentMetadataUpdate {
  * Check if a filename indicates an image file.
  */
 function isImageFile(filename: string): boolean {
-  const ext = filename.toLowerCase().split('.').pop() ?? '';
+  const lower = filename.toLowerCase();
+  const dotIndex = lower.lastIndexOf('.');
+
+  // Require a non-leading dot and a non-empty extension (e.g. "image.jpg", not "jpeg" or ".jpg" or "file.")
+  if (dotIndex <= 0 || dotIndex === lower.length - 1) {
+    return false;
+  }
+
+  const ext = lower.slice(dotIndex + 1);
   return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'].includes(ext);
 }
 
@@ -163,7 +171,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         // For images: use LLM vision
         const originalImageData = file.startsWith('data:') ? file : `data:image/jpeg;base64,${file}`;
 
-        // Resize to 4MB limit regardless of provider
+        // Resize to 3.5 MiB (binary) limit (~4.7 MiB base64) regardless of provider
         const resizeResult = await resizeImageIfNeeded(originalImageData);
         const imageData = resizeResult.imageData;
 
@@ -183,13 +191,21 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
             baseUuid: docUuid,
             suffix: '_resized',
           });
-          documentId = stored?.id ?? '';
+          if (!stored) {
+            reply.code(500);
+            return { ok: false, error: 'Document storage is not configured on the server' };
+          }
+          documentId = stored.id;
         } else {
           // No resizing needed - store single copy without suffix
           const stored = await storeDocument(imageData, filename, undefined, {
             baseUuid: docUuid,
           });
-          documentId = stored?.id ?? '';
+          if (!stored) {
+            reply.code(500);
+            return { ok: false, error: 'Document storage is not configured on the server' };
+          }
+          documentId = stored.id;
         }
 
         const { result, cached } = await withExtractTextCache(
@@ -236,7 +252,11 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
         const dataUrl = `data:${mimeType};base64,${base64Content}`;
         const stored = await storeDocument(dataUrl, filename);
-        documentId = stored?.id ?? '';
+        if (!stored) {
+          reply.code(500);
+          return { ok: false, error: 'Document storage is not configured on the server' };
+        }
+        documentId = stored.id;
       }
 
       // Step 2: Parse text to JSON

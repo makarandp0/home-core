@@ -8,7 +8,7 @@
  *   pnpm test-resize <directory> [options]
  *
  * Options:
- *   --max-size <bytes>  Max size in bytes (default: 4MB)
+ *   --max-size <bytes>  Max size in bytes (default: 3.5MB)
  *   --output <path>     Save resized image to file (only for single file input)
  *   --dry-run           Show what would happen without resizing
  *
@@ -53,7 +53,7 @@ Usage: test-image-resize.ts <image-file|directory> [options]
 Tests the image resizing functionality.
 
 Options:
-  --max-size <bytes>  Max size in bytes (default: 4MB)
+  --max-size <bytes>  Max size in bytes (default: 3.5MB)
   --output <path>     Save resized image to file (only for single file input)
   --dry-run           Show what would happen without resizing
   -h, --help          Show this help message
@@ -75,9 +75,16 @@ Examples:
 
   for (let i = 1; i < args.length; i++) {
     switch (args[i]) {
-      case '--max-size':
-        options.maxSize = parseInt(args[++i], 10);
+      case '--max-size': {
+        const value = args[++i];
+        const parsed = Number.parseInt(value, 10);
+        if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+          console.error(`Invalid value for --max-size: "${value}". Please provide a positive integer number of bytes.`);
+          process.exit(1);
+        }
+        options.maxSize = parsed;
         break;
+      }
       case '--output':
         options.output = args[++i];
         break;

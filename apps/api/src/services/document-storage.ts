@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { getDb, documents, eq } from '@home/db';
+import { parseDataUrl } from '../utils/data-url.js';
 
 export interface DocumentStorageResult {
   id: string;
@@ -21,15 +22,6 @@ export interface RawFileResult {
  */
 function getStoragePath(): string | null {
   return process.env.DOCUMENT_STORAGE_PATH || null;
-}
-
-/**
- * Extract mime type and base64 data from a data URL.
- */
-function parseDataUrl(dataUrl: string): { mimeType: string; base64Data: string } | null {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) return null;
-  return { mimeType: match[1], base64Data: match[2] };
 }
 
 /**

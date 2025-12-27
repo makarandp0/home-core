@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { parseDataUrl } from '../utils/data-url.js';
 
 // Size limit in bytes of decoded binary data
 // Note: Base64 encoding adds ~33% overhead, so we use 3.5MB binary
@@ -10,15 +11,6 @@ export interface ResizeResult {
   resized: boolean; // whether image was modified
   originalSize: number; // bytes
   finalSize: number; // bytes
-}
-
-/**
- * Parse a base64 data URL into components.
- */
-function parseDataUrl(dataUrl: string): { mimeType: string; base64Data: string } | null {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) return null;
-  return { mimeType: match[1], base64Data: match[2] };
 }
 
 /**
