@@ -24,6 +24,48 @@ function formatDate(dateString: string): string {
   });
 }
 
+function formatShortDate(dateString: string | null): string {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+type SizeRange = 'all' | 'small' | 'medium' | 'large';
+
+interface Filters {
+  owner: string;
+  documentType: string;
+  category: string;
+  sizeRange: SizeRange;
+  expiryStatus: string;
+}
+
+interface FilterOptions {
+  owners: string[];
+  documentTypes: string[];
+  categories: string[];
+}
+
+function getSizeRange(bytes: number): SizeRange {
+  if (bytes < 100 * 1024) return 'small'; // < 100KB
+  if (bytes < 1024 * 1024) return 'medium'; // < 1MB
+  return 'large'; // >= 1MB
+}
+
+function getExpiryStatus(expiryDate: string | null): string {
+  if (!expiryDate) return 'none';
+  const expiry = new Date(expiryDate);
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  if (expiry < now) return 'expired';
+  if (expiry < thirtyDaysFromNow) return 'expiring-soon';
+  return 'valid';
+}
+
 export function DocumentsPage() {
   const navigate = useNavigate();
   const [documents, setDocuments] = React.useState<DocumentMetadata[]>([]);
@@ -31,6 +73,14 @@ export function DocumentsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [confirmState, setConfirmState] = React.useState<{ id: string; countdown: number } | null>(null);
+
+  const [filters, setFilters] = React.useState<Filters>({
+    owner: 'all',
+    documentType: 'all',
+    category: 'all',
+    sizeRange: 'all',
+    expiryStatus: 'all',
+  });
 
   React.useEffect(() => {
     async function fetchDocuments() {
@@ -64,6 +114,49 @@ export function DocumentsPage() {
 
     return () => clearInterval(timer);
   }, [confirmState?.id, confirmState && confirmState.countdown > 0]);
+
+  // Build filter options from documents
+  const filterOptions = React.useMemo<FilterOptions>(() => {
+    const owners = new Set<string>();
+    const documentTypes = new Set<string>();
+    const categories = new Set<string>();
+
+    documents.forEach((doc) => {
+      if (doc.documentOwner) owners.add(doc.documentOwner);
+      if (doc.documentType) documentTypes.add(doc.documentType);
+      if (doc.category) categories.add(doc.category);
+    });
+
+    return {
+      owners: Array.from(owners).sort(),
+      documentTypes: Array.from(documentTypes).sort(),
+      categories: Array.from(categories).sort(),
+    };
+  }, [documents]);
+
+  // Apply filters
+  const filteredDocuments = React.useMemo(() => {
+    return documents.filter((doc) => {
+      if (filters.owner !== 'all' && doc.documentOwner !== filters.owner) return false;
+      if (filters.documentType !== 'all' && doc.documentType !== filters.documentType) return false;
+      if (filters.category !== 'all' && doc.category !== filters.category) return false;
+      if (filters.sizeRange !== 'all' && getSizeRange(doc.sizeBytes) !== filters.sizeRange) return false;
+      if (filters.expiryStatus !== 'all' && getExpiryStatus(doc.expiryDate) !== filters.expiryStatus) return false;
+      return true;
+    });
+  }, [documents, filters]);
+
+  const activeFilterCount = Object.values(filters).filter((v) => v !== 'all').length;
+
+  function clearFilters() {
+    setFilters({
+      owner: 'all',
+      documentType: 'all',
+      category: 'all',
+      sizeRange: 'all',
+      expiryStatus: 'all',
+    });
+  }
 
   async function handleDelete(doc: DocumentMetadata, e: React.MouseEvent) {
     e.stopPropagation();
@@ -129,25 +222,138 @@ export function DocumentsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-          Documents ({documents.length})
+          Documents ({filteredDocuments.length}
+          {activeFilterCount > 0 && ` of ${documents.length}`})
         </h2>
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearFilters}
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Clear filters ({activeFilterCount})
+          </button>
+        )}
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        {/* Owner filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Owner
+          </label>
+          <select
+            value={filters.owner}
+            onChange={(e) => setFilters((f) => ({ ...f, owner: e.target.value }))}
+            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          >
+            <option value="all">All owners</option>
+            {filterOptions.owners.map((owner) => (
+              <option key={owner} value={owner}>
+                {owner}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Document Type filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Type
+          </label>
+          <select
+            value={filters.documentType}
+            onChange={(e) => setFilters((f) => ({ ...f, documentType: e.target.value }))}
+            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          >
+            <option value="all">All types</option>
+            {filterOptions.documentTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Category
+          </label>
+          <select
+            value={filters.category}
+            onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
+            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          >
+            <option value="all">All categories</option>
+            {filterOptions.categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Size filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Size
+          </label>
+          <select
+            value={filters.sizeRange}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === 'all' || value === 'small' || value === 'medium' || value === 'large') {
+                setFilters((f) => ({ ...f, sizeRange: value }));
+              }
+            }}
+            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          >
+            <option value="all">All sizes</option>
+            <option value="small">&lt; 100 KB</option>
+            <option value="medium">100 KB - 1 MB</option>
+            <option value="large">&gt; 1 MB</option>
+          </select>
+        </div>
+
+        {/* Expiry filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Expiry Status
+          </label>
+          <select
+            value={filters.expiryStatus}
+            onChange={(e) => setFilters((f) => ({ ...f, expiryStatus: e.target.value }))}
+            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+          >
+            <option value="all">All</option>
+            <option value="expired">Expired</option>
+            <option value="expiring-soon">Expiring soon (30 days)</option>
+            <option value="valid">Valid</option>
+            <option value="none">No expiry</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b dark:border-gray-700">
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                Name
+                Document
               </th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                Type
+                Owner
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
+                Type / Category
               </th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
                 Size
               </th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
-                Created
+                Dates
               </th>
               <th className="px-4 py-2 text-right text-sm font-medium text-gray-600 dark:text-gray-400">
                 Actions
@@ -155,48 +361,95 @@ export function DocumentsPage() {
             </tr>
           </thead>
           <tbody>
-            {documents.map((doc) => (
-              <tr
-                key={doc.id}
-                onClick={() => navigate(`/documents/${doc.id}`)}
-                className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-              >
-                <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900 dark:text-gray-100">
-                    {doc.originalFilename}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">
-                    {doc.id}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                  {doc.documentType || '—'}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                  {formatBytes(doc.sizeBytes)}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                  {formatDate(doc.createdAt)}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={(e) => handleDelete(doc, e)}
-                    disabled={deletingId === doc.id}
-                    className={`text-sm transition-colors disabled:opacity-50 ${
-                      confirmState?.id === doc.id
-                        ? 'text-red-700 dark:text-red-300 font-medium'
-                        : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
-                    }`}
-                  >
-                    {deletingId === doc.id
-                      ? 'Deleting...'
-                      : confirmState?.id === doc.id
-                        ? `Confirm? (${confirmState.countdown})`
-                        : 'Delete'}
-                  </button>
+            {filteredDocuments.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No documents match the selected filters
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredDocuments.map((doc) => {
+                const expiryStatus = getExpiryStatus(doc.expiryDate);
+                return (
+                  <tr
+                    key={doc.id}
+                    onClick={() => navigate(`/documents/${doc.id}`)}
+                    className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                  >
+                    {/* Document name + ID */}
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                        {doc.originalFilename}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-500 font-mono">
+                        {doc.id.slice(0, 8)}...
+                      </div>
+                    </td>
+
+                    {/* Owner */}
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      {doc.documentOwner || '—'}
+                    </td>
+
+                    {/* Type + Category (stacked) */}
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900 dark:text-gray-100">
+                        {doc.documentType || '—'}
+                      </div>
+                      {doc.category && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {doc.category}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Size */}
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      {formatBytes(doc.sizeBytes)}
+                    </td>
+
+                    {/* Dates (stacked: created + expiry) */}
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {formatDate(doc.createdAt)}
+                      </div>
+                      {doc.expiryDate && (
+                        <div
+                          className={`text-xs ${
+                            expiryStatus === 'expired'
+                              ? 'text-red-600 dark:text-red-400'
+                              : expiryStatus === 'expiring-soon'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          Expires: {formatShortDate(doc.expiryDate)}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={(e) => handleDelete(doc, e)}
+                        disabled={deletingId === doc.id}
+                        className={`text-sm transition-colors disabled:opacity-50 ${
+                          confirmState?.id === doc.id
+                            ? 'text-red-700 dark:text-red-300 font-medium'
+                            : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+                        }`}
+                      >
+                        {deletingId === doc.id
+                          ? 'Deleting...'
+                          : confirmState?.id === doc.id
+                            ? `Confirm? (${confirmState.countdown})`
+                            : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
