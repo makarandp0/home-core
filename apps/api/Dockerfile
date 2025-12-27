@@ -12,13 +12,22 @@ WORKDIR /app
 # Enable pnpm via Corepack and pin version from repo
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
-# Copy workspace manifests first for better caching
+# Copy only package manifests first for better dependency caching
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
+COPY packages/db/package.json ./packages/db/
+COPY packages/tailwind-config/package.json ./packages/tailwind-config/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/types/package.json ./packages/types/
+COPY packages/utils/package.json ./packages/utils/
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+
+# Install dependencies (cached unless package.json files change)
+RUN pnpm install --frozen-lockfile
+
+# Now copy source code and build
 COPY packages ./packages
 COPY apps ./apps
-
-# Install dependencies (with dev deps for build) and build API + Web
-RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 

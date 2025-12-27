@@ -61,10 +61,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'apps/web/**'
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+            doc-processor:
+              - 'apps/doc-processor/**'
+
       - name: Set up Docker Buildx
+        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.doc-processor == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build API image
+        if: steps.changes.outputs.api == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -76,6 +91,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Build doc-processor image
+        if: steps.changes.outputs.doc-processor == 'true'
         uses: docker/build-push-action@v6
         with:
           context: apps/doc-processor

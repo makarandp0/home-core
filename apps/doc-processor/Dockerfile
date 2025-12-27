@@ -18,16 +18,16 @@ COPY pyproject.toml uv.lock ./
 # Install dependencies
 RUN uv sync --frozen --no-dev
 
-# Copy source code
-COPY src/ src/
-
-# Pre-download EasyOCR model during build (English only, ~100MB)
-# This avoids download delay on first request
+# Pre-download EasyOCR model during build BEFORE copying source (English only, ~100MB)
+# This avoids download delay on first request and caches the model separately from source
 # Retry logic handles flaky network connections in CI
 RUN for i in 1 2 3; do \
       .venv/bin/python -c "import easyocr; easyocr.Reader(['en'], gpu=False)" && break || \
       { echo "Attempt $i failed, retrying in 5s..." && sleep 5; }; \
     done
+
+# Copy source code (changes here won't invalidate dependency or model cache)
+COPY src/ src/
 
 # Runtime stage
 FROM python:3.11-slim
