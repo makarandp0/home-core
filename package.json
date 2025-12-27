@@ -14,6 +14,7 @@
     "dev:api": "COMMIT_SHA=$(git rev-parse --short HEAD || echo dev) pnpm --filter @home/api dev",
     "dev:doc-processor": "pnpm --filter @home/doc-processor dev",
     "setup:doc-processor": "cd apps/doc-processor && ./setup.sh",
+    "process-docs": "./scripts/with-env.sh pnpm exec tsx apps/api/src/scripts/process-documents.ts",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",

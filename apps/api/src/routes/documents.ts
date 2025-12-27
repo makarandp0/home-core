@@ -4,13 +4,24 @@ import { stat } from 'node:fs/promises';
 import {
   DocumentProcessRequestSchema,
   DocumentProcessResponseSchema,
+  DocumentJsonMetadataSchema,
   type ApiResponse,
   type DocumentProcessData,
   type DocumentListResponse,
   type DocumentMetadata,
+  type DocumentJsonMetadata,
 } from '@home/types';
 import { getDb, documents, desc, eq } from '@home/db';
 import { storeDocument, deleteDocument } from '../services/document-storage.js';
+
+/**
+ * Safely parse JSONB metadata from database.
+ * Returns null if parsing fails (defensive for legacy data).
+ */
+function parseMetadata(raw: unknown): DocumentJsonMetadata | null {
+  const result = DocumentJsonMetadataSchema.safeParse(raw);
+  return result.success ? result.data : null;
+}
 
 const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 
@@ -137,6 +148,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/documents
    * List all stored documents with metadata.
+   * Returns all fields needed for client-side filtering/search.
    */
   fastify.get<{
     Reply: ApiResponse<DocumentListResponse>;
@@ -150,20 +162,36 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           originalFilename: documents.originalFilename,
           mimeType: documents.mimeType,
           sizeBytes: documents.sizeBytes,
+          // Core fields
           documentType: documents.documentType,
           documentOwner: documents.documentOwner,
           expiryDate: documents.expiryDate,
+          // New searchable fields
+          category: documents.category,
+          issueDate: documents.issueDate,
+          country: documents.country,
+          amountValue: documents.amountValue,
+          amountCurrency: documents.amountCurrency,
+          // JSONB metadata (contains keywords, parties, etc.)
+          metadata: documents.metadata,
+          // Timestamps
           createdAt: documents.createdAt,
           updatedAt: documents.updatedAt,
         })
         .from(documents)
         .orderBy(desc(documents.createdAt));
 
+      // Parse metadata from JSONB to typed structure
+      const typedDocs = docs.map((doc) => ({
+        ...doc,
+        metadata: parseMetadata(doc.metadata),
+      }));
+
       return {
         ok: true,
         data: {
-          documents: docs,
-          total: docs.length,
+          documents: typedDocs,
+          total: typedDocs.length,
         },
       };
     } catch (err) {
@@ -192,9 +220,19 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           originalFilename: documents.originalFilename,
           mimeType: documents.mimeType,
           sizeBytes: documents.sizeBytes,
+          // Core fields
           documentType: documents.documentType,
           documentOwner: documents.documentOwner,
           expiryDate: documents.expiryDate,
+          // New searchable fields
+          category: documents.category,
+          issueDate: documents.issueDate,
+          country: documents.country,
+          amountValue: documents.amountValue,
+          amountCurrency: documents.amountCurrency,
+          // JSONB metadata
+          metadata: documents.metadata,
+          // Timestamps
           createdAt: documents.createdAt,
           updatedAt: documents.updatedAt,
         })
@@ -207,7 +245,13 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         return { ok: false, error: 'Document not found' };
       }
 
-      return { ok: true, data: doc };
+      // Parse metadata from JSONB to typed structure
+      const typedDoc = {
+        ...doc,
+        metadata: parseMetadata(doc.metadata),
+      };
+
+      return { ok: true, data: typedDoc };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       reply.code(500);

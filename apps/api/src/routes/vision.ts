@@ -8,11 +8,56 @@ import {
   type VisionExtractTextResponse,
   type VisionParseResponse,
   type ApiResponse,
+  type DocumentData,
 } from '@home/types';
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 import { withAnalyzeCache, withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
-import { storeDocument, updateDocumentMetadata } from '../services/document-storage.js';
-import { getApiKey } from '../services/settings-service.js';
+import {
+  storeDocument,
+  updateDocumentMetadata,
+  type DocumentMetadataUpdate,
+} from '../services/document-storage.js';
+import { getApiKeyForProvider } from '../services/settings-service.js';
+
+/**
+ * Build metadata update from LLM-extracted document data.
+ * Maps top-level fields to database columns and stores the rest in JSONB.
+ */
+function buildMetadataUpdate(doc: DocumentData): DocumentMetadataUpdate {
+  // Fields to store in top-level columns
+  const update: DocumentMetadataUpdate = {
+    documentType: doc.document_type,
+    documentOwner: doc.name ?? undefined,
+    expiryDate: doc.expiry_date ?? undefined,
+    category: doc.category ?? undefined,
+    issueDate: doc.issue_date ?? undefined,
+    country: doc.country ?? undefined,
+    // Convert number to string for numeric column precision
+    amountValue: doc.amount?.value != null ? String(doc.amount.value) : undefined,
+    amountCurrency: doc.amount?.currency ?? undefined,
+  };
+
+  // Fields to store in JSONB metadata column
+  const jsonbMetadata: Record<string, unknown> = {};
+
+  if (doc.id) jsonbMetadata.id = doc.id;
+  if (doc.reference_numbers?.length) jsonbMetadata.reference_numbers = doc.reference_numbers;
+  if (doc.parties?.length) jsonbMetadata.parties = doc.parties;
+  if (doc.date_of_birth) jsonbMetadata.date_of_birth = doc.date_of_birth;
+  if (doc.issuing_authority) jsonbMetadata.issuing_authority = doc.issuing_authority;
+  if (doc.state_province) jsonbMetadata.state_province = doc.state_province;
+  if (doc.address) jsonbMetadata.address = doc.address;
+  if (doc.language) jsonbMetadata.language = doc.language;
+  if (doc.keywords?.length) jsonbMetadata.keywords = doc.keywords;
+  if (doc.confidence) jsonbMetadata.confidence = doc.confidence;
+  if (Object.keys(doc.fields).length) jsonbMetadata.fields = doc.fields;
+
+  if (Object.keys(jsonbMetadata).length > 0) {
+    update.metadata = jsonbMetadata;
+  }
+
+  return update;
+}
 
 export const visionRoutes: FastifyPluginAsync = async (app) => {
   app.post('/vision', async (request, reply): Promise<ApiResponse<VisionResponse>> => {
@@ -34,7 +79,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       return { ok: false, error: `Unknown provider: ${providerId}` };
     }
 
-    const apiKey = requestApiKey || (await getApiKey(providerId));
+    const apiKey = requestApiKey || (await getApiKeyForProvider(providerId));
     if (!apiKey) {
       reply.code(400);
       return {
@@ -64,11 +109,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
 
       // Update document with LLM-extracted metadata
       if (documentId && documentResult.success) {
-        await updateDocumentMetadata(documentId, {
-          documentType: documentResult.data.document_type,
-          documentOwner: documentResult.data.name ?? undefined,
-          expiryDate: documentResult.data.expiry_date ?? undefined,
-        });
+        await updateDocumentMetadata(documentId, buildMetadataUpdate(documentResult.data));
       }
 
       const data: VisionResponse = {
@@ -121,7 +162,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
         return { ok: false, error: `Unknown provider: ${providerId}` };
       }
 
-      const apiKey = requestApiKey || (await getApiKey(providerId));
+      const apiKey = requestApiKey || (await getApiKeyForProvider(providerId));
       if (!apiKey) {
         reply.code(400);
         return {
@@ -183,7 +224,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
       return { ok: false, error: `Unknown provider: ${providerId}` };
     }
 
-    const apiKey = requestApiKey || (await getApiKey(providerId));
+    const apiKey = requestApiKey || (await getApiKeyForProvider(providerId));
     if (!apiKey) {
       reply.code(400);
       return {
@@ -207,11 +248,7 @@ export const visionRoutes: FastifyPluginAsync = async (app) => {
 
       // Update document with LLM-extracted metadata if documentId provided
       if (documentId && documentResult?.success) {
-        await updateDocumentMetadata(documentId, {
-          documentType: documentResult.data.document_type,
-          documentOwner: documentResult.data.name ?? undefined,
-          expiryDate: documentResult.data.expiry_date ?? undefined,
-        });
+        await updateDocumentMetadata(documentId, buildMetadataUpdate(documentResult.data));
       }
 
       const data: VisionParseResponse = {

@@ -32,6 +32,33 @@ export const DocumentProcessResponseSchema = z.object({
 
 export type DocumentProcessResponse = z.infer<typeof DocumentProcessResponseSchema>;
 
+// JSONB metadata stored with documents (for client-side filtering)
+export const DocumentJsonMetadataSchema = z
+  .object({
+    id: z.string().optional(), // document ID (passport number, etc.)
+    reference_numbers: z.array(z.string()).optional(),
+    parties: z.array(z.string()).optional(),
+    date_of_birth: z.string().optional(),
+    issuing_authority: z.string().optional(),
+    state_province: z.string().optional(),
+    address: z
+      .object({
+        street: z.string().nullish(),
+        city: z.string().nullish(),
+        state: z.string().nullish(),
+        postal_code: z.string().nullish(),
+        country: z.string().nullish(),
+      })
+      .optional(),
+    language: z.string().optional(),
+    keywords: z.array(z.string()).optional(),
+    confidence: z.enum(['high', 'medium', 'low']).optional(),
+    fields: z.record(z.string(), z.unknown()).optional(),
+  })
+  .nullable();
+
+export type DocumentJsonMetadata = z.infer<typeof DocumentJsonMetadataSchema>;
+
 // Document metadata (for listing documents)
 export const DocumentMetadataSchema = z.object({
   id: z.string(),
@@ -39,9 +66,19 @@ export const DocumentMetadataSchema = z.object({
   originalFilename: z.string(),
   mimeType: z.string(),
   sizeBytes: z.number(),
+  // Core fields
   documentType: z.string().nullable(),
   documentOwner: z.string().nullable(),
   expiryDate: z.string().nullable(),
+  // New searchable fields
+  category: z.string().nullable(),
+  issueDate: z.string().nullable(),
+  country: z.string().nullable(),
+  amountValue: z.string().nullable(),
+  amountCurrency: z.string().nullable(),
+  // JSONB metadata for additional searchable fields
+  metadata: DocumentJsonMetadataSchema,
+  // Timestamps
   createdAt: z.string(),
   updatedAt: z.string(),
 });

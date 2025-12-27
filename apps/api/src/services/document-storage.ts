@@ -114,30 +114,46 @@ export interface DocumentMetadataUpdate {
   documentType?: string;
   documentOwner?: string;
   expiryDate?: string;
+  // New fields
+  category?: string;
+  issueDate?: string;
+  country?: string;
+  amountValue?: string; // stored as string for numeric precision
+  amountCurrency?: string;
+  // Fields to store in JSONB metadata
+  metadata?: Record<string, unknown>;
 }
 
 /**
  * Update document metadata after LLM parsing.
  *
  * @param documentId - The UUID of the document to update
- * @param metadata - The metadata fields to update
+ * @param metadataUpdate - The metadata fields to update
  * @returns true if update succeeded, false otherwise
  */
 export async function updateDocumentMetadata(
   documentId: string,
-  metadata: DocumentMetadataUpdate
+  metadataUpdate: DocumentMetadataUpdate
 ): Promise<boolean> {
   try {
     const db = getDb();
-    await db
-      .update(documents)
-      .set({
-        documentType: metadata.documentType,
-        documentOwner: metadata.documentOwner,
-        expiryDate: metadata.expiryDate,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(documents.id, documentId));
+
+    // Build update object with only defined fields
+    const setValues: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (metadataUpdate.documentType !== undefined) setValues.documentType = metadataUpdate.documentType;
+    if (metadataUpdate.documentOwner !== undefined) setValues.documentOwner = metadataUpdate.documentOwner;
+    if (metadataUpdate.expiryDate !== undefined) setValues.expiryDate = metadataUpdate.expiryDate;
+    if (metadataUpdate.category !== undefined) setValues.category = metadataUpdate.category;
+    if (metadataUpdate.issueDate !== undefined) setValues.issueDate = metadataUpdate.issueDate;
+    if (metadataUpdate.country !== undefined) setValues.country = metadataUpdate.country;
+    if (metadataUpdate.amountValue !== undefined) setValues.amountValue = metadataUpdate.amountValue;
+    if (metadataUpdate.amountCurrency !== undefined) setValues.amountCurrency = metadataUpdate.amountCurrency;
+    if (metadataUpdate.metadata !== undefined) setValues.metadata = metadataUpdate.metadata;
+
+    await db.update(documents).set(setValues).where(eq(documents.id, documentId));
 
     console.log(`Document metadata updated: ${documentId}`);
     return true;

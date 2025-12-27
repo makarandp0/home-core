@@ -1,10 +1,31 @@
 export interface DocumentData {
   document_type: string;
+  category?: string;
   id?: string;
-  expiry_date?: string;
+  reference_numbers?: string[];
   name?: string;
-  fields: Record<string, string>;
+  parties?: string[];
+  issue_date?: string;
+  expiry_date?: string;
+  date_of_birth?: string;
+  issuing_authority?: string;
+  country?: string;
+  state_province?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  } | null;
+  amount?: {
+    value: number | null;
+    currency: string | null;
+  } | null;
+  language?: string;
+  fields: Record<string, unknown>;
   keywords?: string[];
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 export interface VisionResult {
@@ -81,16 +102,78 @@ export function buildFullPrompt(prompt: string, extractionPrompt: string): strin
 }
 
 export const DOCUMENT_EXTRACTION_PROMPT = `Analyze the extracted text and return a JSON object with the following structure:
+
 {
-  "document_type": "string - type of document (e.g., driver_license, passport, id_card, invoice, receipt, etc.)",
-  "id": "string or null - the primary identifier of the document (e.g., passport number, driver's license number, invoice number, etc.)",
-  "expiry_date": "string or null - expiration date if present, formatted as YYYY-MM-DD",
-  "name": "string or null - person's name if present",
-  "fields": {
-    "key": "value pairs of all other important information found in the document"
+  "document_type": "string - must be one of the types listed below, or 'unknown'",
+  "category": "string - one of: identity, financial, legal, medical, property, vehicle, education, insurance, correspondence, other",
+
+  "id": "string or null - primary identifier (passport number, invoice number, case number, etc.)",
+  "reference_numbers": ["array of any secondary reference numbers, account numbers, or tracking IDs"],
+
+  "name": "string or null - primary person's full name",
+  "parties": ["array of all people or organizations mentioned as parties to this document"],
+
+  "issue_date": "string or null - date document was issued/created, YYYY-MM-DD",
+  "expiry_date": "string or null - expiration date if present, YYYY-MM-DD",
+  "date_of_birth": "string or null - date of birth if present, YYYY-MM-DD",
+
+  "issuing_authority": "string or null - organization that issued the document",
+  "country": "string or null - ISO 3166-1 alpha-2 country code (US, GB, CA, etc.)",
+  "state_province": "string or null - state or province name",
+
+  "address": {
+    "street": "string or null",
+    "city": "string or null",
+    "state": "string or null",
+    "postal_code": "string or null",
+    "country": "string or null"
   },
-  "keywords": ["array of up to 10 main keywords that describe the document content"]
+
+  "amount": {
+    "value": "number or null",
+    "currency": "string - ISO 4217 code (USD, EUR, etc.)"
+  },
+
+  "language": "string - ISO 639-1 language code (en, es, fr, etc.)",
+
+  "fields": {
+    "key": "value pairs of important information not captured in the fields above"
+  },
+
+  "keywords": ["array of up to 10 searchable terms describing the document"],
+
+  "confidence": "high, medium, or low - your confidence in the extraction accuracy"
 }
 
-Important: All dates must be formatted as YYYY-MM-DD (e.g., 2025-12-31).
-Return ONLY the JSON object, no additional text or markdown.`;
+VALID document_type VALUES (use ONLY these exact values, nothing else):
+passport, drivers_license, national_id, visa, birth_certificate, social_security_card, green_card, work_permit,
+invoice, receipt, bank_statement, tax_return, w2_form, 1099_form, pay_stub, credit_card_statement, loan_agreement,
+contract, lease_agreement, power_of_attorney, will, court_order, affidavit, notarized_document,
+medical_record, prescription, vaccination_record, insurance_card, lab_results, discharge_summary,
+deed, title, mortgage, property_tax_bill, home_insurance_policy,
+vehicle_registration, vehicle_title, auto_insurance_card, smog_certificate,
+diploma, transcript, degree_certificate, professional_license,
+insurance_policy, insurance_claim, coverage_summary,
+letter, notice, bill, statement,
+photo, certificate, membership_card, unknown
+
+CATEGORY MAPPING (set category based on document_type):
+- identity: passport, drivers_license, national_id, visa, birth_certificate, social_security_card, green_card, work_permit
+- financial: invoice, receipt, bank_statement, tax_return, w2_form, 1099_form, pay_stub, credit_card_statement, loan_agreement
+- legal: contract, lease_agreement, power_of_attorney, will, court_order, affidavit, notarized_document
+- medical: medical_record, prescription, vaccination_record, insurance_card, lab_results, discharge_summary
+- property: deed, title, mortgage, property_tax_bill, home_insurance_policy
+- vehicle: vehicle_registration, vehicle_title, auto_insurance_card, smog_certificate
+- education: diploma, transcript, degree_certificate, professional_license
+- insurance: insurance_policy, insurance_claim, coverage_summary
+- correspondence: letter, notice, bill, statement
+- other: photo, certificate, membership_card, unknown
+
+CRITICAL RULES:
+- document_type must be EXACTLY one of the values listed above. Use "passport", not "Identity: passport" or any other format
+- category must be one of: identity, financial, legal, medical, property, vehicle, education, insurance, correspondence, other
+- All dates MUST be in YYYY-MM-DD format (e.g., 2025-12-31)
+- Use null for fields not found in the document
+- For address, include only if a complete or partial address is found, otherwise null
+- For amount, include only for documents with monetary values, otherwise null
+- Return ONLY valid JSON, no markdown or explanations`;

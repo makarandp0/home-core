@@ -97,6 +97,21 @@ export async function getApiKey(providerType: string): Promise<string | null> {
 }
 
 /**
+ * Get the API key for a specific provider type, regardless of active status.
+ * Useful for CLI scripts that specify a provider explicitly.
+ */
+export async function getApiKeyForProvider(providerType: string): Promise<string | null> {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(providerConfigs)
+    .where(eq(providerConfigs.providerType, providerType))
+    .limit(1);
+
+  return row?.apiKey ?? null;
+}
+
+/**
  * Get the active provider's API key regardless of provider type.
  * Returns both the key and the provider type.
  */
