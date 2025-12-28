@@ -103,3 +103,15 @@ export const DocumentUploadResponseSchema = z.object({
 });
 
 export type DocumentUploadResponse = z.infer<typeof DocumentUploadResponseSchema>;
+
+// Thumbnails request body
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const ThumbnailsRequestSchema = z.object({
+  ids: z
+    .array(z.string().regex(uuidRegex, 'Invalid document ID format'))
+    .min(1, 'ids must be a non-empty array')
+    .max(50, 'Maximum 50 documents per request'),
+});
+
+export type ThumbnailsRequest = z.infer<typeof ThumbnailsRequestSchema>;

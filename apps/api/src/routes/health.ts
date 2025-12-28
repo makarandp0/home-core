@@ -11,6 +11,7 @@ import {
   type LoadFaceModelResponse,
 } from '@home/types';
 import { getDb, sql } from '@home/db';
+import { createRouteBuilder } from '../utils/route-builder.js';
 
 const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 const DOCUMENT_STORAGE_PATH = process.env.DOCUMENT_STORAGE_PATH || null;
@@ -80,26 +81,32 @@ async function checkDocumentStorage(): Promise<{ path: string | null; accessible
 }
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/health', async (): Promise<Health> => {
-    const version = process.env.COMMIT_SHA || 'dev';
+  const routes = createRouteBuilder(app);
 
-    // Fetch doc-processor status, database status, and storage status in parallel
-    const [docProcessor, dbConnected, storageStatus] = await Promise.all([
-      getDocProcessorStatus(),
-      checkDatabaseConnection(),
-      checkDocumentStorage(),
-    ]);
+  routes.get<unknown, unknown, unknown, Health>({
+    url: '/health',
+    handler: async () => {
+      const version = process.env.COMMIT_SHA || 'dev';
 
-    const payload = {
-      ok: true,
-      version,
-      docProcessor,
-      database: { connected: dbConnected },
-      documentStorage: storageStatus,
-    };
-    return HealthSchema.parse(payload);
+      // Fetch doc-processor status, database status, and storage status in parallel
+      const [docProcessor, dbConnected, storageStatus] = await Promise.all([
+        getDocProcessorStatus(),
+        checkDatabaseConnection(),
+        checkDocumentStorage(),
+      ]);
+
+      const payload = {
+        ok: true,
+        version,
+        docProcessor,
+        database: { connected: dbConnected },
+        documentStorage: storageStatus,
+      };
+      return HealthSchema.parse(payload);
+    },
   });
 
+  // Keep this route using raw fastify since LoadFaceModelResponse has its own ok/error format
   app.post<{ Body: LoadFaceModelRequest }>(
     '/doc-processor/load-model',
     async (request): Promise<LoadFaceModelResponse> => {

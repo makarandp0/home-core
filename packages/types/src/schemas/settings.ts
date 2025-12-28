@@ -43,3 +43,9 @@ export const DeleteResponseSchema = z.object({
   deleted: z.boolean(),
 });
 export type DeleteResponse = z.infer<typeof DeleteResponseSchema>;
+
+// Common ID params schema for routes with :id parameter
+export const IdParamsSchema = z.object({
+  id: z.string().min(1),
+});
+export type IdParams = z.infer<typeof IdParamsSchema>;

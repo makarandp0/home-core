@@ -6,6 +6,8 @@ import {
   DocumentJsonMetadataSchema,
   DocumentUploadRequestSchema,
   DocumentDataSchema,
+  ThumbnailsRequestSchema,
+  IdParamsSchema,
   type ApiResponse,
   type DocumentListResponse,
   type DocumentMetadata,
@@ -14,6 +16,8 @@ import {
   type DocumentUploadRequest,
   type DocumentData,
   type ExtractionMethod,
+  type ThumbnailsRequest,
+  type IdParams,
 } from '@home/types';
 import { getDb, documents, desc, eq, inArray } from '@home/db';
 import {
@@ -28,6 +32,7 @@ import { withExtractTextCache, withParseTextCache } from '../services/llm-cache.
 import { getApiKeyForProvider, getActiveApiKey } from '../services/settings-service.js';
 import { resizeImageIfNeeded } from '../services/image-resize.js';
 import { generateThumbnail, generateThumbnailFromBytes } from '../services/thumbnail.js';
+import { createRouteBuilder, notFound } from '../utils/route-builder.js';
 
 /**
  * Safely parse JSONB metadata from database.
@@ -115,10 +120,14 @@ interface PythonThumbnailResponse {
 }
 
 export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
+  const routes = createRouteBuilder(fastify);
+
   /**
    * POST /api/documents/upload
    * Unified document upload: extracts text and parses to JSON in one call.
    * Handles both images (via LLM) and PDFs (via doc-processor).
+   *
+   * Note: This route uses raw Fastify due to complex provider-specific error handling.
    */
   fastify.post<{
     Body: DocumentUploadRequest;
@@ -386,22 +395,19 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * GET /api/documents/health
    * Check the health of the doc-processor service.
    */
-  fastify.get<{
-    Reply: ApiResponse<{ available: boolean; url: string }>;
-  }>('/documents/health', async () => {
-    try {
-      const response = await fetch(`${DOC_PROCESSOR_URL}/health`, {
-        method: 'GET',
-      });
+  routes.get<unknown, unknown, unknown, { available: boolean; url: string }>({
+    url: '/documents/health',
+    handler: async () => {
+      try {
+        const response = await fetch(`${DOC_PROCESSOR_URL}/health`, {
+          method: 'GET',
+        });
 
-      if (response.ok) {
-        return { ok: true, data: { available: true, url: DOC_PROCESSOR_URL } };
+        return { available: response.ok, url: DOC_PROCESSOR_URL };
+      } catch {
+        return { available: false, url: DOC_PROCESSOR_URL };
       }
-
-      return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
-    } catch {
-      return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
-    }
+    },
   });
 
   /**
@@ -409,32 +415,10 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * Get thumbnails for multiple documents (for lazy loading).
    * Returns a map of document ID to thumbnail data URL.
    */
-  fastify.post<{
-    Body: { ids: string[] };
-    Reply: ApiResponse<Record<string, string | null>>;
-  }>('/documents/thumbnails', async (request, reply) => {
-    const { ids } = request.body;
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      reply.code(400);
-      return { ok: false, error: 'ids must be a non-empty array' };
-    }
-
-    // Limit batch size to prevent abuse
-    if (ids.length > 50) {
-      reply.code(400);
-      return { ok: false, error: 'Maximum 50 documents per request' };
-    }
-
-    // Validate UUID format for all IDs
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const invalidIds = ids.filter((id) => !uuidRegex.test(id));
-    if (invalidIds.length > 0) {
-      reply.code(400);
-      return { ok: false, error: 'Invalid document ID format' };
-    }
-
-    try {
+  routes.post<ThumbnailsRequest, unknown, unknown, Record<string, string | null>>({
+    url: '/documents/thumbnails',
+    schema: { body: ThumbnailsRequestSchema },
+    handler: async ({ body }) => {
       const db = getDb();
       const docs = await db
         .select({
@@ -442,7 +426,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           thumbnail: documents.thumbnail,
         })
         .from(documents)
-        .where(inArray(documents.id, ids));
+        .where(inArray(documents.id, body.ids));
 
       // Build map of id -> thumbnail
       const thumbnailMap: Record<string, string | null> = {};
@@ -450,12 +434,8 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         thumbnailMap[doc.id] = doc.thumbnail;
       }
 
-      return { ok: true, data: thumbnailMap };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to get thumbnails: ${errorMessage}` };
-    }
+      return thumbnailMap;
+    },
   });
 
   /**
@@ -463,10 +443,9 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * List all stored documents with metadata.
    * Returns all fields needed for client-side filtering/search.
    */
-  fastify.get<{
-    Reply: ApiResponse<DocumentListResponse>;
-  }>('/documents', async (request, reply) => {
-    try {
+  routes.get<unknown, unknown, unknown, DocumentListResponse>({
+    url: '/documents',
+    handler: async () => {
       const db = getDb();
       const docs = await db
         .select({
@@ -501,30 +480,20 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       }));
 
       return {
-        ok: true,
-        data: {
-          documents: typedDocs,
-          total: typedDocs.length,
-        },
+        documents: typedDocs,
+        total: typedDocs.length,
       };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to list documents: ${errorMessage}` };
-    }
+    },
   });
 
   /**
    * GET /api/documents/:id
    * Get document metadata by ID.
    */
-  fastify.get<{
-    Params: { id: string };
-    Reply: ApiResponse<DocumentMetadata>;
-  }>('/documents/:id', async (request, reply) => {
-    const { id } = request.params;
-
-    try {
+  routes.get<unknown, IdParams, unknown, DocumentMetadata>({
+    url: '/documents/:id',
+    schema: { params: IdParamsSchema },
+    handler: async ({ params }) => {
       const db = getDb();
       const [doc] = await db
         .select({
@@ -550,31 +519,26 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           updatedAt: documents.updatedAt,
         })
         .from(documents)
-        .where(eq(documents.id, id))
+        .where(eq(documents.id, params.id))
         .limit(1);
 
       if (!doc) {
-        reply.code(404);
-        return { ok: false, error: 'Document not found' };
+        notFound('Document not found');
       }
 
       // Parse metadata from JSONB to typed structure
-      const typedDoc = {
+      return {
         ...doc,
         metadata: parseMetadata(doc.metadata),
       };
-
-      return { ok: true, data: typedDoc };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to get document: ${errorMessage}` };
-    }
+    },
   });
 
   /**
    * GET /api/documents/:id/file
    * Serve the actual document file.
+   *
+   * Note: This route uses raw Fastify due to file streaming requirements.
    */
   fastify.get<{
     Params: { id: string };
@@ -622,25 +586,17 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * DELETE /api/documents/:id
    * Delete a document by ID (removes both file and database entry).
    */
-  fastify.delete<{
-    Params: { id: string };
-    Reply: ApiResponse<{ deleted: boolean }>;
-  }>('/documents/:id', async (request, reply) => {
-    const { id } = request.params;
-
-    try {
-      const success = await deleteDocument(id);
+  routes.delete<unknown, IdParams, unknown, { deleted: boolean }>({
+    url: '/documents/:id',
+    schema: { params: IdParamsSchema },
+    handler: async ({ params }) => {
+      const success = await deleteDocument(params.id);
 
       if (!success) {
-        reply.code(404);
-        return { ok: false, error: 'Document not found or could not be deleted' };
+        notFound('Document not found or could not be deleted');
       }
 
-      return { ok: true, data: { deleted: true } };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to delete document: ${errorMessage}` };
-    }
+      return { deleted: true };
+    },
   });
 };
