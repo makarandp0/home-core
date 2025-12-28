@@ -43,12 +43,12 @@ export function DocumentDetailPage() {
   // If accessed directly via URL, navigation will be disabled
   React.useEffect(() => {
     const state: LocationState | null = location.state;
-    if (state?.documentIds && Array.isArray(state.documentIds) && state.documentIds.length > 0) {
+    if (state?.documentIds && state.documentIds.length > 0) {
       setDocumentIds(state.documentIds);
     } else {
       setDocumentIds([]);
     }
-  }, [location.state]);
+  }, [location.key]);
 
   React.useEffect(() => {
     async function fetchDocument() {
@@ -155,7 +155,7 @@ export function DocumentDetailPage() {
           onClick={() => navigate('/documents')}
           className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         >
-          <span>←</span>
+          <span aria-hidden="true">←</span>
           <span>Back to Documents</span>
         </button>
 
@@ -169,12 +169,14 @@ export function DocumentDetailPage() {
               className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
               title={prevDocId ? 'Previous document' : 'No previous document'}
             >
-              <span>←</span>
+              <span aria-hidden="true">←</span>
               <span>Previous</span>
             </button>
 
             <span className="text-sm text-gray-500 dark:text-gray-400 px-2">
-              {currentIndex + 1} / {documentIds.length}
+              {currentIndex === -1
+                ? 'Position unknown'
+                : `${currentIndex + 1} / ${documentIds.length}`}
             </span>
 
             <button
@@ -186,7 +188,7 @@ export function DocumentDetailPage() {
               title={nextDocId ? 'Next document' : 'No next document'}
             >
               <span>Next</span>
-              <span>→</span>
+              <span aria-hidden="true">→</span>
             </button>
           </div>
         )}

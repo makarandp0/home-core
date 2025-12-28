@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ZodSchema, ZodError, ZodIssue } from 'zod';
+import { z } from 'zod';
 import type { ApiResponse } from '@home/types';
 
 /**
  * Format Zod validation errors into a user-friendly string.
  */
-export function formatZodError(error: ZodError): string {
+export function formatZodError(error: z.ZodError): string {
   return error.issues
-    .map((e: ZodIssue) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+    .map((e: z.ZodIssue) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
     .join(', ');
 }
 
@@ -61,9 +61,9 @@ export interface RouteContext<TBody, TParams, TQuery> {
  * Schema configuration for route validation.
  */
 export interface RouteSchemas<TBody, TParams, TQuery> {
-  body?: ZodSchema<TBody>;
-  params?: ZodSchema<TParams>;
-  query?: ZodSchema<TQuery>;
+  body?: z.ZodType<TBody>;
+  params?: z.ZodType<TParams>;
+  query?: z.ZodType<TQuery>;
 }
 
 /**
@@ -99,7 +99,7 @@ function validationFailure<T>(error: string): ValidationResult<T> {
  * T defaults to `unknown` when no schema is provided, so the type cast is safe.
  * Callers that require specific types should always provide a Zod schema.
  */
-function validateSchema<T>(schema: ZodSchema<T> | undefined, data: unknown): ValidationResult<T> {
+function validateSchema<T>(schema: z.ZodType<T> | undefined, data: unknown): ValidationResult<T> {
   if (!schema) {
     // No schema means we pass through the data as-is without validation.
     // This is safe because T defaults to `unknown` when no schema is provided in the route builder.
