@@ -39,6 +39,7 @@ export function DocumentDetailPage() {
   const [deleting, setDeleting] = React.useState(false);
   const [confirmCountdown, setConfirmCountdown] = React.useState(0);
   const [documentIds, setDocumentIds] = React.useState<string[]>([]);
+  const [navigating, setNavigating] = React.useState<'prev' | 'next' | null>(null);
 
   // Get document IDs from router state (passed from filtered list)
   // If accessed directly via URL, navigation will be disabled
@@ -55,6 +56,7 @@ export function DocumentDetailPage() {
     async function fetchDocument() {
       if (!id) return;
 
+      setLoading(true);
       const result = await api.get(`/api/documents/${id}`, DocumentMetadataSchema);
       if (result.ok) {
         setDocument(result.data);
@@ -62,6 +64,7 @@ export function DocumentDetailPage() {
         setError(getErrorMessage(result.error));
       }
       setLoading(false);
+      setNavigating(null);
     }
 
     fetchDocument();
@@ -71,6 +74,143 @@ export function DocumentDetailPage() {
   const currentIndex = id ? documentIds.indexOf(id) : -1;
   const prevDocId = currentIndex > 0 ? documentIds[currentIndex - 1] : null;
   const nextDocId = currentIndex >= 0 && currentIndex < documentIds.length - 1 ? documentIds[currentIndex + 1] : null;
+
+  // Use ref to avoid re-creating callbacks when documentIds changes by reference
+  const documentIdsRef = React.useRef(documentIds);
+  React.useEffect(() => {
+    documentIdsRef.current = documentIds;
+  }, [documentIds]);
+
+  // Navigation helpers
+  const navigateToPrev = React.useCallback(() => {
+    if (prevDocId) {
+      setNavigating('prev');
+      navigate(`/documents/${prevDocId}`, { state: { documentIds: documentIdsRef.current } });
+    }
+  }, [prevDocId, navigate]);
+
+  const navigateToNext = React.useCallback(() => {
+    if (nextDocId) {
+      setNavigating('next');
+      navigate(`/documents/${nextDocId}`, { state: { documentIds: documentIdsRef.current } });
+    }
+  }, [nextDocId, navigate]);
+
+  // Keyboard navigation (arrow keys)
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      // Ignore if user is interacting with input-like fields or editable areas
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        navigateToPrev();
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        navigateToNext();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigateToPrev, navigateToNext]);
+
+  // Swipe gesture support for mobile with real-time drag preview
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+  const touchStartTarget = React.useRef<EventTarget | null>(null);
+  const isDragging = React.useRef(false);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const SWIPE_THRESHOLD = 80; // Minimum distance for swipe detection
+  const DRAG_RESISTANCE = 0.4; // Resistance when dragging beyond threshold
+
+  const handleTouchStart = React.useCallback((event: React.TouchEvent) => {
+    // Skip if touch started on interactive elements
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      const interactiveElement = target.closest('button, a, input, textarea, select, iframe, [role="button"]');
+      if (interactiveElement) {
+        return;
+      }
+    }
+
+    touchStartX.current = event.touches[0].clientX;
+    touchStartY.current = event.touches[0].clientY;
+    touchStartTarget.current = event.target;
+    isDragging.current = false;
+  }, []);
+
+  const handleTouchMove = React.useCallback((event: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+    const deltaX = touchX - touchStartX.current;
+    const deltaY = touchY - touchStartY.current;
+
+    // Determine if this is a horizontal drag (only on first significant movement)
+    if (!isDragging.current) {
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      if (absX > 10 || absY > 10) {
+        // If more vertical than horizontal, don't track as drag
+        if (absY > absX) {
+          touchStartX.current = null;
+          touchStartY.current = null;
+          return;
+        }
+        isDragging.current = true;
+      }
+    }
+
+    if (isDragging.current) {
+      // Check if we can navigate in this direction
+      const canGoLeft = deltaX > 0 && prevDocId;
+      const canGoRight = deltaX < 0 && nextDocId;
+
+      if (canGoLeft || canGoRight) {
+        // Apply resistance for a natural feel
+        const resistance = Math.abs(deltaX) > SWIPE_THRESHOLD ? DRAG_RESISTANCE : 1;
+        const cappedDelta = deltaX * resistance;
+        setDragOffset(Math.max(-150, Math.min(150, cappedDelta)));
+      } else {
+        // Can't navigate in this direction, show resistance
+        setDragOffset(deltaX * 0.2);
+      }
+    }
+  }, [prevDocId, nextDocId]);
+
+  const handleTouchEnd = React.useCallback(() => {
+    if (touchStartX.current === null) {
+      setDragOffset(0);
+      return;
+    }
+
+    const shouldNavigate = Math.abs(dragOffset) > SWIPE_THRESHOLD * 0.8;
+
+    if (shouldNavigate && isDragging.current) {
+      if (dragOffset > 0 && prevDocId) {
+        navigateToPrev();
+      } else if (dragOffset < 0 && nextDocId) {
+        navigateToNext();
+      }
+    }
+
+    // Reset
+    setDragOffset(0);
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchStartTarget.current = null;
+    isDragging.current = false;
+  }, [dragOffset, prevDocId, nextDocId, navigateToPrev, navigateToNext]);
 
   React.useEffect(() => {
     if (confirmCountdown <= 0) return;
@@ -101,11 +241,59 @@ export function DocumentDetailPage() {
     setConfirmCountdown(0);
   }
 
+  // Navigation overlay - rendered in all states
+  const navigationOverlay = navigating && (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
+        <div
+          className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800 px-8 py-6 rounded-2xl shadow-2xl"
+          style={{
+            animation: `${navigating === 'prev' ? 'slideFromLeft' : 'slideFromRight'} 0.4s ease-out`,
+          }}
+        >
+          <span
+            className="text-5xl text-blue-600 dark:text-blue-400"
+            aria-hidden="true"
+            style={{
+              animation: `${navigating === 'prev' ? 'bounceLeft' : 'bounceRight'} 0.6s ease-in-out infinite`,
+            }}
+          >
+            {navigating === 'prev' ? '←' : '→'}
+          </span>
+          <span className="text-gray-700 dark:text-gray-200 font-semibold text-lg">
+            {navigating === 'prev' ? 'Previous' : 'Next'}
+          </span>
+        </div>
+      </div>
+      <style>{`
+        @keyframes slideFromLeft {
+          from { opacity: 0; transform: translateX(-40px) scale(0.9); }
+          to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes slideFromRight {
+          from { opacity: 0; transform: translateX(40px) scale(0.9); }
+          to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes bounceLeft {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(-8px); }
+        }
+        @keyframes bounceRight {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(8px); }
+        }
+      `}</style>
+    </>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-gray-600 dark:text-gray-400">Loading document...</div>
-      </div>
+      <>
+        {navigationOverlay}
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-gray-600 dark:text-gray-400">Loading document...</div>
+        </div>
+      </>
     );
   }
 
@@ -129,8 +317,41 @@ export function DocumentDetailPage() {
   const isPdf = document.mimeType === 'application/pdf';
   const fileUrl = `/api/documents/${document.id}/file`;
 
+  // Drag direction indicator
+  const dragDirection = dragOffset > 20 ? 'prev' : dragOffset < -20 ? 'next' : null;
+  const dragIndicator = dragDirection && !navigating && (
+    <div className="fixed inset-0 z-40 pointer-events-none flex items-center justify-center">
+      <div
+        className="bg-white dark:bg-gray-800 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3"
+        style={{
+          opacity: Math.min(1, Math.abs(dragOffset) / 80),
+          transform: `scale(${0.8 + Math.min(0.2, Math.abs(dragOffset) / 400)})`,
+        }}
+      >
+        <span className="text-4xl text-blue-600 dark:text-blue-400">
+          {dragDirection === 'prev' ? '←' : '→'}
+        </span>
+        <span className="text-gray-700 dark:text-gray-200 font-semibold">
+          {dragDirection === 'prev' ? 'Previous' : 'Next'}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6 relative"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
+        transition: dragOffset ? 'none' : 'transform 0.3s ease-out',
+      }}
+    >
+      {dragIndicator}
+      {navigationOverlay}
+
       {/* Navigation header */}
       <div className="flex items-center justify-between">
         <button
@@ -144,12 +365,10 @@ export function DocumentDetailPage() {
         {documentIds.length > 0 && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => prevDocId && navigate(`/documents/${prevDocId}`, {
-                state: { documentIds },
-              })}
+              onClick={navigateToPrev}
               disabled={!prevDocId}
               className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
-              title={prevDocId ? 'Previous document' : 'No previous document'}
+              title={prevDocId ? 'Previous document (←)' : 'No previous document'}
             >
               <span aria-hidden="true">←</span>
               <span>Previous</span>
@@ -162,12 +381,10 @@ export function DocumentDetailPage() {
             </span>
 
             <button
-              onClick={() => nextDocId && navigate(`/documents/${nextDocId}`, {
-                state: { documentIds },
-              })}
+              onClick={navigateToNext}
               disabled={!nextDocId}
               className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
-              title={nextDocId ? 'Next document' : 'No next document'}
+              title={nextDocId ? 'Next document (→)' : 'No next document'}
             >
               <span>Next</span>
               <span aria-hidden="true">→</span>

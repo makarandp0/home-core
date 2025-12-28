@@ -77,8 +77,15 @@ export HOME_WEB_PORT=$((5173 + OFFSET))
 export HOME_API_PORT=$((3001 + OFFSET))
 
 info "Branch '$BRANCH' → offset $OFFSET"
+
+# Get local network IP for mobile testing
+LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "")
+
 echo ""
 echo "  Web:           http://localhost:$HOME_WEB_PORT"
+if [[ -n "$LOCAL_IP" ]]; then
+  echo "  Web (network): http://$LOCAL_IP:$HOME_WEB_PORT"
+fi
 echo "  API:           http://localhost:$HOME_API_PORT"
 echo "  Doc Processor: http://localhost:8000"
 echo ""
