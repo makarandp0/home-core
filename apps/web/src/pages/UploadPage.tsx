@@ -53,7 +53,9 @@ export function UploadPage() {
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Upload Document</h2>
               <Badge variant="secondary" className="text-xs">
-                {settings.activeProvider?.name ?? 'No provider configured'}
+                {settings.loading
+                  ? 'Loading...'
+                  : settings.activeProvider?.name ?? 'No provider configured'}
               </Badge>
             </div>
             <Link
