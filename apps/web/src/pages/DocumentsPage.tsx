@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   type DocumentMetadata,
   DocumentListResponseSchema,
-  apiResponse,
+  ThumbnailsResponseSchema,
 } from '@home/types';
 import { DocumentListView, DocumentCardView } from '../components/documents';
+import { api, getErrorMessage } from '@/lib/api';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -82,22 +83,13 @@ export function DocumentsPage() {
 
   React.useEffect(() => {
     async function fetchDocuments() {
-      try {
-        const response = await fetch('/api/documents');
-        const json = await response.json();
-
-        const parsed = apiResponse(DocumentListResponseSchema).safeParse(json);
-        if (!parsed.success || !parsed.data.ok || !parsed.data.data) {
-          setError(parsed.data?.error ?? 'Failed to fetch documents');
-          return;
-        }
-
-        setDocuments(parsed.data.data.documents);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch documents');
-      } finally {
-        setLoading(false);
+      const result = await api.get('/api/documents', DocumentListResponseSchema);
+      if (result.ok) {
+        setDocuments(result.data.documents);
+      } else {
+        setError(getErrorMessage(result.error));
       }
+      setLoading(false);
     }
 
     fetchDocuments();
@@ -109,19 +101,12 @@ export function DocumentsPage() {
 
     async function fetchThumbnails() {
       const ids = documents.map((doc) => doc.id);
-      try {
-        const response = await fetch('/api/documents/thumbnails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids }),
-        });
-        const json = await response.json();
-        if (json.ok && json.data) {
-          setThumbnails(json.data);
-        }
-      } catch (error) {
+      const result = await api.post('/api/documents/thumbnails', ThumbnailsResponseSchema, { ids });
+      if (result.ok) {
+        setThumbnails(result.data);
+      } else {
         // Thumbnails are non-critical; log and continue
-        console.error('Failed to fetch document thumbnails', error);
+        console.error('Failed to fetch document thumbnails:', getErrorMessage(result.error));
       }
     }
 

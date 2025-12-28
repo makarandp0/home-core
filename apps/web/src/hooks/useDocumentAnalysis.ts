@@ -1,12 +1,12 @@
 import * as React from 'react';
 import {
-  apiResponse,
   DocumentUploadDataSchema,
   type DocumentData,
   type ExtractionMethod,
   type ApiError,
 } from '@home/types';
 import { type FileType } from './useFileUpload';
+import { api, getErrorMessage } from '@/lib/api';
 
 export type ProcessingStep = 'idle' | 'processing' | 'complete' | 'error';
 
@@ -65,33 +65,17 @@ export function useDocumentAnalysis() {
         error: null,
       });
 
-      try {
-        // Single API call for extract + parse
-        const response = await fetch('/api/documents/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file: fileDataUrl,
-            filename: fileName,
-            provider,
-            ...(apiKey?.trim() && { apiKey: apiKey.trim() }),
-            ...(prompt?.trim() && { prompt: prompt.trim() }),
-          }),
-        });
+      // Single API call for extract + parse
+      const result = await api.post('/api/documents/upload', DocumentUploadDataSchema, {
+        file: fileDataUrl,
+        filename: fileName,
+        provider,
+        ...(apiKey?.trim() && { apiKey: apiKey.trim() }),
+        ...(prompt?.trim() && { prompt: prompt.trim() }),
+      });
 
-        const json = await response.json();
-        const parsed = apiResponse(DocumentUploadDataSchema).parse(json);
-
-        if (!parsed.ok || !parsed.data) {
-          setState({
-            currentStep: 'error',
-            results: initialResults,
-            error: parsed.error ?? 'Failed to process document',
-          });
-          return;
-        }
-
-        const data = parsed.data;
+      if (result.ok) {
+        const data = result.data;
         setState({
           currentStep: 'complete',
           results: {
@@ -103,11 +87,11 @@ export function useDocumentAnalysis() {
           },
           error: null,
         });
-      } catch (err) {
+      } else {
         setState({
           currentStep: 'error',
           results: initialResults,
-          error: err instanceof Error ? err.message : 'An error occurred',
+          error: getErrorMessage(result.error),
         });
       }
     },

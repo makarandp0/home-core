@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
-  apiResponse,
   ProvidersResponseSchema,
   SettingsResponseSchema,
   ProviderConfigSchema,
@@ -10,6 +9,7 @@ import {
   type ProviderConfigCreate,
   type ProviderConfigUpdate,
 } from '@home/types';
+import { api, getErrorMessage } from '@/lib/api';
 
 interface SettingsContextValue {
   // Available provider types (for dropdown when adding)
@@ -52,18 +52,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Fetch provider types on mount
   useEffect(() => {
     async function fetchProviderTypes() {
-      try {
-        const res = await fetch('/api/providers');
-        const json = await res.json();
-        const parsed = apiResponse(ProvidersResponseSchema).parse(json);
-        if (parsed.ok && parsed.data) {
-          setProviderTypes(parsed.data.providers);
-        }
-      } catch (err) {
-        console.error('Failed to fetch provider types:', err);
-      } finally {
-        setProviderTypesLoading(false);
+      const result = await api.get('/api/providers', ProvidersResponseSchema);
+      if (result.ok) {
+        setProviderTypes(result.data.providers);
+      } else {
+        console.error('Failed to fetch provider types:', getErrorMessage(result.error));
       }
+      setProviderTypesLoading(false);
     }
     fetchProviderTypes();
   }, []);
@@ -78,26 +73,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setError(null);
     }
 
-    try {
-      const res = await fetch('/api/settings');
-      const json = await res.json();
-      const parsed = apiResponse(SettingsResponseSchema).parse(json);
-      if (parsed.ok && parsed.data) {
-        setProviders(parsed.data.providers);
-        setActiveProviderId(parsed.data.activeProviderId);
-      } else {
-        setError(parsed.error?.toString() ?? 'Failed to load settings');
-      }
+    const result = await api.get('/api/settings', SettingsResponseSchema);
+    if (result.ok) {
+      setProviders(result.data.providers);
+      setActiveProviderId(result.data.activeProviderId);
       setLoading(false);
-    } catch (err) {
-      console.error('[useSettings] Fetch failed:', err);
+    } else {
+      console.error('[useSettings] Fetch failed:', getErrorMessage(result.error));
       // Retry if backend might not be ready yet
       if (retryCount < maxRetries) {
         console.log(`[useSettings] Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
         setTimeout(() => fetchSettings(retryCount + 1), retryDelay);
         return;
       }
-      setError(err instanceof Error ? err.message : 'Failed to load settings');
+      setError(getErrorMessage(result.error));
       setLoading(false);
     }
   }, []);
@@ -110,29 +99,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Add a new provider
   const addProvider = useCallback(
     async (data: ProviderConfigCreate): Promise<ProviderConfig | null> => {
-      try {
-        const res = await fetch('/api/settings/providers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        const parsed = apiResponse(ProviderConfigSchema).safeParse(json);
-        if (!parsed.success) {
-          setError('Invalid response from server');
-          return null;
-        }
-        if (parsed.data.ok && parsed.data.data) {
-          setProviders((prev) => [...prev, parsed.data.data!]);
-          return parsed.data.data;
-        }
-        setError(parsed.data.error ?? 'Failed to add provider');
-        return null;
-      } catch (err) {
-        console.error('Failed to add provider:', err);
-        setError(err instanceof Error ? err.message : 'Failed to add provider');
-        return null;
+      const result = await api.post('/api/settings/providers', ProviderConfigSchema, data);
+      if (result.ok) {
+        setProviders((prev) => [...prev, result.data]);
+        return result.data;
       }
+      setError(getErrorMessage(result.error));
+      return null;
     },
     [],
   );
@@ -140,89 +113,45 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Update a provider
   const updateProvider = useCallback(
     async (id: string, data: ProviderConfigUpdate): Promise<ProviderConfig | null> => {
-      try {
-        const res = await fetch(`/api/settings/providers/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        const parsed = apiResponse(ProviderConfigSchema).safeParse(json);
-        if (!parsed.success) {
-          setError('Invalid response from server');
-          return null;
-        }
-        if (parsed.data.ok && parsed.data.data) {
-          setProviders((prev) => prev.map((p) => (p.id === id ? parsed.data.data! : p)));
-          return parsed.data.data;
-        }
-        setError(parsed.data.error ?? 'Failed to update provider');
-        return null;
-      } catch (err) {
-        console.error('Failed to update provider:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update provider');
-        return null;
+      const result = await api.put(`/api/settings/providers/${id}`, ProviderConfigSchema, data);
+      if (result.ok) {
+        setProviders((prev) => prev.map((p) => (p.id === id ? result.data : p)));
+        return result.data;
       }
+      setError(getErrorMessage(result.error));
+      return null;
     },
     [],
   );
 
   // Delete a provider
   const deleteProvider = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/settings/providers/${id}`, {
-        method: 'DELETE',
-      });
-      const json = await res.json();
-      const parsed = apiResponse(DeleteResponseSchema).safeParse(json);
-      if (!parsed.success) {
-        setError('Invalid response from server');
-        return false;
-      }
-      if (parsed.data.ok && parsed.data.data) {
-        setProviders((prev) => prev.filter((p) => p.id !== id));
-        setActiveProviderId((prev) => (prev === id ? null : prev));
-        return true;
-      }
-      setError(parsed.data.error ?? 'Failed to delete provider');
-      return false;
-    } catch (err) {
-      console.error('Failed to delete provider:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete provider');
-      return false;
+    const result = await api.delete(`/api/settings/providers/${id}`, DeleteResponseSchema);
+    if (result.ok) {
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+      setActiveProviderId((prev) => (prev === id ? null : prev));
+      return true;
     }
+    setError(getErrorMessage(result.error));
+    return false;
   }, []);
 
   // Activate a provider
   const activateProvider = useCallback(async (id: string): Promise<ProviderConfig | null> => {
-    try {
-      const res = await fetch(`/api/settings/providers/${id}/activate`, {
-        method: 'POST',
-      });
-      const json = await res.json();
-      const parsed = apiResponse(ProviderConfigSchema).safeParse(json);
-      if (!parsed.success) {
-        setError('Invalid response from server');
-        return null;
-      }
-      if (parsed.data.ok && parsed.data.data) {
-        // Update providers list to reflect new active state
-        setProviders((prev) =>
-          prev.map((p) => ({
-            ...p,
-            isActive: p.id === id,
-          })),
-        );
-        setActiveProviderId(id);
-        return parsed.data.data;
-      }
-      setError(parsed.data.error ?? 'Failed to activate provider');
-      return null;
-    } catch (err) {
-      console.error('Failed to activate provider:', err);
-      setError(err instanceof Error ? err.message : 'Failed to activate provider');
-      return null;
+    const result = await api.post(`/api/settings/providers/${id}/activate`, ProviderConfigSchema);
+    if (result.ok) {
+      // Update providers list to reflect new active state
+      setProviders((prev) =>
+        prev.map((p) => ({
+          ...p,
+          isActive: p.id === id,
+        })),
+      );
+      setActiveProviderId(id);
+      return result.data;
     }
+    setError(getErrorMessage(result.error));
+    return null;
   }, []);
 
   return (
