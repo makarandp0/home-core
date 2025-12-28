@@ -1,7 +1,8 @@
 import React from 'react';
-import { HealthSchema } from '@home/types';
+import { HealthSchema, LoadFaceModelResponseSchema, type DocProcessorStatus } from '@home/types';
 import { FRONTEND_VERSION } from '../version';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface PrInfo {
@@ -96,8 +97,7 @@ function CommitLink({ commit, label }: { commit: string; label: string }) {
 
 export function VersionPage() {
   const [backendVersion, setBackendVersion] = React.useState<string | null>(null);
-  const [docProcessorVersion, setDocProcessorVersion] = React.useState<string | null>(null);
-  const [docProcessorUrl, setDocProcessorUrl] = React.useState<string | null>(null);
+  const [docProcessor, setDocProcessor] = React.useState<DocProcessorStatus | null>(null);
   const [databaseConnected, setDatabaseConnected] = React.useState<boolean | null>(null);
   const [documentStorage, setDocumentStorage] = React.useState<{
     path: string | null;
@@ -105,30 +105,56 @@ export function VersionPage() {
     error?: string;
   } | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [loadingModel, setLoadingModel] = React.useState(false);
+  const [loadModelError, setLoadModelError] = React.useState<string | null>(null);
+
+  const fetchHealth = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/health');
+      const json = await res.json();
+      const parsed = HealthSchema.parse(json);
+      setBackendVersion(parsed.version ?? null);
+      setDocProcessor(parsed.docProcessor ?? null);
+      setDatabaseConnected(parsed.database?.connected ?? null);
+      setDocumentStorage(parsed.documentStorage ?? null);
+    } catch {
+      setBackendVersion(null);
+      setDocProcessor(null);
+      setDatabaseConnected(null);
+      setDocumentStorage(null);
+    }
+  }, []);
 
   React.useEffect(() => {
     const run = async () => {
-      try {
-        const res = await fetch('/api/health');
-        const json = await res.json();
-        const parsed = HealthSchema.parse(json);
-        setBackendVersion(parsed.version ?? null);
-        setDocProcessorVersion(parsed.docProcessorVersion ?? null);
-        setDocProcessorUrl(parsed.docProcessorUrl ?? null);
-        setDatabaseConnected(parsed.database?.connected ?? null);
-        setDocumentStorage(parsed.documentStorage ?? null);
-      } catch {
-        setBackendVersion(null);
-        setDocProcessorVersion(null);
-        setDocProcessorUrl(null);
-        setDatabaseConnected(null);
-        setDocumentStorage(null);
-      } finally {
-        setLoading(false);
-      }
+      await fetchHealth();
+      setLoading(false);
     };
     run();
-  }, []);
+  }, [fetchHealth]);
+
+  const handleLoadModel = async () => {
+    setLoadingModel(true);
+    setLoadModelError(null);
+    try {
+      const res = await fetch('/api/doc-processor/load-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'buffalo_l' }),
+      });
+      const json = await res.json();
+      const parsed = LoadFaceModelResponseSchema.parse(json);
+      if (!parsed.ok) {
+        setLoadModelError(parsed.error ?? 'Unknown error');
+      } else {
+        await fetchHealth();
+      }
+    } catch (err) {
+      setLoadModelError(err instanceof Error ? err.message : 'Failed to load model');
+    } finally {
+      setLoadingModel(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -162,25 +188,71 @@ export function VersionPage() {
               <div className="p-3 bg-secondary/50 rounded-md border border-border/50">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">Doc Processor</span>
-                  {docProcessorVersion ? (
-                    <a
-                      href={`https://github.com/${GITHUB_REPO}/commit/${docProcessorVersion}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
-                    >
-                      {docProcessorVersion.slice(0, 7)}
-                    </a>
-                  ) : (
-                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                      Unavailable
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {docProcessor?.available ? (
+                      <>
+                        <span className={cn(
+                          "text-xs font-medium",
+                          "text-green-600 dark:text-green-400"
+                        )}>
+                          Available
+                        </span>
+                        {docProcessor.version && (
+                          <a
+                            href={`https://github.com/${GITHUB_REPO}/commit/${docProcessor.version}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
+                          >
+                            {docProcessor.version.slice(0, 7)}
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                        Unavailable
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {docProcessorUrl && (
+                {docProcessor?.url && (
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {docProcessorUrl}
+                    {docProcessor.url}
                   </p>
+                )}
+                {docProcessor?.available && (
+                  <div className="mt-2 pt-2 border-t border-border/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Face Model</span>
+                      <div className="flex items-center gap-2">
+                        {docProcessor.faceModel?.loaded ? (
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                            {docProcessor.faceModel.model || 'Loaded'}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+                              Not Loaded
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleLoadModel}
+                              disabled={loadingModel}
+                              className="h-6 px-2 text-xs"
+                            >
+                              {loadingModel ? 'Loading...' : 'Load'}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {loadModelError && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        {loadModelError}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">

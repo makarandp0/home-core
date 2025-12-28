@@ -39,7 +39,7 @@ Run all services (web, API, and doc-processor) in watch mode:
 pnpm dev
 ```
 
-Ports are automatically offset based on branch name for parallel development across worktrees.
+Web and API ports are automatically offset based on branch name for parallel development across worktrees. PostgreSQL and doc-processor run as shared instances on fixed ports (5432, 8000).
 
 Or run individually:
 
@@ -182,6 +182,30 @@ pnpm start:web  # Build and preview web on :4173
 - In production, API serves the web SPA from `apps/web/dist` with SPA fallback
 - In dev, Vite serves the web and proxies `/api` to Fastify
 
+## Environment Variables
+
+How configuration is handled across deployment scenarios:
+
+| Variable | Dev (`pnpm dev`) | Self-host (docker-compose) | Railway |
+|----------|------------------|---------------------------|---------|
+| `DATABASE_URL` | Set in `.env` | Set in `.env` or use default | Auto-set by Railway Postgres |
+| `DOCUMENT_STORAGE_PATH` | Set in `.env` | Set in `.env` | Railway volume path |
+| `HOME_DOC_PROCESSOR_URL` | Auto-set to `http://localhost:8000` | Auto-set to `http://doc-processor:8000` | **Must configure** |
+| `HOME_API_PORT` | Branch-specific (3001 + offset) | Optional, default 3001 | Railway assigns |
+| `HOME_WEB_PORT` | Branch-specific (5173 + offset) | Optional, default 5173 | Railway assigns |
+
+**Notes:**
+- **Dev**: PostgreSQL and doc-processor run in Docker on fixed ports (5432, 8000) shared across worktrees. Web and API get branch-specific ports.
+- **Self-host**: All services run in Docker. Inter-service communication uses Docker's internal networking (`http://doc-processor:8000`).
+- **Railway**: Services are deployed separately. You must set `HOME_DOC_PROCESSOR_URL` to the doc-processor's Railway internal URL.
+
+## Railway Deployment
+
+1. Add a PostgreSQL database from the Railway dashboard
+2. Deploy the API and doc-processor as separate services
+3. Set `HOME_DOC_PROCESSOR_URL` on the API service to point to your doc-processor's internal URL
+4. Configure API keys via the Settings page in the UI
+
 ## Commit Guidelines
 
 - Use conventional commits: `feat:`, `fix:`, `chore:`
@@ -198,7 +222,7 @@ pnpm start:web  # Build and preview web on :4173
 
 - Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
 - Restart dev servers after changing shared schemas in `@home/types`
-- All worktrees share the same PostgreSQL container on port 5432
+- All worktrees share the same PostgreSQL (port 5432) and doc-processor (port 8000) containers
 - Each worktree has its own `.env` (copied when created)
 
 ## Debugging
