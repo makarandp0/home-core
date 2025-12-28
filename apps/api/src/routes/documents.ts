@@ -32,7 +32,7 @@ import { withExtractTextCache, withParseTextCache } from '../services/llm-cache.
 import { getApiKeyForProvider, getActiveApiKey } from '../services/settings-service.js';
 import { resizeImageIfNeeded } from '../services/image-resize.js';
 import { generateThumbnail, generateThumbnailFromBytes } from '../services/thumbnail.js';
-import { createRouteBuilder, notFound, serverError } from '../utils/route-builder.js';
+import { createRouteBuilder, notFound } from '../utils/route-builder.js';
 
 /**
  * Safely parse JSONB metadata from database.
@@ -419,27 +419,22 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
     url: '/documents/thumbnails',
     schema: { body: ThumbnailsRequestSchema },
     handler: async ({ body }) => {
-      try {
-        const db = getDb();
-        const docs = await db
-          .select({
-            id: documents.id,
-            thumbnail: documents.thumbnail,
-          })
-          .from(documents)
-          .where(inArray(documents.id, body.ids));
+      const db = getDb();
+      const docs = await db
+        .select({
+          id: documents.id,
+          thumbnail: documents.thumbnail,
+        })
+        .from(documents)
+        .where(inArray(documents.id, body.ids));
 
-        // Build map of id -> thumbnail
-        const thumbnailMap: Record<string, string | null> = {};
-        for (const doc of docs) {
-          thumbnailMap[doc.id] = doc.thumbnail;
-        }
-
-        return thumbnailMap;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        serverError(`Failed to get thumbnails: ${errorMessage}`);
+      // Build map of id -> thumbnail
+      const thumbnailMap: Record<string, string | null> = {};
+      for (const doc of docs) {
+        thumbnailMap[doc.id] = doc.thumbnail;
       }
+
+      return thumbnailMap;
     },
   });
 
@@ -451,48 +446,43 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
   routes.get<unknown, unknown, unknown, DocumentListResponse>({
     url: '/documents',
     handler: async () => {
-      try {
-        const db = getDb();
-        const docs = await db
-          .select({
-            id: documents.id,
-            filename: documents.filename,
-            originalFilename: documents.originalFilename,
-            mimeType: documents.mimeType,
-            sizeBytes: documents.sizeBytes,
-            // Core fields
-            documentType: documents.documentType,
-            documentOwner: documents.documentOwner,
-            expiryDate: documents.expiryDate,
-            // New searchable fields
-            category: documents.category,
-            issueDate: documents.issueDate,
-            country: documents.country,
-            amountValue: documents.amountValue,
-            amountCurrency: documents.amountCurrency,
-            // JSONB metadata (contains keywords, parties, etc.)
-            metadata: documents.metadata,
-            // Timestamps
-            createdAt: documents.createdAt,
-            updatedAt: documents.updatedAt,
-          })
-          .from(documents)
-          .orderBy(desc(documents.createdAt));
+      const db = getDb();
+      const docs = await db
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+          originalFilename: documents.originalFilename,
+          mimeType: documents.mimeType,
+          sizeBytes: documents.sizeBytes,
+          // Core fields
+          documentType: documents.documentType,
+          documentOwner: documents.documentOwner,
+          expiryDate: documents.expiryDate,
+          // New searchable fields
+          category: documents.category,
+          issueDate: documents.issueDate,
+          country: documents.country,
+          amountValue: documents.amountValue,
+          amountCurrency: documents.amountCurrency,
+          // JSONB metadata (contains keywords, parties, etc.)
+          metadata: documents.metadata,
+          // Timestamps
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
+        .orderBy(desc(documents.createdAt));
 
-        // Parse metadata from JSONB to typed structure
-        const typedDocs = docs.map((doc) => ({
-          ...doc,
-          metadata: parseMetadata(doc.metadata),
-        }));
+      // Parse metadata from JSONB to typed structure
+      const typedDocs = docs.map((doc) => ({
+        ...doc,
+        metadata: parseMetadata(doc.metadata),
+      }));
 
-        return {
-          documents: typedDocs,
-          total: typedDocs.length,
-        };
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        serverError(`Failed to list documents: ${errorMessage}`);
-      }
+      return {
+        documents: typedDocs,
+        total: typedDocs.length,
+      };
     },
   });
 
@@ -504,48 +494,43 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
     url: '/documents/:id',
     schema: { params: IdParamsSchema },
     handler: async ({ params }) => {
-      try {
-        const db = getDb();
-        const [doc] = await db
-          .select({
-            id: documents.id,
-            filename: documents.filename,
-            originalFilename: documents.originalFilename,
-            mimeType: documents.mimeType,
-            sizeBytes: documents.sizeBytes,
-            // Core fields
-            documentType: documents.documentType,
-            documentOwner: documents.documentOwner,
-            expiryDate: documents.expiryDate,
-            // New searchable fields
-            category: documents.category,
-            issueDate: documents.issueDate,
-            country: documents.country,
-            amountValue: documents.amountValue,
-            amountCurrency: documents.amountCurrency,
-            // JSONB metadata
-            metadata: documents.metadata,
-            // Timestamps
-            createdAt: documents.createdAt,
-            updatedAt: documents.updatedAt,
-          })
-          .from(documents)
-          .where(eq(documents.id, params.id))
-          .limit(1);
+      const db = getDb();
+      const [doc] = await db
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+          originalFilename: documents.originalFilename,
+          mimeType: documents.mimeType,
+          sizeBytes: documents.sizeBytes,
+          // Core fields
+          documentType: documents.documentType,
+          documentOwner: documents.documentOwner,
+          expiryDate: documents.expiryDate,
+          // New searchable fields
+          category: documents.category,
+          issueDate: documents.issueDate,
+          country: documents.country,
+          amountValue: documents.amountValue,
+          amountCurrency: documents.amountCurrency,
+          // JSONB metadata
+          metadata: documents.metadata,
+          // Timestamps
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
+        .where(eq(documents.id, params.id))
+        .limit(1);
 
-        if (!doc) {
-          notFound('Document not found');
-        }
-
-        // Parse metadata from JSONB to typed structure
-        return {
-          ...doc,
-          metadata: parseMetadata(doc.metadata),
-        };
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        serverError(`Failed to get document: ${errorMessage}`);
+      if (!doc) {
+        notFound('Document not found');
       }
+
+      // Parse metadata from JSONB to typed structure
+      return {
+        ...doc,
+        metadata: parseMetadata(doc.metadata),
+      };
     },
   });
 
@@ -605,18 +590,13 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
     url: '/documents/:id',
     schema: { params: IdParamsSchema },
     handler: async ({ params }) => {
-      try {
-        const success = await deleteDocument(params.id);
+      const success = await deleteDocument(params.id);
 
-        if (!success) {
-          notFound('Document not found or could not be deleted');
-        }
-
-        return { deleted: true };
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        serverError(`Failed to delete document: ${errorMessage}`);
+      if (!success) {
+        notFound('Document not found or could not be deleted');
       }
+
+      return { deleted: true };
     },
   });
 };

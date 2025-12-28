@@ -93,12 +93,17 @@ function validationFailure<T>(error: string): ValidationResult<T> {
 
 /**
  * Helper to validate and extract data, returning either validated data or an error response.
+ *
+ * When a schema is provided, the returned data is validated and typed as `T`.
+ * When no schema is provided, the data is passed through as-is. In the route builder,
+ * T defaults to `unknown` when no schema is provided, so the type cast is safe.
+ * Callers that require specific types should always provide a Zod schema.
  */
 function validateSchema<T>(schema: ZodSchema<T> | undefined, data: unknown): ValidationResult<T> {
   if (!schema) {
-    // No schema means we pass through the data as-is
-    // This is safe because T defaults to `unknown` when no schema is provided
-    // eslint-disable-next-line no-restricted-syntax -- Required for generic pass-through when no schema is provided
+    // No schema means we pass through the data as-is without validation.
+    // This is safe because T defaults to `unknown` when no schema is provided in the route builder.
+    // eslint-disable-next-line no-restricted-syntax -- Safe cast: T defaults to unknown when no schema provided
     return validationSuccess(data as T);
   }
   const result = schema.safeParse(data);
@@ -151,14 +156,16 @@ function createValidatedRoute<TBody = unknown, TParams = unknown, TQuery = unkno
 
       return { ok: true, data };
     } catch (err) {
-      // Handle RouteError specially
+      // Handle RouteError (thrown by notFound, badRequest, serverError helpers)
       if (err instanceof RouteError) {
         reply.code(err.statusCode);
         return { ok: false, error: err.message };
       }
 
-      // Re-throw unknown errors for global error handler
-      throw err;
+      // Convert unknown errors to 500 responses
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      reply.code(500);
+      return { ok: false, error: errorMessage };
     }
   });
 }
