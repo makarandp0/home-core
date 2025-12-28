@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   type DocumentMetadata,
   DocumentMetadataSchema,
@@ -24,14 +24,31 @@ function formatDate(dateString: string): string {
   });
 }
 
+interface LocationState {
+  documentIds?: string[];
+}
+
 export function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [document, setDocument] = React.useState<DocumentMetadata | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [confirmCountdown, setConfirmCountdown] = React.useState(0);
+  const [documentIds, setDocumentIds] = React.useState<string[]>([]);
+
+  // Get document IDs from router state (passed from filtered list)
+  // If accessed directly via URL, navigation will be disabled
+  React.useEffect(() => {
+    const state: LocationState | null = location.state;
+    if (state?.documentIds && state.documentIds.length > 0) {
+      setDocumentIds(state.documentIds);
+    } else {
+      setDocumentIds([]);
+    }
+  }, [location.key]);
 
   React.useEffect(() => {
     async function fetchDocument() {
@@ -57,6 +74,11 @@ export function DocumentDetailPage() {
 
     fetchDocument();
   }, [id]);
+
+  // Calculate prev/next document IDs
+  const currentIndex = id ? documentIds.indexOf(id) : -1;
+  const prevDocId = currentIndex > 0 ? documentIds[currentIndex - 1] : null;
+  const nextDocId = currentIndex >= 0 && currentIndex < documentIds.length - 1 ? documentIds[currentIndex + 1] : null;
 
   React.useEffect(() => {
     if (confirmCountdown <= 0) return;
@@ -127,6 +149,51 @@ export function DocumentDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Navigation header */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => navigate('/documents')}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        >
+          <span aria-hidden="true">←</span>
+          <span>Back to Documents</span>
+        </button>
+
+        {documentIds.length > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => prevDocId && navigate(`/documents/${prevDocId}`, {
+                state: { documentIds },
+              })}
+              disabled={!prevDocId}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
+              title={prevDocId ? 'Previous document' : 'No previous document'}
+            >
+              <span aria-hidden="true">←</span>
+              <span>Previous</span>
+            </button>
+
+            <span className="text-sm text-gray-500 dark:text-gray-400 px-2">
+              {currentIndex === -1
+                ? 'Position unknown'
+                : `${currentIndex + 1} / ${documentIds.length}`}
+            </span>
+
+            <button
+              onClick={() => nextDocId && navigate(`/documents/${nextDocId}`, {
+                state: { documentIds },
+              })}
+              disabled={!nextDocId}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
+              title={nextDocId ? 'Next document' : 'No next document'}
+            >
+              <span>Next</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        )}
+      </div>
+
       <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
         {document.originalFilename}
       </h2>
@@ -215,13 +282,6 @@ export function DocumentDetailPage() {
             }`}
           >
             {deleting ? 'Deleting...' : confirmCountdown > 0 ? `Confirm? (${confirmCountdown})` : 'Delete'}
-          </button>
-
-          <button
-            onClick={() => navigate('/documents')}
-            className="block w-full text-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            ← Back to Documents
           </button>
         </div>
       </div>

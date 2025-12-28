@@ -202,6 +202,12 @@ export function DocumentsPage() {
 
   const activeFilterCount = Object.values(filters).filter((v) => v !== 'all').length;
 
+  // Memoize document ID list for navigation state
+  const documentIdList = React.useMemo(
+    () => filteredDocuments.map((d) => d.id),
+    [filteredDocuments]
+  );
+
   function clearFilters() {
     setFilters({
       owner: 'all',
@@ -386,7 +392,9 @@ export function DocumentsPage() {
         <DocumentListView
           documents={filteredDocuments}
           thumbnails={thumbnails}
-          onNavigate={(id) => navigate(`/documents/${id}`)}
+          onNavigate={(id) => navigate(`/documents/${id}`, {
+            state: { documentIds: documentIdList },
+          })}
           formatDate={formatDate}
           formatShortDate={formatShortDate}
         />
@@ -394,7 +402,9 @@ export function DocumentsPage() {
         <DocumentCardView
           documents={filteredDocuments}
           thumbnails={thumbnails}
-          onNavigate={(id) => navigate(`/documents/${id}`)}
+          onNavigate={(id) => navigate(`/documents/${id}`, {
+            state: { documentIds: documentIdList },
+          })}
           formatShortDate={formatShortDate}
         />
       )}
