@@ -41,15 +41,18 @@ pnpm dev
 
 Web and API ports are automatically offset based on branch name for parallel development across worktrees. PostgreSQL and doc-processor run as shared instances on fixed ports (5432, 8000).
 
-Or run individually:
+The web app proxies `/api/*` to the API during development (see `apps/web/vite.config.ts`).
 
-```bash
-pnpm dev:web           # http://localhost:5173
-pnpm dev:api           # http://localhost:3001
-pnpm dev:doc-processor # http://localhost:8000
+### Mobile Testing
+
+The dev server is exposed on the network by default. Find your URL in the dev output:
+
+```
+  Web:           http://localhost:5873
+  Web (network): http://192.168.1.x:5873   <- Use this on your phone
 ```
 
-The web app proxies `/api/*` to the API during development (see `apps/web/vite.config.ts`).
+If `qrencode` is installed (`brew install qrencode`), a QR code is displayed for easy scanning. Both devices must be on the same WiFi network.
 
 ## Build & Typecheck
 

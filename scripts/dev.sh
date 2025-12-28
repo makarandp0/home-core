@@ -90,6 +90,13 @@ echo "  API:           http://localhost:$HOME_API_PORT"
 echo "  Doc Processor: http://localhost:8000"
 echo ""
 
+# Show QR code for mobile testing if qrencode is available
+if [[ -n "$LOCAL_IP" ]] && command -v qrencode &> /dev/null; then
+  echo "  Scan to open on mobile:"
+  qrencode -t ANSIUTF8 -m 2 "http://$LOCAL_IP:$HOME_WEB_PORT"
+  echo ""
+fi
+
 # Set additional env vars
 export HOME_DOC_PROCESSOR_URL="http://localhost:8000"
 export COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
