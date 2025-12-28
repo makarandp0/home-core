@@ -34,18 +34,11 @@ echo "Creating worktree..."
 git worktree add -b "$NAME" "$WORKTREE_PATH" main
 info "Worktree created at $WORKTREE_PATH"
 
-# Show assigned ports
-OFFSET=$(get_port_offset "$NAME")
-info "Ports: web:$((5173 + OFFSET)) api:$((3001 + OFFSET)) doc:$((8000 + OFFSET))"
 
 # Install dependencies
 echo ""
 (cd "$WORKTREE_PATH" && pnpm install)
 info "Dependencies installed"
-
-# Set up doc-processor
-(cd "$WORKTREE_PATH" && pnpm setup:doc-processor)
-info "Doc-processor ready"
 
 # Copy .env
 if [[ -f ".env" ]]; then
@@ -56,6 +49,11 @@ fi
 # Build
 (cd "$WORKTREE_PATH" && pnpm build)
 info "Build complete"
+
+
+# Show assigned ports
+OFFSET=$(get_port_offset "$NAME")
+info "Ports: web:$((5173 + OFFSET)) api:$((3001 + OFFSET)) doc:$((8000 + OFFSET))"
 
 echo ""
 echo -e "${GREEN}Ready!${NC}"
