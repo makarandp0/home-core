@@ -1,10 +1,12 @@
 # Build stage
 FROM python:3.11-slim AS builder
 
-# Install system dependencies for PyMuPDF and EasyOCR
+# Install system dependencies for PyMuPDF, EasyOCR, and InsightFace
+# g++ is required to compile insightface's C++ extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,7 +28,7 @@ RUN for i in 1 2 3; do \
       { echo "Attempt $i failed, retrying in 5s..." && sleep 5; }; \
     done
 
-# Copy source code (changes here won't invalidate dependency or model cache)
+# Copy source code (changes here won't invalidate dependency cache)
 COPY src/ src/
 
 # Runtime stage

@@ -54,14 +54,6 @@ Services start at:
 - PostgreSQL: localhost:5432
 - Doc Processor: http://localhost:8000
 
-## Railway
-
-For Railway deployments:
-
-1. Add a PostgreSQL database from the Railway dashboard
-2. Deploy the app (DATABASE_URL is auto-set by Railway Postgres)
-3. Configure API keys via the Settings page in the UI
-
 ## API Endpoints
 
 - `GET /api/health` — Health check
