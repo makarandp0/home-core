@@ -45,6 +45,7 @@ export default defineConfig({
     'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(getGitBranch()),
   },
   server: {
+    host: true,
     port: Number(process.env.HOME_WEB_PORT ?? process.env.VITE_PORT ?? 5173),
     proxy: {
       '/api': {
