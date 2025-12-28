@@ -21,7 +21,9 @@
       "Bash(ps:*)",
       "Bash(pnpm add:*)",
       "Bash(pnpm --filter @home/api build:*)",
-      "Bash(pnpm remove:*)"
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm --filter @home/web exec tsc:*)",
+      "Bash(gh api:*)"
     ]
   }
 }

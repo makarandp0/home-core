@@ -2,8 +2,16 @@ import { makAssert } from '@home/utils';
 import type { PixelCrop } from 'react-image-crop';
 
 /**
+ * Rotation in degrees (0, 90, 180, 270)
+ */
+export type Rotation = 0 | 90 | 180 | 270;
+
+/**
  * Crops an image based on the provided crop coordinates.
  * Returns a data URL of the cropped image.
+ *
+ * @param imageSrc - The source image data URL (already rotated if needed)
+ * @param crop - The crop coordinates in pixels
  */
 export function getCroppedImage(
   imageSrc: string,
@@ -16,11 +24,9 @@ export function getCroppedImage(
     makAssert(ctx !== null, 'Canvas 2D context should be available');
 
     img.onload = () => {
-      // Set canvas size to the crop dimensions
       canvas.width = crop.width;
       canvas.height = crop.height;
 
-      // Draw the cropped portion of the image
       ctx.drawImage(
         img,
         crop.x,
