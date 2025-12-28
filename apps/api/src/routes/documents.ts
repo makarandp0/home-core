@@ -186,7 +186,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           });
 
           // Store both original and resized versions
-          await storeRawFile(originalImageData, docUuid, '_original');
+          await storeRawFile(originalImageData, docUuid, '_original', filename);
           const stored = await storeDocument(imageData, filename, undefined, {
             baseUuid: docUuid,
             suffix: '_resized',
