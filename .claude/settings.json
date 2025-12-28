@@ -23,7 +23,9 @@
       "Bash(pnpm --filter @home/api build:*)",
       "Bash(pnpm remove:*)",
       "Bash(pnpm --filter @home/web exec tsc:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm --filter @home/types build:*)"
     ]
   }
 }
