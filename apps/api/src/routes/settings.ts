@@ -2,9 +2,12 @@ import type { FastifyPluginAsync } from 'fastify';
 import {
   ProviderConfigCreateSchema,
   ProviderConfigUpdateSchema,
-  type ApiResponse,
+  IdParamsSchema,
   type SettingsResponse,
   type ProviderConfig,
+  type ProviderConfigCreate,
+  type ProviderConfigUpdate,
+  type IdParams,
 } from '@home/types';
 import {
   getSettingsResponse,
@@ -14,85 +17,77 @@ import {
   setActiveProvider,
   getActiveProvider,
 } from '../services/settings-service.js';
+import { createRouteBuilder, notFound, badRequest } from '../utils/route-builder.js';
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
+  const routes = createRouteBuilder(app);
+
   // GET /api/settings - Get all settings (providers + active)
-  app.get('/settings', async (): Promise<ApiResponse<SettingsResponse>> => {
-    const settings = await getSettingsResponse();
-    return { ok: true, data: settings };
+  routes.get<unknown, unknown, unknown, SettingsResponse>({
+    url: '/settings',
+    handler: async () => {
+      return await getSettingsResponse();
+    },
   });
 
   // POST /api/settings/providers - Create new provider config
-  app.post('/settings/providers', async (request, reply): Promise<ApiResponse<ProviderConfig>> => {
-    const parseResult = ProviderConfigCreateSchema.safeParse(request.body);
-
-    if (!parseResult.success) {
-      reply.code(400);
-      return {
-        ok: false,
-        error: `Validation error: ${parseResult.error.issues.map((e) => e.message).join(', ')}`,
-      };
-    }
-
-    const provider = await createProviderConfig(parseResult.data);
-    return { ok: true, data: provider };
+  routes.post<ProviderConfigCreate, unknown, unknown, ProviderConfig>({
+    url: '/settings/providers',
+    schema: { body: ProviderConfigCreateSchema },
+    handler: async ({ body }) => {
+      return await createProviderConfig(body);
+    },
   });
 
   // PUT /api/settings/providers/:id - Update provider config
-  app.put<{ Params: { id: string } }>('/settings/providers/:id', async (request, reply): Promise<ApiResponse<ProviderConfig>> => {
-    const { id } = request.params;
-    const parseResult = ProviderConfigUpdateSchema.safeParse(request.body);
-
-    if (!parseResult.success) {
-      reply.code(400);
-      return {
-        ok: false,
-        error: `Validation error: ${parseResult.error.issues.map((e) => e.message).join(', ')}`,
-      };
-    }
-
-    const provider = await updateProviderConfig(id, parseResult.data);
-    if (!provider) {
-      reply.code(404);
-      return { ok: false, error: 'Provider configuration not found' };
-    }
-
-    return { ok: true, data: provider };
+  routes.put<ProviderConfigUpdate, IdParams, unknown, ProviderConfig>({
+    url: '/settings/providers/:id',
+    schema: {
+      body: ProviderConfigUpdateSchema,
+      params: IdParamsSchema,
+    },
+    handler: async ({ body, params }) => {
+      const provider = await updateProviderConfig(params.id, body);
+      if (!provider) {
+        notFound('Provider configuration not found');
+      }
+      return provider;
+    },
   });
 
   // DELETE /api/settings/providers/:id - Delete provider config
-  app.delete<{ Params: { id: string } }>('/settings/providers/:id', async (request, reply): Promise<ApiResponse<{ deleted: boolean }>> => {
-    const { id } = request.params;
-
-    // Prevent deleting the active provider if there are other providers to switch to
-    const activeProvider = await getActiveProvider();
-    if (activeProvider && activeProvider.id === id) {
-      const settings = await getSettingsResponse();
-      if (settings.providers.length > 1) {
-        reply.code(400);
-        return { ok: false, error: 'Cannot delete the active provider. Please activate another provider first.' };
+  routes.delete<unknown, IdParams, unknown, { deleted: boolean }>({
+    url: '/settings/providers/:id',
+    schema: { params: IdParamsSchema },
+    handler: async ({ params }) => {
+      // Prevent deleting the active provider if there are other providers to switch to
+      const activeProvider = await getActiveProvider();
+      if (activeProvider && activeProvider.id === params.id) {
+        const settings = await getSettingsResponse();
+        if (settings.providers.length > 1) {
+          badRequest('Cannot delete the active provider. Please activate another provider first.');
+        }
       }
-    }
 
-    const deleted = await deleteProviderConfig(id);
-    if (!deleted) {
-      reply.code(404);
-      return { ok: false, error: 'Provider configuration not found' };
-    }
+      const deleted = await deleteProviderConfig(params.id);
+      if (!deleted) {
+        notFound('Provider configuration not found');
+      }
 
-    return { ok: true, data: { deleted: true } };
+      return { deleted: true };
+    },
   });
 
   // POST /api/settings/providers/:id/activate - Set provider as active
-  app.post<{ Params: { id: string } }>('/settings/providers/:id/activate', async (request, reply): Promise<ApiResponse<ProviderConfig>> => {
-    const { id } = request.params;
-
-    const provider = await setActiveProvider(id);
-    if (!provider) {
-      reply.code(404);
-      return { ok: false, error: 'Provider configuration not found' };
-    }
-
-    return { ok: true, data: provider };
+  routes.post<unknown, IdParams, unknown, ProviderConfig>({
+    url: '/settings/providers/:id/activate',
+    schema: { params: IdParamsSchema },
+    handler: async ({ params }) => {
+      const provider = await setActiveProvider(params.id);
+      if (!provider) {
+        notFound('Provider configuration not found');
+      }
+      return provider;
+    },
   });
 };

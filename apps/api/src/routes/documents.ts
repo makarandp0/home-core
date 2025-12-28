@@ -6,6 +6,8 @@ import {
   DocumentJsonMetadataSchema,
   DocumentUploadRequestSchema,
   DocumentDataSchema,
+  ThumbnailsRequestSchema,
+  IdParamsSchema,
   type ApiResponse,
   type DocumentListResponse,
   type DocumentMetadata,
@@ -14,6 +16,8 @@ import {
   type DocumentUploadRequest,
   type DocumentData,
   type ExtractionMethod,
+  type ThumbnailsRequest,
+  type IdParams,
 } from '@home/types';
 import { getDb, documents, desc, eq, inArray } from '@home/db';
 import {
@@ -28,6 +32,7 @@ import { withExtractTextCache, withParseTextCache } from '../services/llm-cache.
 import { getApiKeyForProvider, getActiveApiKey } from '../services/settings-service.js';
 import { resizeImageIfNeeded } from '../services/image-resize.js';
 import { generateThumbnail, generateThumbnailFromBytes } from '../services/thumbnail.js';
+import { createRouteBuilder, notFound, serverError } from '../utils/route-builder.js';
 
 /**
  * Safely parse JSONB metadata from database.
@@ -115,10 +120,14 @@ interface PythonThumbnailResponse {
 }
 
 export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
+  const routes = createRouteBuilder(fastify);
+
   /**
    * POST /api/documents/upload
    * Unified document upload: extracts text and parses to JSON in one call.
    * Handles both images (via LLM) and PDFs (via doc-processor).
+   *
+   * Note: This route uses raw Fastify due to complex provider-specific error handling.
    */
   fastify.post<{
     Body: DocumentUploadRequest;
@@ -386,22 +395,19 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * GET /api/documents/health
    * Check the health of the doc-processor service.
    */
-  fastify.get<{
-    Reply: ApiResponse<{ available: boolean; url: string }>;
-  }>('/documents/health', async () => {
-    try {
-      const response = await fetch(`${DOC_PROCESSOR_URL}/health`, {
-        method: 'GET',
-      });
+  routes.get<unknown, unknown, unknown, { available: boolean; url: string }>({
+    url: '/documents/health',
+    handler: async () => {
+      try {
+        const response = await fetch(`${DOC_PROCESSOR_URL}/health`, {
+          method: 'GET',
+        });
 
-      if (response.ok) {
-        return { ok: true, data: { available: true, url: DOC_PROCESSOR_URL } };
+        return { available: response.ok, url: DOC_PROCESSOR_URL };
+      } catch {
+        return { available: false, url: DOC_PROCESSOR_URL };
       }
-
-      return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
-    } catch {
-      return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
-    }
+    },
   });
 
   /**
@@ -409,53 +415,32 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * Get thumbnails for multiple documents (for lazy loading).
    * Returns a map of document ID to thumbnail data URL.
    */
-  fastify.post<{
-    Body: { ids: string[] };
-    Reply: ApiResponse<Record<string, string | null>>;
-  }>('/documents/thumbnails', async (request, reply) => {
-    const { ids } = request.body;
+  routes.post<ThumbnailsRequest, unknown, unknown, Record<string, string | null>>({
+    url: '/documents/thumbnails',
+    schema: { body: ThumbnailsRequestSchema },
+    handler: async ({ body }) => {
+      try {
+        const db = getDb();
+        const docs = await db
+          .select({
+            id: documents.id,
+            thumbnail: documents.thumbnail,
+          })
+          .from(documents)
+          .where(inArray(documents.id, body.ids));
 
-    if (!Array.isArray(ids) || ids.length === 0) {
-      reply.code(400);
-      return { ok: false, error: 'ids must be a non-empty array' };
-    }
+        // Build map of id -> thumbnail
+        const thumbnailMap: Record<string, string | null> = {};
+        for (const doc of docs) {
+          thumbnailMap[doc.id] = doc.thumbnail;
+        }
 
-    // Limit batch size to prevent abuse
-    if (ids.length > 50) {
-      reply.code(400);
-      return { ok: false, error: 'Maximum 50 documents per request' };
-    }
-
-    // Validate UUID format for all IDs
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const invalidIds = ids.filter((id) => !uuidRegex.test(id));
-    if (invalidIds.length > 0) {
-      reply.code(400);
-      return { ok: false, error: 'Invalid document ID format' };
-    }
-
-    try {
-      const db = getDb();
-      const docs = await db
-        .select({
-          id: documents.id,
-          thumbnail: documents.thumbnail,
-        })
-        .from(documents)
-        .where(inArray(documents.id, ids));
-
-      // Build map of id -> thumbnail
-      const thumbnailMap: Record<string, string | null> = {};
-      for (const doc of docs) {
-        thumbnailMap[doc.id] = doc.thumbnail;
+        return thumbnailMap;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        serverError(`Failed to get thumbnails: ${errorMessage}`);
       }
-
-      return { ok: true, data: thumbnailMap };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to get thumbnails: ${errorMessage}` };
-    }
+    },
   });
 
   /**
@@ -463,118 +448,112 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * List all stored documents with metadata.
    * Returns all fields needed for client-side filtering/search.
    */
-  fastify.get<{
-    Reply: ApiResponse<DocumentListResponse>;
-  }>('/documents', async (request, reply) => {
-    try {
-      const db = getDb();
-      const docs = await db
-        .select({
-          id: documents.id,
-          filename: documents.filename,
-          originalFilename: documents.originalFilename,
-          mimeType: documents.mimeType,
-          sizeBytes: documents.sizeBytes,
-          // Core fields
-          documentType: documents.documentType,
-          documentOwner: documents.documentOwner,
-          expiryDate: documents.expiryDate,
-          // New searchable fields
-          category: documents.category,
-          issueDate: documents.issueDate,
-          country: documents.country,
-          amountValue: documents.amountValue,
-          amountCurrency: documents.amountCurrency,
-          // JSONB metadata (contains keywords, parties, etc.)
-          metadata: documents.metadata,
-          // Timestamps
-          createdAt: documents.createdAt,
-          updatedAt: documents.updatedAt,
-        })
-        .from(documents)
-        .orderBy(desc(documents.createdAt));
+  routes.get<unknown, unknown, unknown, DocumentListResponse>({
+    url: '/documents',
+    handler: async () => {
+      try {
+        const db = getDb();
+        const docs = await db
+          .select({
+            id: documents.id,
+            filename: documents.filename,
+            originalFilename: documents.originalFilename,
+            mimeType: documents.mimeType,
+            sizeBytes: documents.sizeBytes,
+            // Core fields
+            documentType: documents.documentType,
+            documentOwner: documents.documentOwner,
+            expiryDate: documents.expiryDate,
+            // New searchable fields
+            category: documents.category,
+            issueDate: documents.issueDate,
+            country: documents.country,
+            amountValue: documents.amountValue,
+            amountCurrency: documents.amountCurrency,
+            // JSONB metadata (contains keywords, parties, etc.)
+            metadata: documents.metadata,
+            // Timestamps
+            createdAt: documents.createdAt,
+            updatedAt: documents.updatedAt,
+          })
+          .from(documents)
+          .orderBy(desc(documents.createdAt));
 
-      // Parse metadata from JSONB to typed structure
-      const typedDocs = docs.map((doc) => ({
-        ...doc,
-        metadata: parseMetadata(doc.metadata),
-      }));
+        // Parse metadata from JSONB to typed structure
+        const typedDocs = docs.map((doc) => ({
+          ...doc,
+          metadata: parseMetadata(doc.metadata),
+        }));
 
-      return {
-        ok: true,
-        data: {
+        return {
           documents: typedDocs,
           total: typedDocs.length,
-        },
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to list documents: ${errorMessage}` };
-    }
+        };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        serverError(`Failed to list documents: ${errorMessage}`);
+      }
+    },
   });
 
   /**
    * GET /api/documents/:id
    * Get document metadata by ID.
    */
-  fastify.get<{
-    Params: { id: string };
-    Reply: ApiResponse<DocumentMetadata>;
-  }>('/documents/:id', async (request, reply) => {
-    const { id } = request.params;
+  routes.get<unknown, IdParams, unknown, DocumentMetadata>({
+    url: '/documents/:id',
+    schema: { params: IdParamsSchema },
+    handler: async ({ params }) => {
+      try {
+        const db = getDb();
+        const [doc] = await db
+          .select({
+            id: documents.id,
+            filename: documents.filename,
+            originalFilename: documents.originalFilename,
+            mimeType: documents.mimeType,
+            sizeBytes: documents.sizeBytes,
+            // Core fields
+            documentType: documents.documentType,
+            documentOwner: documents.documentOwner,
+            expiryDate: documents.expiryDate,
+            // New searchable fields
+            category: documents.category,
+            issueDate: documents.issueDate,
+            country: documents.country,
+            amountValue: documents.amountValue,
+            amountCurrency: documents.amountCurrency,
+            // JSONB metadata
+            metadata: documents.metadata,
+            // Timestamps
+            createdAt: documents.createdAt,
+            updatedAt: documents.updatedAt,
+          })
+          .from(documents)
+          .where(eq(documents.id, params.id))
+          .limit(1);
 
-    try {
-      const db = getDb();
-      const [doc] = await db
-        .select({
-          id: documents.id,
-          filename: documents.filename,
-          originalFilename: documents.originalFilename,
-          mimeType: documents.mimeType,
-          sizeBytes: documents.sizeBytes,
-          // Core fields
-          documentType: documents.documentType,
-          documentOwner: documents.documentOwner,
-          expiryDate: documents.expiryDate,
-          // New searchable fields
-          category: documents.category,
-          issueDate: documents.issueDate,
-          country: documents.country,
-          amountValue: documents.amountValue,
-          amountCurrency: documents.amountCurrency,
-          // JSONB metadata
-          metadata: documents.metadata,
-          // Timestamps
-          createdAt: documents.createdAt,
-          updatedAt: documents.updatedAt,
-        })
-        .from(documents)
-        .where(eq(documents.id, id))
-        .limit(1);
+        if (!doc) {
+          notFound('Document not found');
+        }
 
-      if (!doc) {
-        reply.code(404);
-        return { ok: false, error: 'Document not found' };
+        // Parse metadata from JSONB to typed structure
+        return {
+          ...doc,
+          metadata: parseMetadata(doc.metadata),
+        };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        serverError(`Failed to get document: ${errorMessage}`);
       }
-
-      // Parse metadata from JSONB to typed structure
-      const typedDoc = {
-        ...doc,
-        metadata: parseMetadata(doc.metadata),
-      };
-
-      return { ok: true, data: typedDoc };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to get document: ${errorMessage}` };
-    }
+    },
   });
 
   /**
    * GET /api/documents/:id/file
    * Serve the actual document file.
+   *
+   * Note: This route uses raw Fastify due to file streaming requirements.
    */
   fastify.get<{
     Params: { id: string };
@@ -622,25 +601,22 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * DELETE /api/documents/:id
    * Delete a document by ID (removes both file and database entry).
    */
-  fastify.delete<{
-    Params: { id: string };
-    Reply: ApiResponse<{ deleted: boolean }>;
-  }>('/documents/:id', async (request, reply) => {
-    const { id } = request.params;
+  routes.delete<unknown, IdParams, unknown, { deleted: boolean }>({
+    url: '/documents/:id',
+    schema: { params: IdParamsSchema },
+    handler: async ({ params }) => {
+      try {
+        const success = await deleteDocument(params.id);
 
-    try {
-      const success = await deleteDocument(id);
+        if (!success) {
+          notFound('Document not found or could not be deleted');
+        }
 
-      if (!success) {
-        reply.code(404);
-        return { ok: false, error: 'Document not found or could not be deleted' };
+        return { deleted: true };
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        serverError(`Failed to delete document: ${errorMessage}`);
       }
-
-      return { ok: true, data: { deleted: true } };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      reply.code(500);
-      return { ok: false, error: `Failed to delete document: ${errorMessage}` };
-    }
+    },
   });
 };
