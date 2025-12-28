@@ -115,3 +115,7 @@ export const ThumbnailsRequestSchema = z.object({
 });
 
 export type ThumbnailsRequest = z.infer<typeof ThumbnailsRequestSchema>;
+
+// Thumbnails response - map of document ID to thumbnail data URL (or null)
+export const ThumbnailsResponseSchema = z.record(z.string(), z.string().nullable());
+export type ThumbnailsResponse = z.infer<typeof ThumbnailsResponseSchema>;

@@ -4,6 +4,7 @@ import { FRONTEND_VERSION } from '../version';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 
 interface PrInfo {
   number: number;
@@ -109,15 +110,13 @@ export function VersionPage() {
   const [loadModelError, setLoadModelError] = React.useState<string | null>(null);
 
   const fetchHealth = React.useCallback(async () => {
-    try {
-      const res = await fetch('/api/health');
-      const json = await res.json();
-      const parsed = HealthSchema.parse(json);
-      setBackendVersion(parsed.version ?? null);
-      setDocProcessor(parsed.docProcessor ?? null);
-      setDatabaseConnected(parsed.database?.connected ?? null);
-      setDocumentStorage(parsed.documentStorage ?? null);
-    } catch {
+    const result = await api.get('/api/health', HealthSchema);
+    if (result.ok) {
+      setBackendVersion(result.data.version ?? null);
+      setDocProcessor(result.data.docProcessor ?? null);
+      setDatabaseConnected(result.data.database?.connected ?? null);
+      setDocumentStorage(result.data.documentStorage ?? null);
+    } else {
       setBackendVersion(null);
       setDocProcessor(null);
       setDatabaseConnected(null);

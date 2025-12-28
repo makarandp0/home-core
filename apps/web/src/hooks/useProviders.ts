@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { apiResponse, ProvidersResponseSchema, type ProviderInfo } from '@home/types';
+import { ProvidersResponseSchema, type ProviderInfo } from '@home/types';
+import { api, getErrorMessage } from '@/lib/api';
 
 export function useProviders() {
   const [providers, setProviders] = React.useState<ProviderInfo[]>([]);
@@ -8,21 +9,16 @@ export function useProviders() {
 
   React.useEffect(() => {
     async function fetchProviders() {
-      try {
-        const res = await fetch('/api/providers');
-        const json = await res.json();
-        const parsed = apiResponse(ProvidersResponseSchema).parse(json);
-        if (parsed.ok && parsed.data) {
-          setProviders(parsed.data.providers);
-          if (parsed.data.providers.length > 0) {
-            setSelectedProvider(parsed.data.providers[0].id);
-          }
+      const result = await api.get('/api/providers', ProvidersResponseSchema);
+      if (result.ok) {
+        setProviders(result.data.providers);
+        if (result.data.providers.length > 0) {
+          setSelectedProvider(result.data.providers[0].id);
         }
-      } catch (err) {
-        console.error('Failed to fetch providers:', err);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Failed to fetch providers:', getErrorMessage(result.error));
       }
+      setLoading(false);
     }
     fetchProviders();
   }, []);

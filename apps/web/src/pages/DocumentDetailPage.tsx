@@ -3,8 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   type DocumentMetadata,
   DocumentMetadataSchema,
-  apiResponse,
+  DeleteResponseSchema,
 } from '@home/types';
+import { api, getErrorMessage } from '@/lib/api';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -54,22 +55,13 @@ export function DocumentDetailPage() {
     async function fetchDocument() {
       if (!id) return;
 
-      try {
-        const response = await fetch(`/api/documents/${id}`);
-        const json = await response.json();
-
-        const parsed = apiResponse(DocumentMetadataSchema).safeParse(json);
-        if (!parsed.success || !parsed.data.ok || !parsed.data.data) {
-          setError(parsed.data?.error ?? 'Failed to fetch document');
-          return;
-        }
-
-        setDocument(parsed.data.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch document');
-      } finally {
-        setLoading(false);
+      const result = await api.get(`/api/documents/${id}`, DocumentMetadataSchema);
+      if (result.ok) {
+        setDocument(result.data);
+      } else {
+        setError(getErrorMessage(result.error));
       }
+      setLoading(false);
     }
 
     fetchDocument();
@@ -99,24 +91,14 @@ export function DocumentDetailPage() {
     }
 
     setDeleting(true);
-    try {
-      const response = await fetch(`/api/documents/${document.id}`, {
-        method: 'DELETE',
-      });
-      const json = await response.json();
-
-      if (!json.ok) {
-        setError(json.error ?? 'Failed to delete document');
-        return;
-      }
-
+    const result = await api.delete(`/api/documents/${document.id}`, DeleteResponseSchema);
+    if (result.ok) {
       navigate('/documents');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete document');
-    } finally {
-      setDeleting(false);
-      setConfirmCountdown(0);
+    } else {
+      setError(getErrorMessage(result.error));
     }
+    setDeleting(false);
+    setConfirmCountdown(0);
   }
 
   if (loading) {
