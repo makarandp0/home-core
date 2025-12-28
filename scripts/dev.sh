@@ -88,15 +88,24 @@ export HOME_DOC_PROCESSOR_URL="http://localhost:8000"
 export COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export VITE_COMMIT_SHA="$COMMIT_SHA"
 
-# Open browser after servers start (background with delay)
+# Open browser after API is ready (background)
 WEB_URL="http://localhost:$HOME_WEB_PORT"
+API_URL="http://localhost:$HOME_API_PORT"
 (
-  sleep 3
-  if command -v open &> /dev/null; then
-    open "$WEB_URL"  # macOS
-  elif command -v xdg-open &> /dev/null; then
-    xdg-open "$WEB_URL"  # Linux
-  fi
+  # Wait for API to be healthy (max 60 seconds)
+  for i in {1..60}; do
+    if curl -sf "$API_URL/api/health" &> /dev/null; then
+      echo -e "\n${GREEN}✓${NC} API ready, opening browser..."
+      if command -v open &> /dev/null; then
+        open "$WEB_URL"  # macOS
+      elif command -v xdg-open &> /dev/null; then
+        xdg-open "$WEB_URL"  # Linux
+      fi
+      exit 0
+    fi
+    sleep 1
+  done
+  echo -e "${YELLOW}!${NC} API not ready after 60s, skipping browser open"
 ) &
 
 # Run dev for all packages except doc-processor (runs in Docker)
