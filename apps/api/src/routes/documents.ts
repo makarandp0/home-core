@@ -426,6 +426,14 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       return { ok: false, error: 'Maximum 50 documents per request' };
     }
 
+    // Validate UUID format for all IDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const invalidIds = ids.filter((id) => !uuidRegex.test(id));
+    if (invalidIds.length > 0) {
+      reply.code(400);
+      return { ok: false, error: 'Invalid document ID format' };
+    }
+
     try {
       const db = getDb();
       const docs = await db

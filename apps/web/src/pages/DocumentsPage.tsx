@@ -125,8 +125,9 @@ export function DocumentsPage() {
         if (json.ok && json.data) {
           setThumbnails(json.data);
         }
-      } catch {
-        // Thumbnails are non-critical, silently fail
+      } catch (error) {
+        // Thumbnails are non-critical; log and continue
+        console.error('Failed to fetch document thumbnails', error);
       }
     }
 

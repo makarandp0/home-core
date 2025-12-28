@@ -30,24 +30,22 @@ export async function generateThumbnail(imageData: string): Promise<ThumbnailRes
 
   try {
     // Resize to thumbnail size, maintaining aspect ratio
-    const resized = await sharp(buffer)
+    // Use resolveWithObject to get buffer and metadata in one operation
+    const { data: resized, info } = await sharp(buffer)
       .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
         fit: 'inside',
         withoutEnlargement: true,
       })
       .jpeg({ quality: THUMBNAIL_QUALITY, mozjpeg: true })
-      .toBuffer();
-
-    // Get dimensions of the thumbnail
-    const metadata = await sharp(resized).metadata();
+      .toBuffer({ resolveWithObject: true });
 
     const thumbnailBase64 = resized.toString('base64');
     const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnailBase64}`;
 
     return {
       thumbnail: thumbnailDataUrl,
-      width: metadata.width ?? THUMBNAIL_SIZE,
-      height: metadata.height ?? THUMBNAIL_SIZE,
+      width: info.width ?? THUMBNAIL_SIZE,
+      height: info.height ?? THUMBNAIL_SIZE,
       sizeBytes: resized.length,
     };
   } catch (err) {
@@ -66,23 +64,22 @@ export async function generateThumbnailFromBytes(
   imageBytes: Buffer
 ): Promise<ThumbnailResult | null> {
   try {
-    const resized = await sharp(imageBytes)
+    // Use resolveWithObject to get buffer and metadata in one operation
+    const { data: resized, info } = await sharp(imageBytes)
       .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
         fit: 'inside',
         withoutEnlargement: true,
       })
       .jpeg({ quality: THUMBNAIL_QUALITY, mozjpeg: true })
-      .toBuffer();
-
-    const metadata = await sharp(resized).metadata();
+      .toBuffer({ resolveWithObject: true });
 
     const thumbnailBase64 = resized.toString('base64');
     const thumbnailDataUrl = `data:image/jpeg;base64,${thumbnailBase64}`;
 
     return {
       thumbnail: thumbnailDataUrl,
-      width: metadata.width ?? THUMBNAIL_SIZE,
-      height: metadata.height ?? THUMBNAIL_SIZE,
+      width: info.width ?? THUMBNAIL_SIZE,
+      height: info.height ?? THUMBNAIL_SIZE,
       sizeBytes: resized.length,
     };
   } catch (err) {
