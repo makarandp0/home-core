@@ -59,6 +59,31 @@ async function request<T>(
     }
 
     const response = await fetch(url, init);
+
+    // Handle HTTP-level errors before attempting to parse JSON
+    if (!response.ok) {
+      try {
+        const errorJson: RawApiResponse<unknown> = await response.json();
+        if (errorJson?.error !== undefined) {
+          return { ok: false, error: errorJson.error };
+        }
+      } catch {
+        // Ignore JSON parsing errors and fall back to text below
+      }
+
+      let message = `Request failed with status ${response.status}`;
+      try {
+        const text = await response.text();
+        if (text) {
+          message += `: ${text}`;
+        }
+      } catch {
+        // Ignore text parsing errors, keep default message
+      }
+
+      return { ok: false, error: message };
+    }
+
     const json: RawApiResponse<unknown> = await response.json();
 
     // Handle API-level errors (ok: false from backend)
@@ -121,5 +146,19 @@ export function getErrorMessage(error: ApiError): string {
   if (typeof error === 'string') {
     return error;
   }
-  return error.message;
+
+  const baseMessage = error.message;
+  const details = error.details;
+
+  if (details !== undefined) {
+    try {
+      const serializedDetails =
+        typeof details === 'string' ? details : JSON.stringify(details);
+      return serializedDetails ? `${baseMessage}: ${serializedDetails}` : baseMessage;
+    } catch {
+      return baseMessage;
+    }
+  }
+
+  return baseMessage;
 }
