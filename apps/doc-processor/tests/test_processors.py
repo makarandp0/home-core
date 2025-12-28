@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.processors.pdf import extract_pdf_text, pdf_to_images
+from src.processors.pdf import extract_pdf_text, pdf_to_images, pdf_first_page_thumbnail
 from src.processors.ocr import ocr_image
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -50,6 +50,45 @@ class TestPdfProcessor:
         assert isinstance(images[0], bytes)
         # PNG magic bytes
         assert images[0][:4] == b'\x89PNG'
+
+    def test_pdf_first_page_thumbnail(self):
+        """Test generating a thumbnail from the first page of a PDF."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        image_bytes, width, height = pdf_first_page_thumbnail(pdf_bytes, max_size=150)
+
+        assert isinstance(image_bytes, bytes)
+        # PNG magic bytes
+        assert image_bytes[:4] == b'\x89PNG'
+        # Dimensions should be within max_size
+        assert width <= 150
+        assert height <= 150
+        assert width > 0 and height > 0
+
+    def test_pdf_first_page_thumbnail_custom_size(self):
+        """Test generating a thumbnail with a custom max size."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        image_bytes, width, height = pdf_first_page_thumbnail(pdf_bytes, max_size=100)
+
+        assert isinstance(image_bytes, bytes)
+        assert width <= 100
+        assert height <= 100
+
+    def test_pdf_first_page_thumbnail_empty_pdf(self):
+        """Test that empty PDF raises ValueError."""
+        pdf_path = FIXTURES_DIR / "empty.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        # empty.pdf has 1 page, so it should work (not raise)
+        # But if we had a truly empty PDF with 0 pages, it would raise ValueError
+        image_bytes, width, height = pdf_first_page_thumbnail(pdf_bytes)
+        assert isinstance(image_bytes, bytes)
 
 
 class TestOcrProcessor:

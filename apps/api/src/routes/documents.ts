@@ -15,7 +15,7 @@ import {
   type DocumentData,
   type ExtractionMethod,
 } from '@home/types';
-import { getDb, documents, desc, eq } from '@home/db';
+import { getDb, documents, desc, eq, inArray } from '@home/db';
 import {
   storeDocument,
   storeRawFile,
@@ -27,6 +27,7 @@ import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 import { withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
 import { getApiKeyForProvider, getActiveApiKey } from '../services/settings-service.js';
 import { resizeImageIfNeeded } from '../services/image-resize.js';
+import { generateThumbnail, generateThumbnailFromBytes } from '../services/thumbnail.js';
 
 /**
  * Safely parse JSONB metadata from database.
@@ -103,6 +104,16 @@ interface PythonServiceResponse {
   error?: string;
 }
 
+interface PythonThumbnailResponse {
+  ok: boolean;
+  data?: {
+    image: string; // base64 PNG
+    width: number;
+    height: number;
+  };
+  error?: string;
+}
+
 export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/documents/upload
@@ -165,6 +176,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       let extractionConfidence: number | null = null;
       let documentId: string;
       let extractCached = false;
+      let thumbnailDataUrl: string | null = null;
 
       // Step 1: Extract text based on file type
       if (isImageFile(filename)) {
@@ -206,6 +218,18 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
             return { ok: false, error: 'Document storage is not configured on the server' };
           }
           documentId = stored.id;
+        }
+
+        // Generate thumbnail for image
+        const thumbResult = await generateThumbnail(imageData);
+        if (thumbResult) {
+          thumbnailDataUrl = thumbResult.thumbnail;
+          request.log.info({
+            msg: 'Thumbnail generated',
+            width: thumbResult.width,
+            height: thumbResult.height,
+            sizeBytes: thumbResult.sizeBytes,
+          });
         }
 
         const { result, cached } = await withExtractTextCache(
@@ -257,6 +281,39 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           return { ok: false, error: 'Document storage is not configured on the server' };
         }
         documentId = stored.id;
+
+        // Generate thumbnail for PDF (call doc-processor for first page image)
+        try {
+          const thumbResponse = await fetch(`${DOC_PROCESSOR_URL}/thumbnail/base64`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              file_data: base64Content,
+              size: 150,
+            }),
+          });
+
+          if (thumbResponse.ok) {
+            const thumbResult: PythonThumbnailResponse = await thumbResponse.json();
+            if (thumbResult.ok && thumbResult.data) {
+              // Convert PNG from doc-processor to optimized JPEG thumbnail
+              const pngBuffer = Buffer.from(thumbResult.data.image, 'base64');
+              const optimizedThumb = await generateThumbnailFromBytes(pngBuffer);
+              if (optimizedThumb) {
+                thumbnailDataUrl = optimizedThumb.thumbnail;
+                request.log.info({
+                  msg: 'PDF thumbnail generated',
+                  width: optimizedThumb.width,
+                  height: optimizedThumb.height,
+                  sizeBytes: optimizedThumb.sizeBytes,
+                });
+              }
+            }
+          }
+        } catch (thumbErr) {
+          // Thumbnail generation is non-critical, log and continue
+          request.log.warn({ msg: 'Failed to generate PDF thumbnail', error: thumbErr });
+        }
       }
 
       // Step 2: Parse text to JSON
@@ -272,9 +329,21 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         ? DocumentDataSchema.safeParse(parseResult.document)
         : null;
 
-      // Update document with LLM-extracted metadata
-      if (documentId && documentResult?.success) {
-        await updateDocumentMetadata(documentId, buildMetadataUpdate(documentResult.data));
+      // Update document with LLM-extracted metadata and thumbnail
+      if (documentId) {
+        const metadataUpdate = documentResult?.success
+          ? buildMetadataUpdate(documentResult.data)
+          : {};
+
+        // Add thumbnail to dedicated column if generated
+        if (thumbnailDataUrl) {
+          metadataUpdate.thumbnail = thumbnailDataUrl;
+        }
+
+        // Only update if we have something to update
+        if (Object.keys(metadataUpdate).length > 0) {
+          await updateDocumentMetadata(documentId, metadataUpdate);
+        }
       }
 
       const data: DocumentUploadData = {
@@ -332,6 +401,60 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
     } catch {
       return { ok: true, data: { available: false, url: DOC_PROCESSOR_URL } };
+    }
+  });
+
+  /**
+   * POST /api/documents/thumbnails
+   * Get thumbnails for multiple documents (for lazy loading).
+   * Returns a map of document ID to thumbnail data URL.
+   */
+  fastify.post<{
+    Body: { ids: string[] };
+    Reply: ApiResponse<Record<string, string | null>>;
+  }>('/documents/thumbnails', async (request, reply) => {
+    const { ids } = request.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      reply.code(400);
+      return { ok: false, error: 'ids must be a non-empty array' };
+    }
+
+    // Limit batch size to prevent abuse
+    if (ids.length > 50) {
+      reply.code(400);
+      return { ok: false, error: 'Maximum 50 documents per request' };
+    }
+
+    // Validate UUID format for all IDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const invalidIds = ids.filter((id) => !uuidRegex.test(id));
+    if (invalidIds.length > 0) {
+      reply.code(400);
+      return { ok: false, error: 'Invalid document ID format' };
+    }
+
+    try {
+      const db = getDb();
+      const docs = await db
+        .select({
+          id: documents.id,
+          thumbnail: documents.thumbnail,
+        })
+        .from(documents)
+        .where(inArray(documents.id, ids));
+
+      // Build map of id -> thumbnail
+      const thumbnailMap: Record<string, string | null> = {};
+      for (const doc of docs) {
+        thumbnailMap[doc.id] = doc.thumbnail;
+      }
+
+      return { ok: true, data: thumbnailMap };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      reply.code(500);
+      return { ok: false, error: `Failed to get thumbnails: ${errorMessage}` };
     }
   });
 

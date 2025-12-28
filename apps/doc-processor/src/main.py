@@ -6,8 +6,16 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from .config import MAX_FILE_SIZE, VERSION
-from .models import DocumentData, HealthResponse, ProcessingResult, ProcessRequest
-from .processors import extract_pdf_text, ocr_image, ocr_pdf_pages
+from .models import (
+    DocumentData,
+    HealthResponse,
+    ProcessingResult,
+    ProcessRequest,
+    ThumbnailData,
+    ThumbnailRequest,
+    ThumbnailResult,
+)
+from .processors import extract_pdf_text, ocr_image, ocr_pdf_pages, pdf_first_page_thumbnail
 
 app = FastAPI(
     title="Document Processor",
@@ -115,6 +123,36 @@ async def process_base64(request: ProcessRequest) -> ProcessingResult:
         return ProcessingResult(ok=False, error=result["error"])
 
     return ProcessingResult(ok=True, data=result)
+
+
+@app.post("/thumbnail/base64", response_model=ThumbnailResult)
+async def generate_pdf_thumbnail(request: ThumbnailRequest) -> ThumbnailResult:
+    """
+    Generate a thumbnail from the first page of a PDF.
+
+    Used for showing document previews in the document list.
+    """
+    try:
+        file_bytes = base64.b64decode(request.file_data)
+    except Exception:
+        return ThumbnailResult(ok=False, error="Invalid base64 encoding")
+
+    try:
+        image_bytes, width, height = pdf_first_page_thumbnail(file_bytes, request.size)
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        return ThumbnailResult(
+            ok=True,
+            data=ThumbnailData(
+                image=image_base64,
+                width=width,
+                height=height,
+            ),
+        )
+    except ValueError as e:
+        return ThumbnailResult(ok=False, error=str(e))
+    except Exception as e:
+        return ThumbnailResult(ok=False, error=f"Failed to generate thumbnail: {e}")
 
 
 @app.exception_handler(Exception)

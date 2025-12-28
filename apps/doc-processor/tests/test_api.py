@@ -90,3 +90,76 @@ class TestProcessBase64Endpoint:
         data = response.json()
         assert data["ok"] is False
         assert "base64" in data["error"].lower()
+
+
+class TestThumbnailBase64Endpoint:
+    """Tests for PDF thumbnail generation endpoint."""
+
+    def test_generate_pdf_thumbnail(self):
+        """Test generating a thumbnail from a PDF."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_b64 = base64.b64encode(f.read()).decode()
+
+        response = client.post(
+            "/thumbnail/base64",
+            json={"file_data": pdf_b64, "size": 150},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is True
+        assert data["data"] is not None
+        assert "image" in data["data"]
+        assert data["data"]["width"] <= 150
+        assert data["data"]["height"] <= 150
+        assert data["data"]["width"] > 0
+        assert data["data"]["height"] > 0
+        # Verify it's valid base64
+        image_bytes = base64.b64decode(data["data"]["image"])
+        # PNG magic bytes
+        assert image_bytes[:4] == b'\x89PNG'
+
+    def test_generate_pdf_thumbnail_custom_size(self):
+        """Test generating a thumbnail with custom size."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_b64 = base64.b64encode(f.read()).decode()
+
+        response = client.post(
+            "/thumbnail/base64",
+            json={"file_data": pdf_b64, "size": 100},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is True
+        assert data["data"]["width"] <= 100
+        assert data["data"]["height"] <= 100
+
+    def test_thumbnail_invalid_base64(self):
+        """Test that invalid base64 is rejected."""
+        response = client.post(
+            "/thumbnail/base64",
+            json={"file_data": "not-valid-base64!!!", "size": 150},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is False
+        assert "base64" in data["error"].lower()
+
+    def test_thumbnail_invalid_pdf(self):
+        """Test that invalid PDF data is rejected."""
+        # Send valid base64 but invalid PDF content
+        invalid_pdf_b64 = base64.b64encode(b"not a pdf file").decode()
+
+        response = client.post(
+            "/thumbnail/base64",
+            json={"file_data": invalid_pdf_b64, "size": 150},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ok"] is False
+        assert data["error"] is not None

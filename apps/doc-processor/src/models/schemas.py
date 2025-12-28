@@ -35,3 +35,26 @@ class HealthResponse(BaseModel):
     ok: bool
     service: str = "doc-processor"
     version: str  # Set dynamically from config
+
+
+class ThumbnailData(BaseModel):
+    """Generated thumbnail data."""
+
+    image: str = Field(description="Base64-encoded PNG image of first page")
+    width: int = Field(description="Thumbnail width in pixels")
+    height: int = Field(description="Thumbnail height in pixels")
+
+
+class ThumbnailResult(BaseModel):
+    """API response for thumbnail generation."""
+
+    ok: bool
+    data: ThumbnailData | None = None
+    error: str | None = None
+
+
+class ThumbnailRequest(BaseModel):
+    """Request body for PDF thumbnail generation."""
+
+    file_data: str = Field(description="Base64-encoded PDF content")
+    size: int = Field(default=150, description="Max thumbnail size in pixels")
