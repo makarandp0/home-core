@@ -14,7 +14,14 @@
       "Bash(pnpm process-docs:*)",
       "Bash(pnpm build:*)",
       "Bash(curl:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "WebSearch",
+      "WebFetch(domain:localhost)",
+      "Bash(lsof:*)",
+      "Bash(ps:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm --filter @home/api build:*)",
+      "Bash(pnpm remove:*)"
     ]
   }
 }
