@@ -207,29 +207,43 @@ export function DocumentDetailPage() {
   // Navigation overlay - rendered in all states
   const navigationOverlay = navigating && (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 dark:bg-black/40 transition-opacity">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50">
         <div
-          className="flex items-center gap-3 bg-white dark:bg-gray-800 px-6 py-4 rounded-xl shadow-lg"
+          className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800 px-8 py-6 rounded-2xl shadow-2xl"
           style={{
-            animation: `${navigating === 'prev' ? 'slideFromLeft' : 'slideFromRight'} 0.3s ease-out`,
+            animation: `${navigating === 'prev' ? 'slideFromLeft' : 'slideFromRight'} 0.4s ease-out`,
           }}
         >
-          <span className="text-2xl" aria-hidden="true">
+          <span
+            className="text-5xl text-blue-600 dark:text-blue-400"
+            aria-hidden="true"
+            style={{
+              animation: `${navigating === 'prev' ? 'bounceLeft' : 'bounceRight'} 0.6s ease-in-out infinite`,
+            }}
+          >
             {navigating === 'prev' ? '←' : '→'}
           </span>
-          <span className="text-gray-700 dark:text-gray-200 font-medium">
+          <span className="text-gray-700 dark:text-gray-200 font-semibold text-lg">
             {navigating === 'prev' ? 'Previous' : 'Next'}
           </span>
         </div>
       </div>
       <style>{`
         @keyframes slideFromLeft {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
+          from { opacity: 0; transform: translateX(-40px) scale(0.9); }
+          to { opacity: 1; transform: translateX(0) scale(1); }
         }
         @keyframes slideFromRight {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
+          from { opacity: 0; transform: translateX(40px) scale(0.9); }
+          to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes bounceLeft {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(-8px); }
+        }
+        @keyframes bounceRight {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(8px); }
         }
       `}</style>
     </>
