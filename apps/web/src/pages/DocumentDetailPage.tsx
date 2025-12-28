@@ -39,6 +39,7 @@ export function DocumentDetailPage() {
   const [deleting, setDeleting] = React.useState(false);
   const [confirmCountdown, setConfirmCountdown] = React.useState(0);
   const [documentIds, setDocumentIds] = React.useState<string[]>([]);
+  const [navigating, setNavigating] = React.useState<'prev' | 'next' | null>(null);
 
   // Get document IDs from router state (passed from filtered list)
   // If accessed directly via URL, navigation will be disabled
@@ -55,6 +56,7 @@ export function DocumentDetailPage() {
     async function fetchDocument() {
       if (!id) return;
 
+      setLoading(true);
       const result = await api.get(`/api/documents/${id}`, DocumentMetadataSchema);
       if (result.ok) {
         setDocument(result.data);
@@ -62,6 +64,7 @@ export function DocumentDetailPage() {
         setError(getErrorMessage(result.error));
       }
       setLoading(false);
+      setNavigating(null);
     }
 
     fetchDocument();
@@ -81,12 +84,14 @@ export function DocumentDetailPage() {
   // Navigation helpers
   const navigateToPrev = React.useCallback(() => {
     if (prevDocId) {
+      setNavigating('prev');
       navigate(`/documents/${prevDocId}`, { state: { documentIds: documentIdsRef.current } });
     }
   }, [prevDocId, navigate]);
 
   const navigateToNext = React.useCallback(() => {
     if (nextDocId) {
+      setNavigating('next');
       navigate(`/documents/${nextDocId}`, { state: { documentIds: documentIdsRef.current } });
     }
   }, [nextDocId, navigate]);
@@ -229,10 +234,22 @@ export function DocumentDetailPage() {
 
   return (
     <div
-      className="space-y-6"
+      className="space-y-6 relative"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Navigation transition overlay */}
+      {navigating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 dark:bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="flex items-center gap-3 bg-white dark:bg-gray-800 px-6 py-4 rounded-xl shadow-lg">
+            <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+            <span className="text-gray-700 dark:text-gray-200">
+              {navigating === 'prev' ? 'Previous' : 'Next'} document...
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Navigation header */}
       <div className="flex items-center justify-between">
         <button
