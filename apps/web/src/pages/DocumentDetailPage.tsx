@@ -72,24 +72,36 @@ export function DocumentDetailPage() {
   const prevDocId = currentIndex > 0 ? documentIds[currentIndex - 1] : null;
   const nextDocId = currentIndex >= 0 && currentIndex < documentIds.length - 1 ? documentIds[currentIndex + 1] : null;
 
+  // Use ref to avoid re-creating callbacks when documentIds changes by reference
+  const documentIdsRef = React.useRef(documentIds);
+  React.useEffect(() => {
+    documentIdsRef.current = documentIds;
+  }, [documentIds]);
+
   // Navigation helpers
   const navigateToPrev = React.useCallback(() => {
     if (prevDocId) {
-      navigate(`/documents/${prevDocId}`, { state: { documentIds } });
+      navigate(`/documents/${prevDocId}`, { state: { documentIds: documentIdsRef.current } });
     }
-  }, [prevDocId, navigate, documentIds]);
+  }, [prevDocId, navigate]);
 
   const navigateToNext = React.useCallback(() => {
     if (nextDocId) {
-      navigate(`/documents/${nextDocId}`, { state: { documentIds } });
+      navigate(`/documents/${nextDocId}`, { state: { documentIds: documentIdsRef.current } });
     }
-  }, [nextDocId, navigate, documentIds]);
+  }, [nextDocId, navigate]);
 
   // Keyboard navigation (arrow keys)
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      // Ignore if user is typing in an input field
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      const target = event.target;
+      // Ignore if user is interacting with input-like fields or editable areas
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
         return;
       }
 
@@ -109,16 +121,30 @@ export function DocumentDetailPage() {
   // Swipe gesture support for mobile
   const touchStartX = React.useRef<number | null>(null);
   const touchStartY = React.useRef<number | null>(null);
-  const SWIPE_THRESHOLD = 50; // Minimum distance for swipe detection
+  const touchStartTarget = React.useRef<EventTarget | null>(null);
+  const SWIPE_THRESHOLD = 80; // Minimum distance for swipe detection (increased to avoid scroll conflicts)
   const SWIPE_ANGLE_THRESHOLD = 30; // Max vertical deviation in degrees
 
   const handleTouchStart = React.useCallback((event: React.TouchEvent) => {
     touchStartX.current = event.touches[0].clientX;
     touchStartY.current = event.touches[0].clientY;
+    touchStartTarget.current = event.target;
   }, []);
 
   const handleTouchEnd = React.useCallback((event: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
+
+    // Skip swipe detection if touch started on interactive elements
+    const target = touchStartTarget.current;
+    if (target instanceof HTMLElement) {
+      const interactiveElement = target.closest('button, a, input, textarea, select, iframe, [role="button"]');
+      if (interactiveElement) {
+        touchStartX.current = null;
+        touchStartY.current = null;
+        touchStartTarget.current = null;
+        return;
+      }
+    }
 
     const touchEndX = event.changedTouches[0].clientX;
     const touchEndY = event.changedTouches[0].clientY;
@@ -141,6 +167,7 @@ export function DocumentDetailPage() {
 
     touchStartX.current = null;
     touchStartY.current = null;
+    touchStartTarget.current = null;
   }, [navigateToPrev, navigateToNext]);
 
   React.useEffect(() => {
