@@ -76,6 +76,7 @@ export function DocumentsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [confirmState, setConfirmState] = React.useState<{ id: string; countdown: number } | null>(null);
+  const [thumbnails, setThumbnails] = React.useState<Record<string, string | null>>({});
 
   const [filters, setFilters] = React.useState<Filters>({
     owner: 'all',
@@ -107,6 +108,30 @@ export function DocumentsPage() {
 
     fetchDocuments();
   }, []);
+
+  // Lazy load thumbnails after documents are fetched
+  React.useEffect(() => {
+    if (documents.length === 0) return;
+
+    async function fetchThumbnails() {
+      const ids = documents.map((doc) => doc.id);
+      try {
+        const response = await fetch('/api/documents/thumbnails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        });
+        const json = await response.json();
+        if (json.ok && json.data) {
+          setThumbnails(json.data);
+        }
+      } catch {
+        // Thumbnails are non-critical, silently fail
+      }
+    }
+
+    fetchThumbnails();
+  }, [documents]);
 
   React.useEffect(() => {
     if (!confirmState || confirmState.countdown <= 0) return;
@@ -394,6 +419,7 @@ export function DocumentsPage() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b dark:border-gray-700">
+              <th className="w-12 px-2 py-2"></th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-400">
                 Document
               </th>
@@ -417,19 +443,56 @@ export function DocumentsPage() {
           <tbody>
             {filteredDocuments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                   No documents match the selected filters
                 </td>
               </tr>
             ) : (
               filteredDocuments.map((doc) => {
                 const expiryStatus = doc._expiryStatus;
+                const thumbnail = thumbnails[doc.id];
+                const isPdf = doc.mimeType === 'application/pdf';
                 return (
                   <tr
                     key={doc.id}
                     onClick={() => navigate(`/documents/${doc.id}`)}
                     className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                   >
+                    {/* Thumbnail */}
+                    <td className="px-2 py-2">
+                      <div className="w-10 h-10 flex items-center justify-center rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                        {thumbnail ? (
+                          <img
+                            src={thumbnail}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <svg
+                            className="w-5 h-5 text-gray-400 dark:text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            {isPdf ? (
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                              />
+                            ) : (
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            )}
+                          </svg>
+                        )}
+                      </div>
+                    </td>
                     {/* Document name + ID */}
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900 dark:text-gray-100">

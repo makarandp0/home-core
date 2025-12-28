@@ -171,6 +171,8 @@ export interface DocumentMetadataUpdate {
   amountCurrency?: string;
   // Fields to store in JSONB metadata
   metadata?: Record<string, unknown>;
+  // Thumbnail (base64 data URL)
+  thumbnail?: string;
 }
 
 /**
@@ -201,6 +203,7 @@ export async function updateDocumentMetadata(
     if (metadataUpdate.amountValue !== undefined) setValues.amountValue = metadataUpdate.amountValue;
     if (metadataUpdate.amountCurrency !== undefined) setValues.amountCurrency = metadataUpdate.amountCurrency;
     if (metadataUpdate.metadata !== undefined) setValues.metadata = metadataUpdate.metadata;
+    if (metadataUpdate.thumbnail !== undefined) setValues.thumbnail = metadataUpdate.thumbnail;
 
     await db.update(documents).set(setValues).where(eq(documents.id, documentId));
 

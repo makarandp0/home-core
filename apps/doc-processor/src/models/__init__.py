@@ -3,6 +3,17 @@ from .schemas import (
     HealthResponse,
     ProcessingResult,
     ProcessRequest,
+    ThumbnailData,
+    ThumbnailRequest,
+    ThumbnailResult,
 )
 
-__all__ = ["DocumentData", "ProcessingResult", "ProcessRequest", "HealthResponse"]
+__all__ = [
+    "DocumentData",
+    "ProcessingResult",
+    "ProcessRequest",
+    "HealthResponse",
+    "ThumbnailData",
+    "ThumbnailRequest",
+    "ThumbnailResult",
+]

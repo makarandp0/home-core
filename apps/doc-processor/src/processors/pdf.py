@@ -51,3 +51,36 @@ def pdf_to_images(file_bytes: bytes, dpi: int = 200) -> list[bytes]:
 
     doc.close()
     return images
+
+
+def pdf_first_page_thumbnail(file_bytes: bytes, max_size: int = 150) -> tuple[bytes, int, int]:
+    """
+    Generate a thumbnail from the first page of a PDF.
+
+    Args:
+        file_bytes: Raw PDF file bytes
+        max_size: Maximum width/height in pixels (default 150)
+
+    Returns:
+        Tuple of (PNG image bytes, width, height)
+    """
+    doc = fitz.open(stream=BytesIO(file_bytes), filetype="pdf")
+
+    if doc.page_count == 0:
+        doc.close()
+        raise ValueError("PDF has no pages")
+
+    page = doc[0]
+    page_rect = page.rect
+
+    # Calculate scale to fit within max_size while maintaining aspect ratio
+    scale = min(max_size / page_rect.width, max_size / page_rect.height)
+    matrix = fitz.Matrix(scale, scale)
+
+    pix = page.get_pixmap(matrix=matrix)
+    width = pix.width
+    height = pix.height
+    image_bytes = pix.tobytes("png")
+
+    doc.close()
+    return image_bytes, width, height
