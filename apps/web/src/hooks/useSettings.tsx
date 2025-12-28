@@ -68,10 +68,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     fetchProviderTypes();
   }, []);
 
-  // Fetch settings
-  const fetchSettings = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch settings with retry for when backend isn't ready yet
+  const fetchSettings = useCallback(async (retryCount = 0) => {
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
+
+    if (retryCount === 0) {
+      setLoading(true);
+      setError(null);
+    }
+
     try {
       const res = await fetch('/api/settings');
       const json = await res.json();
@@ -82,10 +88,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       } else {
         setError(parsed.error?.toString() ?? 'Failed to load settings');
       }
+      setLoading(false);
     } catch (err) {
-      console.error('Failed to fetch settings:', err);
+      console.error('[useSettings] Fetch failed:', err);
+      // Retry if backend might not be ready yet
+      if (retryCount < maxRetries) {
+        console.log(`[useSettings] Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => fetchSettings(retryCount + 1), retryDelay);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to load settings');
-    } finally {
       setLoading(false);
     }
   }, []);

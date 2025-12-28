@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { join, dirname, extname } from 'node:path';
 import { getDb, documents, eq } from '@home/db';
 import { parseDataUrl } from '../utils/data-url.js';
 
@@ -25,17 +25,25 @@ function getStoragePath(): string | null {
 }
 
 /**
- * Get file extension from mime type.
+ * Get file extension from mime type, with fallback to original filename extension.
  */
-function getExtensionFromMimeType(mimeType: string): string {
+function getExtensionFromMimeType(mimeType: string, originalFilename?: string): string {
   const extensions: Record<string, string> = {
     'image/jpeg': '.jpg',
     'image/png': '.png',
     'image/gif': '.gif',
     'image/webp': '.webp',
+    'image/bmp': '.bmp',
     'application/pdf': '.pdf',
   };
-  return extensions[mimeType] || '';
+  const ext = extensions[mimeType];
+  if (ext) return ext;
+  // Fallback to original filename extension if mime type not mapped
+  if (originalFilename) {
+    const originalExt = extname(originalFilename).toLowerCase();
+    if (originalExt) return originalExt;
+  }
+  return '';
 }
 
 /**
@@ -45,12 +53,14 @@ function getExtensionFromMimeType(mimeType: string): string {
  * @param imageData - The base64 data URL of the file
  * @param baseFilename - Base filename (without extension) to use
  * @param suffix - Suffix to add to filename (e.g., '_original')
+ * @param originalFilename - Original filename to extract extension from as fallback
  * @returns RawFileResult or null if storage is not configured
  */
 export async function storeRawFile(
   imageData: string,
   baseFilename: string,
-  suffix: string
+  suffix: string,
+  originalFilename?: string
 ): Promise<RawFileResult | null> {
   const storagePath = getStoragePath();
   if (!storagePath) {
@@ -64,7 +74,7 @@ export async function storeRawFile(
   }
 
   const { mimeType, base64Data } = parsed;
-  const extension = getExtensionFromMimeType(mimeType);
+  const extension = getExtensionFromMimeType(mimeType, originalFilename);
   const filename = `${baseFilename}${suffix}${extension}`;
   const fullPath = join(storagePath, filename);
 
@@ -115,7 +125,7 @@ export async function storeDocument(
   }
 
   const { mimeType, base64Data } = parsed;
-  const extension = getExtensionFromMimeType(mimeType);
+  const extension = getExtensionFromMimeType(mimeType, originalFilename);
   const uuid = options?.baseUuid ?? randomUUID();
   const suffix = options?.suffix ?? '';
   const filename = `${uuid}${suffix}${extension}`;

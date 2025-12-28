@@ -1,10 +1,32 @@
 import sharp from 'sharp';
+import { Jimp } from 'jimp';
 import { parseDataUrl } from '../utils/data-url.js';
 
 // Size limit in bytes of decoded binary data
 // Note: Base64 encoding adds ~33% overhead, so we use 3.5MB binary
 // which results in ~4.7MB base64 (safely under Anthropic's 5MB limit)
 export const DEFAULT_SIZE_LIMIT = 3.5 * 1024 * 1024; // 3.5MB binary → ~4.7MB base64
+
+// Formats supported by LLM providers (Anthropic, OpenAI, Gemini)
+const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+function isFormatSupported(mimeType: string): boolean {
+  return SUPPORTED_FORMATS.includes(mimeType.toLowerCase());
+}
+
+/**
+ * Convert a BMP buffer to PNG buffer using Jimp.
+ * Jimp handles BMP files properly and can output PNG.
+ */
+async function convertBmpToPng(buffer: Buffer): Promise<{ data: Buffer; width: number; height: number }> {
+  const image = await Jimp.read(buffer);
+  const pngBuffer = await image.getBuffer('image/png');
+  return {
+    data: pngBuffer,
+    width: image.width,
+    height: image.height,
+  };
+}
 
 export interface ResizeResult {
   imageData: string; // base64 data URL
@@ -35,20 +57,36 @@ export async function resizeImageIfNeeded(
   const originalSize = buffer.length;
 
   const limit = maxSizeBytes;
+  const needsFormatConversion = !isFormatSupported(mimeType);
 
-  // If under limit, return original
-  if (originalSize <= limit) {
+  // If under limit and format is supported, return original
+  if (originalSize <= limit && !needsFormatConversion) {
     return { imageData, resized: false, originalSize, finalSize: originalSize };
   }
 
   try {
-    // Get image metadata
-    const metadata = await sharp(buffer).metadata();
-    const originalWidth = metadata.width ?? 1920;
-    const originalHeight = metadata.height ?? 1080;
+    // Handle BMP files specially since sharp doesn't support them natively
+    let workingBuffer: Buffer = buffer;
+    let originalWidth: number;
+    let originalHeight: number;
+    let hasAlpha = false;
+
+    if (mimeType.toLowerCase() === 'image/bmp') {
+      // Convert BMP to PNG using Jimp, then let sharp handle the rest
+      const converted = await convertBmpToPng(buffer);
+      workingBuffer = Buffer.from(converted.data);
+      originalWidth = converted.width;
+      originalHeight = converted.height;
+      hasAlpha = false; // BMP typically doesn't have meaningful alpha
+    } else {
+      // Use sharp directly for supported formats
+      const metadata = await sharp(buffer).metadata();
+      originalWidth = metadata.width ?? 1920;
+      originalHeight = metadata.height ?? 1080;
+      hasAlpha = metadata.hasAlpha && mimeType === 'image/png';
+    }
 
     // Determine output format (JPEG for best compression, unless PNG needed for transparency)
-    const hasAlpha = metadata.hasAlpha && mimeType === 'image/png';
     const outputFormat = hasAlpha ? 'png' : 'jpeg';
     const outputMime = hasAlpha ? 'image/png' : 'image/jpeg';
 
@@ -62,7 +100,7 @@ export async function resizeImageIfNeeded(
       const newWidth = Math.round(originalWidth * scaleFactor);
       const newHeight = Math.round(originalHeight * scaleFactor);
 
-      const resizedImage = sharp(buffer).resize(newWidth, newHeight, {
+      const resizedImage = sharp(workingBuffer).resize(newWidth, newHeight, {
         fit: 'inside',
         withoutEnlargement: true,
       });
@@ -98,10 +136,12 @@ export async function resizeImageIfNeeded(
     const finalBase64 = resultBuffer.toString('base64');
     const finalDataUrl = `data:${outputMime};base64,${finalBase64}`;
 
+    const reason = needsFormatConversion
+      ? `converted from ${mimeType} to ${outputMime}`
+      : `resized (scale: ${(scaleFactor * 100).toFixed(0)}%, quality: ${quality})`;
     console.log(
-      `Image resized: ${(originalSize / 1024 / 1024).toFixed(2)}MB -> ` +
-        `${(resultBuffer.length / 1024 / 1024).toFixed(2)}MB ` +
-        `(scale: ${(scaleFactor * 100).toFixed(0)}%, quality: ${quality})`
+      `Image processed: ${(originalSize / 1024 / 1024).toFixed(2)}MB -> ` +
+        `${(resultBuffer.length / 1024 / 1024).toFixed(2)}MB - ${reason}`
     );
 
     return {
@@ -111,8 +151,12 @@ export async function resizeImageIfNeeded(
       finalSize: resultBuffer.length,
     };
   } catch (err) {
-    console.error('Failed to resize image:', err);
-    // Return original on error
+    console.error('Failed to process image:', err);
+    // If format conversion was required, we can't fall back to the original unsupported format
+    if (needsFormatConversion) {
+      throw new Error(`Failed to convert image from ${mimeType}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+    // Only fall back to original if format was already supported (resize-only failure)
     return { imageData, resized: false, originalSize, finalSize: originalSize };
   }
 }
