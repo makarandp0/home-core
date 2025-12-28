@@ -204,11 +204,45 @@ export function DocumentDetailPage() {
     setConfirmCountdown(0);
   }
 
+  // Navigation overlay - rendered in all states
+  const navigationOverlay = navigating && (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 dark:bg-black/40 transition-opacity">
+        <div
+          className="flex items-center gap-3 bg-white dark:bg-gray-800 px-6 py-4 rounded-xl shadow-lg"
+          style={{
+            animation: `${navigating === 'prev' ? 'slideFromLeft' : 'slideFromRight'} 0.3s ease-out`,
+          }}
+        >
+          <span className="text-2xl" aria-hidden="true">
+            {navigating === 'prev' ? '←' : '→'}
+          </span>
+          <span className="text-gray-700 dark:text-gray-200 font-medium">
+            {navigating === 'prev' ? 'Previous' : 'Next'}
+          </span>
+        </div>
+      </div>
+      <style>{`
+        @keyframes slideFromLeft {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideFromRight {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+    </>
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-gray-600 dark:text-gray-400">Loading document...</div>
-      </div>
+      <>
+        {navigationOverlay}
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-gray-600 dark:text-gray-400">Loading document...</div>
+        </div>
+      </>
     );
   }
 
@@ -238,37 +272,7 @@ export function DocumentDetailPage() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Navigation transition overlay */}
-      {navigating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 dark:bg-black/40 transition-opacity">
-          <div
-            className={`flex items-center gap-3 bg-white dark:bg-gray-800 px-6 py-4 rounded-xl shadow-lg animate-pulse ${
-              navigating === 'prev' ? 'animate-slide-right' : 'animate-slide-left'
-            }`}
-            style={{
-              animation: `${navigating === 'prev' ? 'slideFromLeft' : 'slideFromRight'} 0.3s ease-out`,
-            }}
-          >
-            <span className="text-2xl" aria-hidden="true">
-              {navigating === 'prev' ? '←' : '→'}
-            </span>
-            <span className="text-gray-700 dark:text-gray-200 font-medium">
-              {navigating === 'prev' ? 'Previous' : 'Next'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slideFromLeft {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes slideFromRight {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
+      {navigationOverlay}
 
       {/* Navigation header */}
       <div className="flex items-center justify-between">
