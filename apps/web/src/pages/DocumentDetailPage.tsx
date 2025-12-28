@@ -72,6 +72,77 @@ export function DocumentDetailPage() {
   const prevDocId = currentIndex > 0 ? documentIds[currentIndex - 1] : null;
   const nextDocId = currentIndex >= 0 && currentIndex < documentIds.length - 1 ? documentIds[currentIndex + 1] : null;
 
+  // Navigation helpers
+  const navigateToPrev = React.useCallback(() => {
+    if (prevDocId) {
+      navigate(`/documents/${prevDocId}`, { state: { documentIds } });
+    }
+  }, [prevDocId, navigate, documentIds]);
+
+  const navigateToNext = React.useCallback(() => {
+    if (nextDocId) {
+      navigate(`/documents/${nextDocId}`, { state: { documentIds } });
+    }
+  }, [nextDocId, navigate, documentIds]);
+
+  // Keyboard navigation (arrow keys)
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      // Ignore if user is typing in an input field
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        navigateToPrev();
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        navigateToNext();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigateToPrev, navigateToNext]);
+
+  // Swipe gesture support for mobile
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+  const SWIPE_THRESHOLD = 50; // Minimum distance for swipe detection
+  const SWIPE_ANGLE_THRESHOLD = 30; // Max vertical deviation in degrees
+
+  const handleTouchStart = React.useCallback((event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0].clientX;
+    touchStartY.current = event.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = React.useCallback((event: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = event.changedTouches[0].clientX;
+    const touchEndY = event.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+
+    // Check if horizontal swipe (not a vertical scroll)
+    const angle = Math.abs(Math.atan2(deltaY, deltaX) * (180 / Math.PI));
+    const isHorizontalSwipe = angle < SWIPE_ANGLE_THRESHOLD || angle > (180 - SWIPE_ANGLE_THRESHOLD);
+
+    if (isHorizontalSwipe && Math.abs(deltaX) > SWIPE_THRESHOLD) {
+      if (deltaX > 0) {
+        // Swipe right -> go to previous
+        navigateToPrev();
+      } else {
+        // Swipe left -> go to next
+        navigateToNext();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }, [navigateToPrev, navigateToNext]);
+
   React.useEffect(() => {
     if (confirmCountdown <= 0) return;
 
@@ -130,7 +201,11 @@ export function DocumentDetailPage() {
   const fileUrl = `/api/documents/${document.id}/file`;
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Navigation header */}
       <div className="flex items-center justify-between">
         <button
@@ -144,12 +219,10 @@ export function DocumentDetailPage() {
         {documentIds.length > 0 && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => prevDocId && navigate(`/documents/${prevDocId}`, {
-                state: { documentIds },
-              })}
+              onClick={navigateToPrev}
               disabled={!prevDocId}
               className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
-              title={prevDocId ? 'Previous document' : 'No previous document'}
+              title={prevDocId ? 'Previous document (←)' : 'No previous document'}
             >
               <span aria-hidden="true">←</span>
               <span>Previous</span>
@@ -162,12 +235,10 @@ export function DocumentDetailPage() {
             </span>
 
             <button
-              onClick={() => nextDocId && navigate(`/documents/${nextDocId}`, {
-                state: { documentIds },
-              })}
+              onClick={navigateToNext}
               disabled={!nextDocId}
               className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-600 dark:disabled:hover:text-gray-400"
-              title={nextDocId ? 'Next document' : 'No next document'}
+              title={nextDocId ? 'Next document (→)' : 'No next document'}
             >
               <span>Next</span>
               <span aria-hidden="true">→</span>
