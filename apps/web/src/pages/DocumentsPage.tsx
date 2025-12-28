@@ -386,7 +386,9 @@ export function DocumentsPage() {
         <DocumentListView
           documents={filteredDocuments}
           thumbnails={thumbnails}
-          onNavigate={(id) => navigate(`/documents/${id}`)}
+          onNavigate={(id) => navigate(`/documents/${id}`, {
+            state: { documentIds: filteredDocuments.map((d) => d.id) },
+          })}
           formatDate={formatDate}
           formatShortDate={formatShortDate}
         />
@@ -394,7 +396,9 @@ export function DocumentsPage() {
         <DocumentCardView
           documents={filteredDocuments}
           thumbnails={thumbnails}
-          onNavigate={(id) => navigate(`/documents/${id}`)}
+          onNavigate={(id) => navigate(`/documents/${id}`, {
+            state: { documentIds: filteredDocuments.map((d) => d.id) },
+          })}
           formatShortDate={formatShortDate}
         />
       )}
