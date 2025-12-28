@@ -11,6 +11,8 @@ interface ImageCropModalProps {
   onCancel: () => void;
 }
 
+const ROTATIONS: Rotation[] = [0, 90, 180, 270];
+
 export function ImageCropModal({ imageUrl, onCrop, onCancel }: ImageCropModalProps) {
   const [crop, setCrop] = React.useState<Crop>();
   const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
@@ -27,6 +29,7 @@ export function ImageCropModal({ imageUrl, onCrop, onCancel }: ImageCropModalPro
     }
 
     const img = new Image();
+
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -42,12 +45,17 @@ export function ImageCropModal({ imageUrl, onCrop, onCancel }: ImageCropModalPro
       ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
       ctx.restore();
 
+      // Use data URL (not blob URL) since it needs to be sent to server as base64
       setRotatedPreview(canvas.toDataURL('image/jpeg', 0.9));
     };
+
+    img.onerror = () => {
+      console.error('Failed to load image for rotation preview');
+      setRotatedPreview(imageUrl);
+    };
+
     img.src = imageUrl;
   }, [imageUrl, rotation]);
-
-  const ROTATIONS: Rotation[] = [0, 90, 180, 270];
 
   const rotateLeft = () => {
     setRotation((prev) => {
