@@ -5,18 +5,8 @@ import {
   DocumentListResponseSchema,
   ThumbnailsResponseSchema,
 } from '@home/types';
-import { DocumentListView, DocumentCardView } from '../components/documents';
+import { DocumentCardView, type CardStyle } from '../components/documents';
 import { api, getErrorMessage } from '@/lib/api';
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function formatShortDate(dateString: string | null): string {
   if (!dateString) return '—';
@@ -27,9 +17,7 @@ function formatShortDate(dateString: string | null): string {
   });
 }
 
-type ViewMode = 'list' | 'card';
-
-const VIEW_MODE_STORAGE_KEY = 'documents-view-mode';
+const CARD_STYLE_STORAGE_KEY = 'documents-card-style';
 
 interface Filters {
   owner: string;
@@ -64,9 +52,9 @@ export function DocumentsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [thumbnails, setThumbnails] = React.useState<Record<string, string | null>>({});
-  const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
-    const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    return stored === 'card' ? 'card' : 'list';
+  const [cardStyle, setCardStyle] = React.useState<CardStyle>(() => {
+    const stored = localStorage.getItem(CARD_STYLE_STORAGE_KEY);
+    return stored === 'compact' ? 'compact' : 'minimal';
   });
 
   const [filters, setFilters] = React.useState<Filters>({
@@ -76,10 +64,10 @@ export function DocumentsPage() {
     expiryStatus: 'all',
   });
 
-  // Persist view mode to localStorage
+  // Persist card style to localStorage
   React.useEffect(() => {
-    localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
-  }, [viewMode]);
+    localStorage.setItem(CARD_STYLE_STORAGE_KEY, cardStyle);
+  }, [cardStyle]);
 
   React.useEffect(() => {
     async function fetchDocuments() {
@@ -249,32 +237,42 @@ export function DocumentsPage() {
               Clear filters ({activeFilterCount})
             </button>
           )}
-          {/* View Toggle */}
+          {/* View Style Toggle */}
           <div className="flex items-center border rounded-lg overflow-hidden dark:border-gray-600">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setCardStyle('minimal')}
               className={`p-2 transition-colors ${
-                viewMode === 'list'
+                cardStyle === 'minimal'
                   ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100'
                   : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
-              title="List view"
+              title="Minimal view"
             >
+              {/* Horizontal rows with small squares - represents minimal cards */}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+                <rect x="3" y="4" width="4" height="4" rx="0.5" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeWidth={1.5} d="M9 5h12M9 7h8" />
+                <rect x="3" y="10" width="4" height="4" rx="0.5" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeWidth={1.5} d="M9 11h12M9 13h8" />
+                <rect x="3" y="16" width="4" height="4" rx="0.5" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeWidth={1.5} d="M9 17h12M9 19h8" />
               </svg>
             </button>
             <button
-              onClick={() => setViewMode('card')}
+              onClick={() => setCardStyle('compact')}
               className={`p-2 transition-colors ${
-                viewMode === 'card'
+                cardStyle === 'compact'
                   ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100'
                   : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
-              title="Card view"
+              title="Compact grid view"
             >
+              {/* Grid of squares - represents compact cards */}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                <rect x="3" y="3" width="7" height="7" rx="1" strokeWidth={1.5} />
+                <rect x="14" y="3" width="7" height="7" rx="1" strokeWidth={1.5} />
+                <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth={1.5} />
+                <rect x="14" y="14" width="7" height="7" rx="1" strokeWidth={1.5} />
               </svg>
             </button>
           </div>
@@ -368,21 +366,11 @@ export function DocumentsPage() {
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* Document Grid */}
       {filteredDocuments.length === 0 ? (
         <div className="py-8 text-center text-gray-500 dark:text-gray-400">
           No documents match the selected filters
         </div>
-      ) : viewMode === 'list' ? (
-        <DocumentListView
-          documents={filteredDocuments}
-          thumbnails={thumbnails}
-          onNavigate={(id) => navigate(`/documents/${id}`, {
-            state: { documentIds: documentIdList },
-          })}
-          formatDate={formatDate}
-          formatShortDate={formatShortDate}
-        />
       ) : (
         <DocumentCardView
           documents={filteredDocuments}
@@ -391,6 +379,7 @@ export function DocumentsPage() {
             state: { documentIds: documentIdList },
           })}
           formatShortDate={formatShortDate}
+          cardStyle={cardStyle}
         />
       )}
     </div>
