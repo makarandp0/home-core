@@ -1,49 +1,95 @@
+import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Collapsible } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { ErrorDisplay } from '../components/ErrorDisplay';
-import { DocumentDataDisplay } from '../components/DocumentDataDisplay';
-import { JsonDisplay } from '../components/JsonDisplay';
 import { DropZone } from '../components/DropZone';
 import { ImageCropModal } from '../components/ImageCropModal';
-import { useSettings, useFileUpload, useDocumentAnalysis } from '../hooks';
-import { Settings as SettingsIcon, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useSettings, useFileUpload } from '../hooks';
+import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
+import { DocumentUploadDataSchema } from '@home/types';
+import { api, getErrorMessage } from '@/lib/api';
 
 export function UploadPage() {
   const settings = useSettings();
   const fileUpload = useFileUpload();
-  const analysis = useDocumentAnalysis();
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadComplete, setUploadComplete] = React.useState(false);
+  const [uploadStats, setUploadStats] = React.useState({ success: 0, failed: 0 });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUploadAll = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fileUpload.file || !fileUpload.fileDataUrl) {
-      return;
+    if (!settings.activeProvider) return;
+
+    const pendingFiles = fileUpload.files.filter((f) => f.status === 'pending');
+    if (pendingFiles.length === 0) return;
+
+    setIsUploading(true);
+
+    let successCount = 0;
+    let failedCount = 0;
+
+    // Process files sequentially
+    for (const fileEntry of pendingFiles) {
+      if (!fileEntry.dataUrl) {
+        fileUpload.updateFileStatus(fileEntry.id, 'error', 'No file data');
+        failedCount++;
+        continue;
+      }
+
+      fileUpload.updateFileStatus(fileEntry.id, 'uploading');
+
+      try {
+        const result = await api.post('/api/documents/upload', DocumentUploadDataSchema, {
+          file: fileEntry.dataUrl,
+          filename: fileEntry.file.name,
+          provider: settings.activeProvider.providerType,
+        });
+
+        if (result.ok) {
+          fileUpload.updateFileStatus(fileEntry.id, 'done');
+          successCount++;
+        } else {
+          const errorMessage = getErrorMessage(result.error);
+          fileUpload.updateFileStatus(
+            fileEntry.id,
+            'error',
+            typeof errorMessage === 'string' ? errorMessage : 'Upload failed'
+          );
+          failedCount++;
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error && typeof error.message === 'string'
+            ? error.message
+            : 'Unexpected error during upload';
+        fileUpload.updateFileStatus(fileEntry.id, 'error', message);
+        failedCount++;
+      }
     }
 
-    if (!settings.activeProvider) {
-      return;
-    }
-
-    fileUpload.clearError();
-    analysis.reset();
-
-    await analysis.analyze({
-      fileDataUrl: fileUpload.fileDataUrl,
-      fileName: fileUpload.file.name,
-      fileType: fileUpload.fileType,
-      provider: settings.activeProvider.providerType,
-      // apiKey is now retrieved server-side from database
-    });
+    setIsUploading(false);
+    setUploadStats({ success: successCount, failed: failedCount });
+    setUploadComplete(true);
   };
 
-  const displayError = fileUpload.error ?? analysis.error;
-  const hasResults = analysis.document || analysis.parseResponse;
-  const isReady = fileUpload.file && fileUpload.fileDataUrl && !fileUpload.isProcessing;
-  const isComplete = hasResults && !analysis.isProcessing;
+  const handleReset = () => {
+    fileUpload.reset();
+    setUploadComplete(false);
+    setUploadStats({ success: 0, failed: 0 });
+  };
+
+  const displayError = fileUpload.error;
   const isConfigured = settings.activeProvider !== null;
+  const pendingCount = fileUpload.files.filter((f) => f.status === 'pending').length;
+  const hasFilesToUpload = pendingCount > 0;
+
+  // Check if all files are done (success or error)
+  const allFilesDone =
+    fileUpload.files.length > 0 &&
+    fileUpload.files.every((f) => f.status === 'done' || f.status === 'error');
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -51,7 +97,7 @@ export function UploadPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Upload Document</h2>
+              <h2 className="text-lg font-semibold">Upload Documents</h2>
               <Badge variant="secondary" className="text-xs">
                 {settings.loading
                   ? 'Loading...'
@@ -69,64 +115,50 @@ export function UploadPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Success State */}
-          {isComplete ? (
+          {/* Success State - All uploads complete */}
+          {uploadComplete && allFilesDone ? (
             <div className="space-y-4">
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-green-200 bg-green-50 p-8 dark:border-green-900 dark:bg-green-950/30">
                 <CheckCircle2 className="mb-3 h-12 w-12 text-green-600 dark:text-green-500" />
                 <h3 className="text-lg font-medium text-green-900 dark:text-green-100">
-                  Document uploaded!
+                  Upload complete!
                 </h3>
                 <p className="mt-1 text-sm text-green-700 dark:text-green-400">
-                  {analysis.document?.document_type || 'Document'} processed successfully
+                  {uploadStats.success} document{uploadStats.success !== 1 ? 's' : ''} uploaded
+                  successfully
+                  {uploadStats.failed > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400">
+                      , {uploadStats.failed} failed
+                    </span>
+                  )}
                 </p>
               </div>
-
-              <Collapsible title="View Details">
-                <div className="space-y-4">
-                  {analysis.parseResponse && <JsonDisplay data={analysis.parseResponse} />}
-                  {analysis.document && <DocumentDataDisplay document={analysis.document} />}
-                  {analysis.extractedText && (
-                    <div className="rounded-lg border bg-muted/30 p-4">
-                      <h4 className="mb-2 text-sm font-medium">Extracted Text</h4>
-                      <p className="max-h-32 overflow-y-auto whitespace-pre-wrap text-sm text-muted-foreground">
-                        {analysis.extractedText}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </Collapsible>
 
               <Button
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => {
-                  fileUpload.reset();
-                  analysis.reset();
-                }}
+                onClick={handleReset}
               >
-                Upload Another
+                Upload More Documents
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleUploadAll} className="space-y-6">
               <DropZone
-                file={fileUpload.file}
-                fileType={fileUpload.fileType}
-                filePreview={fileUpload.filePreview}
+                files={fileUpload.files}
                 isProcessing={fileUpload.isProcessing}
                 onFileChange={fileUpload.handleFileChange}
                 onDrop={fileUpload.handleDrop}
                 onCameraCapture={fileUpload.handleCameraCapture}
-                onReset={fileUpload.reset}
+                onRemoveFile={fileUpload.removeFile}
                 onCropClick={fileUpload.openCropModal}
-                disabled={analysis.isProcessing}
+                disabled={isUploading}
               />
 
-              {fileUpload.showCropModal && fileUpload.filePreview && (
+              {fileUpload.cropFile?.preview && (
                 <ImageCropModal
-                  imageUrl={fileUpload.filePreview}
+                  imageUrl={fileUpload.cropFile.preview}
                   onCrop={fileUpload.applyCrop}
                   onCancel={fileUpload.closeCropModal}
                 />
@@ -139,21 +171,24 @@ export function UploadPage() {
                 size="lg"
                 className="w-full"
                 disabled={
-                  analysis.isProcessing ||
-                  !isReady ||
+                  isUploading ||
+                  !hasFilesToUpload ||
                   !isConfigured ||
-                  settings.loading
+                  settings.loading ||
+                  fileUpload.isProcessing
                 }
               >
-                {analysis.isProcessing ? (
+                {isUploading ? (
                   <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Analyzing...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Analyze Document
+                    {hasFilesToUpload
+                      ? `Upload ${pendingCount} Document${pendingCount !== 1 ? 's' : ''}`
+                      : 'Select Files to Upload'}
                   </>
                 )}
               </Button>

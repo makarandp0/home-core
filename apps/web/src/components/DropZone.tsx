@@ -1,31 +1,131 @@
 import * as React from 'react';
-import { Upload, FileText, Image, X, Camera, Crop } from 'lucide-react';
+import { Upload, FileText, Image, X, Camera, Plus, CheckCircle2, AlertCircle, Loader2, Crop } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CameraCapture } from './CameraCapture';
+import { type FileEntry, type FileStatus } from '@/hooks/useFileUpload';
 
 interface DropZoneProps {
-  file: File | null;
-  fileType: 'image' | 'pdf' | null;
-  filePreview: string | null;
+  files: FileEntry[];
   isProcessing: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent<HTMLElement>) => void;
   onCameraCapture: (dataUrl: string) => void;
-  onReset: () => void;
-  onCropClick?: () => void;
+  onRemoveFile: (id: string) => void;
+  onCropClick: (id: string) => void;
   disabled?: boolean;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileStatusIcon({ status }: { status: FileStatus }) {
+  switch (status) {
+    case 'uploading':
+      return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
+    case 'done':
+      return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+    case 'error':
+      return <AlertCircle className="h-4 w-4 text-destructive" />;
+    default:
+      return null;
+  }
+}
+
+function FileListItem({
+  entry,
+  onRemove,
+  onCropClick,
+  disabled,
+}: {
+  entry: FileEntry;
+  onRemove: () => void;
+  onCropClick: () => void;
+  disabled?: boolean;
+}) {
+  const isUploading = entry.status === 'uploading';
+  const isDone = entry.status === 'done';
+  const isError = entry.status === 'error';
+  const canEdit = !isDone && !isUploading;
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors',
+        isDone && 'border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20',
+        isError && 'border-destructive/50 bg-destructive/5'
+      )}
+    >
+      {/* Thumbnail / Icon */}
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+        {entry.fileType === 'image' && entry.preview ? (
+          <img
+            src={entry.preview}
+            alt=""
+            className="h-10 w-10 rounded-md object-cover"
+          />
+        ) : entry.fileType === 'image' ? (
+          <Image className="h-5 w-5 text-muted-foreground" />
+        ) : (
+          <FileText className="h-5 w-5 text-muted-foreground" />
+        )}
+      </div>
+
+      {/* File info */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-medium">{entry.file.name}</span>
+        <span className="text-xs text-muted-foreground">
+          {formatFileSize(entry.file.size)}
+          {entry.error && (
+            <span className="ml-2 text-destructive">{entry.error}</span>
+          )}
+        </span>
+      </div>
+
+      {/* Status / Actions */}
+      <div className="flex items-center gap-1">
+        <FileStatusIcon status={entry.status} />
+        {canEdit && entry.fileType === 'image' && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCropClick}
+            disabled={disabled}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          >
+            <Crop className="h-4 w-4" />
+            <span className="sr-only">Crop image</span>
+          </Button>
+        )}
+        {canEdit && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            disabled={disabled}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Remove file</span>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function DropZone({
-  file,
-  fileType,
-  filePreview,
+  files,
   isProcessing,
   onFileChange,
   onDrop,
   onCameraCapture,
-  onReset,
+  onRemoveFile,
   onCropClick,
   disabled,
 }: DropZoneProps) {
@@ -57,91 +157,85 @@ export function DropZone({
     if (!disabled) inputRef.current?.click();
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  // Show file preview/info when file is selected
-  if (file && !isProcessing) {
+  // Show file list when files are selected
+  if (files.length > 0 && !isProcessing) {
     return (
-      <div className="relative rounded-xl border-2 border-border bg-card overflow-hidden">
-        {/* File preview area */}
-        <div className="p-4">
-          {fileType === 'image' && filePreview ? (
-            <div className="flex justify-center">
-              <img
-                src={filePreview}
-                alt="Preview"
-                className="max-h-64 rounded-lg object-contain"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <FileText className="h-16 w-16" />
-                <span className="text-sm font-medium">PDF Document</span>
-              </div>
-            </div>
-          )}
+      <div className="space-y-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,.pdf,application/pdf"
+          onChange={onFileChange}
+          className="hidden"
+          disabled={disabled}
+          multiple={true}
+        />
+
+        {/* File list */}
+        <div className="space-y-2">
+          {files.map((entry) => (
+            <FileListItem
+              key={entry.id}
+              entry={entry}
+              onRemove={() => onRemoveFile(entry.id)}
+              onCropClick={() => onCropClick(entry.id)}
+              disabled={disabled}
+            />
+          ))}
         </div>
 
-        {/* File info bar */}
-        <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-3">
-          <div className="flex items-center gap-3">
-            {fileType === 'image' ? (
-              <Image className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <FileText className="h-5 w-5 text-muted-foreground" />
-            )}
-            <div className="flex flex-col">
-              <span className="text-sm font-medium truncate max-w-[200px]">
-                {file.name}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {formatFileSize(file.size)}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {fileType === 'image' && onCropClick && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onCropClick}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Crop className="h-4 w-4" />
-                <span className="sr-only">Crop image</span>
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onReset}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Remove file</span>
-            </Button>
+        {/* Add more files button */}
+        <div
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          onClick={handleClick}
+          onKeyDown={(e) => {
+            if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          aria-label="Add more files"
+          className={cn(
+            'flex items-center justify-center rounded-lg border-2 border-dashed p-4 transition-all cursor-pointer',
+            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+            isDragging
+              ? 'border-primary bg-primary/5'
+              : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
+            disabled && 'opacity-50 cursor-not-allowed'
+          )}
+        >
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Plus className="h-4 w-4" />
+            <span>Add more files</span>
           </div>
         </div>
       </div>
     );
   }
 
-  // Show drop zone when no file
+  // Show drop zone when no files
   return (
     <div
+      role="button"
+      tabIndex={disabled || isProcessing ? -1 : 0}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (!disabled && !isProcessing && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      aria-label="Drop files here or click to browse"
       className={cn(
         'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all cursor-pointer',
+        'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
         isDragging
           ? 'border-primary bg-primary/5 scale-[1.02]'
           : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
@@ -156,12 +250,13 @@ export function DropZone({
         onChange={onFileChange}
         className="hidden"
         disabled={disabled}
+        multiple={true}
       />
 
       {isProcessing ? (
         <div className="flex flex-col items-center gap-3">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-muted border-t-primary" />
-          <span className="text-sm text-muted-foreground">Processing file...</span>
+          <span className="text-sm text-muted-foreground">Processing files...</span>
         </div>
       ) : showCamera ? (
         <CameraCapture
@@ -184,7 +279,7 @@ export function DropZone({
             />
           </div>
           <p className="mb-1 text-sm font-medium">
-            {isDragging ? 'Drop your file here' : 'Drag and drop your file here'}
+            {isDragging ? 'Drop your files here' : 'Drag and drop your files here'}
           </p>
           <p className="text-xs text-muted-foreground">
             or click to browse
