@@ -8,14 +8,13 @@ import { DropZone } from '../components/DropZone';
 import { ImageCropModal } from '../components/ImageCropModal';
 import { useSettings, useFileUpload } from '../hooks';
 import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
-import { DocumentUploadDataSchema, type ApiError } from '@home/types';
+import { DocumentUploadDataSchema } from '@home/types';
 import { api, getErrorMessage } from '@/lib/api';
 
 export function UploadPage() {
   const settings = useSettings();
   const fileUpload = useFileUpload();
   const [isUploading, setIsUploading] = React.useState(false);
-  const [uploadError, setUploadError] = React.useState<ApiError | null>(null);
   const [uploadComplete, setUploadComplete] = React.useState(false);
   const [uploadStats, setUploadStats] = React.useState({ success: 0, failed: 0 });
 
@@ -28,7 +27,6 @@ export function UploadPage() {
     if (pendingFiles.length === 0) return;
 
     setIsUploading(true);
-    setUploadError(null);
 
     let successCount = 0;
     let failedCount = 0;
@@ -70,12 +68,11 @@ export function UploadPage() {
 
   const handleReset = () => {
     fileUpload.reset();
-    setUploadError(null);
     setUploadComplete(false);
     setUploadStats({ success: 0, failed: 0 });
   };
 
-  const displayError = fileUpload.error ?? uploadError;
+  const displayError = fileUpload.error;
   const isConfigured = settings.activeProvider !== null;
   const pendingCount = fileUpload.files.filter((f) => f.status === 'pending').length;
   const hasFilesToUpload = pendingCount > 0;

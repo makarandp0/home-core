@@ -22,9 +22,14 @@ export interface FileUploadState {
   cropFileId: string | null;
 }
 
-let fileIdCounter = 0;
 function generateFileId(): string {
-  return `file-${Date.now()}-${fileIdCounter++}`;
+  // Prefer crypto.randomUUID when available for robust, non-sequential IDs
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `file-${crypto.randomUUID()}`;
+  }
+  // Fallback: combine timestamp with a random base36 component
+  const randomPart = Math.random().toString(36).slice(2);
+  return `file-${Date.now()}-${randomPart}`;
 }
 
 export function useFileUpload() {
@@ -35,45 +40,69 @@ export function useFileUpload() {
     cropFileId: null,
   });
 
+  // Track processing state with ref to prevent concurrent calls
+  const isProcessingRef = React.useRef(false);
+
   const processFiles = React.useCallback(async (selectedFiles: File[]) => {
     if (selectedFiles.length === 0) return;
 
+    // Prevent concurrent processing
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
     setState((s) => ({ ...s, isProcessing: true, error: null }));
 
-    const newEntries: FileEntry[] = [];
-    const errors: string[] = [];
+    const readFileAsDataURL = (file: File): Promise<string> =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
+          resolve(reader.result);
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
 
-    for (const file of selectedFiles) {
+    type ProcessResult = { entry: FileEntry; error: null } | { entry: null; error: string };
+
+    // Process all files in parallel for better performance
+    const filePromises = selectedFiles.map(async (file): Promise<ProcessResult> => {
       const isPdf = file.type === 'application/pdf';
       const isImage = file.type.startsWith('image/');
 
       if (!isPdf && !isImage) {
-        errors.push(`${file.name}: not a valid image or PDF`);
-        continue;
+        return { entry: null, error: `${file.name}: not a valid image or PDF` };
       }
 
-      // Read file as data URL
       try {
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
-            resolve(reader.result);
-          };
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsDataURL(file);
-        });
+        const dataUrl = await readFileAsDataURL(file);
 
-        newEntries.push({
+        const entry: FileEntry = {
           id: generateFileId(),
           file,
           fileType: isPdf ? 'pdf' : 'image',
           preview: isImage ? dataUrl : null,
           dataUrl,
           status: 'pending',
-        });
+        };
+
+        return { entry, error: null };
       } catch {
-        errors.push(`${file.name}: failed to read file`);
+        return { entry: null, error: `${file.name}: failed to read file` };
+      }
+    });
+
+    const results = await Promise.all(filePromises);
+
+    const newEntries: FileEntry[] = [];
+    const errors: string[] = [];
+
+    for (const result of results) {
+      if (result.entry) {
+        newEntries.push(result.entry);
+      }
+      if (result.error) {
+        errors.push(result.error);
       }
     }
 
@@ -83,6 +112,8 @@ export function useFileUpload() {
       error: errors.length > 0 ? errors.join(', ') : null,
       isProcessing: false,
     }));
+
+    isProcessingRef.current = false;
   }, []);
 
   const handleFileChange = React.useCallback(

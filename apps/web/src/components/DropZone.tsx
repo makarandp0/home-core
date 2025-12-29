@@ -186,12 +186,22 @@ export function DropZone({
 
         {/* Add more files button */}
         <div
+          role="button"
+          tabIndex={disabled ? -1 : 0}
           onClick={handleClick}
+          onKeyDown={(e) => {
+            if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              handleClick();
+            }
+          }}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          aria-label="Add more files"
           className={cn(
             'flex items-center justify-center rounded-lg border-2 border-dashed p-4 transition-all cursor-pointer',
+            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
             isDragging
               ? 'border-primary bg-primary/5'
               : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
@@ -210,12 +220,22 @@ export function DropZone({
   // Show drop zone when no files
   return (
     <div
+      role="button"
+      tabIndex={disabled || isProcessing ? -1 : 0}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (!disabled && !isProcessing && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      aria-label="Drop files here or click to browse"
       className={cn(
         'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all cursor-pointer',
+        'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
         isDragging
           ? 'border-primary bg-primary/5 scale-[1.02]'
           : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
