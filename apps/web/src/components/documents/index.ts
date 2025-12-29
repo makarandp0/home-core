@@ -1,2 +1,2 @@
-export { DocumentListView } from './DocumentListView';
 export { DocumentCardView } from './DocumentCardView';
+export type { CardStyle } from './DocumentCardView';

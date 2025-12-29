@@ -1,4 +1,5 @@
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { HealthSchema, LoadFaceModelResponseSchema, type DocProcessorStatus } from '@home/types';
 import { FRONTEND_VERSION } from '../version';
 import { Card } from '@/components/ui/card';
@@ -108,6 +109,12 @@ export function VersionPage() {
   const [loading, setLoading] = React.useState(true);
   const [loadingModel, setLoadingModel] = React.useState(false);
   const [loadModelError, setLoadModelError] = React.useState<string | null>(null);
+
+  // Generate the network URL for QR code (for mobile access)
+  const getNetworkUrl = () => {
+    const { protocol, hostname, port } = window.location;
+    return `${protocol}//${hostname}${port ? ':' + port : ''}/`;
+  };
 
   const fetchHealth = React.useCallback(async () => {
     const result = await api.get('/api/health', HealthSchema);
@@ -299,6 +306,24 @@ export function VersionPage() {
         <p className="mt-4 text-sm text-muted-foreground text-center">
           Click on a PR link to view it on GitHub
         </p>
+      </Card>
+
+      {/* QR Code for Mobile Access */}
+      <Card className="p-4 mt-4">
+        <h2 className="text-lg font-medium mb-3">Mobile Access</h2>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="bg-white p-3 rounded-lg">
+            <QRCodeSVG value={getNetworkUrl()} size={120} />
+          </div>
+          <div className="flex-1 space-y-2">
+            <p className="text-sm text-muted-foreground break-all font-mono">
+              {getNetworkUrl()}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Scan to open on your mobile device. Make sure both devices are on the same network.
+            </p>
+          </div>
+        </div>
       </Card>
     </div>
   );
