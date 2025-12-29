@@ -25,6 +25,20 @@ function getBranchColor(branch: string): string {
   return branchColors[hash % branchColors.length];
 }
 
+function isLocalDevelopment(hostname: string): boolean {
+  // Standard localhost variants
+  if (['localhost', '127.0.0.1', '::1'].includes(hostname)) {
+    return true;
+  }
+  // Private IPv4 ranges (RFC 1918)
+  const privateIpPatterns = [
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,      // 10.0.0.0 - 10.255.255.255
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/, // 172.16.0.0 - 172.31.255.255
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,          // 192.168.0.0 - 192.168.255.255
+  ];
+  return privateIpPatterns.some(pattern => pattern.test(hostname));
+}
+
 export function App() {
   return (
     <ThemeProvider>
@@ -37,7 +51,7 @@ export function App() {
                 <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
                 <span>home-core web</span>
               </Link>
-              {typeof window !== 'undefined' && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) && (
+              {typeof window !== 'undefined' && isLocalDevelopment(window.location.hostname) && (
                 <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>
                   Local{import.meta.env.VITE_GIT_BRANCH ? `:${import.meta.env.VITE_GIT_BRANCH}` : ''}
                 </Badge>
