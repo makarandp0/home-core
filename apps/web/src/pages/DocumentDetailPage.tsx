@@ -7,14 +7,6 @@ import {
 } from '@home/types';
 import { api, getErrorMessage } from '@/lib/api';
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -40,6 +32,17 @@ export function DocumentDetailPage() {
   const [confirmCountdown, setConfirmCountdown] = React.useState(0);
   const [documentIds, setDocumentIds] = React.useState<string[]>([]);
   const [navigating, setNavigating] = React.useState<'prev' | 'next' | null>(null);
+
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = React.useState(false);
+  const [editForm, setEditForm] = React.useState({
+    originalFilename: '',
+    documentOwner: '',
+    documentType: '',
+    category: '',
+  });
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
 
   // Get document IDs from router state (passed from filtered list)
   // If accessed directly via URL, navigation will be disabled
@@ -69,6 +72,84 @@ export function DocumentDetailPage() {
 
     fetchDocument();
   }, [id]);
+
+  // Sync edit form when document loads or changes
+  React.useEffect(() => {
+    if (document) {
+      setEditForm({
+        originalFilename: document.originalFilename,
+        documentOwner: document.documentOwner ?? '',
+        documentType: document.documentType ?? '',
+        category: document.category ?? '',
+      });
+    }
+  }, [document]);
+
+  // Edit mode handlers
+  function handleEditToggle() {
+    if (isEditMode) {
+      // Cancel: reset form to current document values
+      if (document) {
+        setEditForm({
+          originalFilename: document.originalFilename,
+          documentOwner: document.documentOwner ?? '',
+          documentType: document.documentType ?? '',
+          category: document.category ?? '',
+        });
+      }
+      setSaveError(null);
+    }
+    setIsEditMode(!isEditMode);
+  }
+
+  async function handleSave() {
+    if (!document) return;
+
+    setSaving(true);
+    setSaveError(null);
+
+    // Build update payload - only include changed fields
+    const updates: Record<string, string | null> = {};
+
+    if (editForm.originalFilename !== document.originalFilename) {
+      updates.originalFilename = editForm.originalFilename;
+    }
+    if (editForm.documentOwner !== (document.documentOwner ?? '')) {
+      updates.documentOwner = editForm.documentOwner || null;
+    }
+    if (editForm.documentType !== (document.documentType ?? '')) {
+      updates.documentType = editForm.documentType || null;
+    }
+    if (editForm.category !== (document.category ?? '')) {
+      updates.category = editForm.category || null;
+    }
+
+    // Skip if no changes
+    if (Object.keys(updates).length === 0) {
+      setIsEditMode(false);
+      setSaving(false);
+      return;
+    }
+
+    const result = await api.patch(
+      `/api/documents/${document.id}`,
+      DocumentMetadataSchema,
+      updates
+    );
+
+    if (result.ok) {
+      setDocument(result.data);
+      setIsEditMode(false);
+    } else {
+      setSaveError(getErrorMessage(result.error));
+    }
+
+    setSaving(false);
+  }
+
+  function handleFormChange(field: keyof typeof editForm, value: string) {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  }
 
   // Calculate prev/next document IDs
   const currentIndex = id ? documentIds.indexOf(id) : -1;
@@ -426,41 +507,136 @@ export function DocumentDetailPage() {
         {/* Document metadata */}
         <div className="space-y-4">
           <div className="border dark:border-gray-700 rounded-lg p-4">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">Details</h3>
-            <dl className="space-y-3 text-sm">
-              <div>
-                <dt className="text-gray-500 dark:text-gray-400">File name</dt>
-                <dd className="text-gray-900 dark:text-gray-100">{document.originalFilename}</dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 dark:text-gray-400">Type</dt>
-                <dd className="text-gray-900 dark:text-gray-100">{document.mimeType}</dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 dark:text-gray-400">Size</dt>
-                <dd className="text-gray-900 dark:text-gray-100">{formatBytes(document.sizeBytes)}</dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 dark:text-gray-400">Created</dt>
-                <dd className="text-gray-900 dark:text-gray-100">{formatDate(document.createdAt)}</dd>
-              </div>
-              <div>
-                <dt className="text-gray-500 dark:text-gray-400">Document ID</dt>
-                <dd className="text-gray-900 dark:text-gray-100 text-xs break-all">{document.id}</dd>
-              </div>
-              {document.documentType && (
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">Details</h3>
+              <button
+                onClick={handleEditToggle}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {isEditMode ? 'Cancel' : 'Edit'}
+              </button>
+            </div>
+
+            {isEditMode ? (
+              // Edit mode form
+              <div className="space-y-4">
                 <div>
-                  <dt className="text-gray-500 dark:text-gray-400">Document Type</dt>
-                  <dd className="text-gray-900 dark:text-gray-100">{document.documentType}</dd>
+                  <label
+                    htmlFor="originalFilename"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    File name
+                  </label>
+                  <input
+                    id="originalFilename"
+                    type="text"
+                    value={editForm.originalFilename}
+                    onChange={(e) => handleFormChange('originalFilename', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
-              )}
-              {document.expiryDate && (
                 <div>
-                  <dt className="text-gray-500 dark:text-gray-400">Expiry Date</dt>
-                  <dd className="text-gray-900 dark:text-gray-100">{document.expiryDate}</dd>
+                  <label
+                    htmlFor="documentOwner"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Document Owner
+                  </label>
+                  <input
+                    id="documentOwner"
+                    type="text"
+                    value={editForm.documentOwner}
+                    onChange={(e) => handleFormChange('documentOwner', e.target.value)}
+                    placeholder="e.g., John Smith"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
-              )}
-            </dl>
+                <div>
+                  <label
+                    htmlFor="documentType"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Document Type
+                  </label>
+                  <input
+                    id="documentType"
+                    type="text"
+                    value={editForm.documentType}
+                    onChange={(e) => handleFormChange('documentType', e.target.value)}
+                    placeholder="e.g., passport, invoice"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="category"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Category
+                  </label>
+                  <input
+                    id="category"
+                    type="text"
+                    value={editForm.category}
+                    onChange={(e) => handleFormChange('category', e.target.value)}
+                    placeholder="e.g., identity, financial"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {saveError && (
+                  <div className="text-sm text-red-600 dark:text-red-400">{saveError}</div>
+                )}
+
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !editForm.originalFilename.trim()}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            ) : (
+              // View mode - definition list
+              <dl className="space-y-3 text-sm">
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">File name</dt>
+                  <dd className="text-gray-900 dark:text-gray-100">{document.originalFilename}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">Created</dt>
+                  <dd className="text-gray-900 dark:text-gray-100">{formatDate(document.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">Document ID</dt>
+                  <dd className="text-gray-900 dark:text-gray-100 text-xs break-all">{document.id}</dd>
+                </div>
+                {document.documentOwner && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Document Owner</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.documentOwner}</dd>
+                  </div>
+                )}
+                {document.documentType && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Document Type</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.documentType}</dd>
+                  </div>
+                )}
+                {document.category && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Category</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.category}</dd>
+                  </div>
+                )}
+                {document.expiryDate && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Expiry Date</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.expiryDate}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
           </div>
 
           <a

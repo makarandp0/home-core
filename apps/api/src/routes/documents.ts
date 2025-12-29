@@ -8,6 +8,7 @@ import {
   DocumentDataSchema,
   ThumbnailsRequestSchema,
   IdParamsSchema,
+  DocumentUpdateRequestSchema,
   type ApiResponse,
   type DocumentListResponse,
   type DocumentMetadata,
@@ -18,6 +19,7 @@ import {
   type ExtractionMethod,
   type ThumbnailsRequest,
   type IdParams,
+  type DocumentUpdateRequest,
 } from '@home/types';
 import { getDb, documents, desc, eq, inArray } from '@home/db';
 import {
@@ -597,6 +599,90 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       return { deleted: true };
+    },
+  });
+
+  /**
+   * PATCH /api/documents/:id
+   * Update document metadata (partial update).
+   */
+  routes.patch<DocumentUpdateRequest, IdParams, unknown, DocumentMetadata>({
+    url: '/documents/:id',
+    schema: {
+      body: DocumentUpdateRequestSchema,
+      params: IdParamsSchema,
+    },
+    handler: async ({ params, body }) => {
+      const db = getDb();
+
+      // First verify document exists
+      const [existing] = await db
+        .select({ id: documents.id })
+        .from(documents)
+        .where(eq(documents.id, params.id))
+        .limit(1);
+
+      if (!existing) {
+        notFound('Document not found');
+      }
+
+      // Build update object - only include fields that were provided
+      const updateFields: Record<string, unknown> = {};
+
+      if (body.originalFilename !== undefined) {
+        updateFields.originalFilename = body.originalFilename;
+      }
+      if (body.documentOwner !== undefined) {
+        updateFields.documentOwner = body.documentOwner;
+      }
+      if (body.documentType !== undefined) {
+        updateFields.documentType = body.documentType;
+      }
+      if (body.category !== undefined) {
+        updateFields.category = body.category;
+      }
+
+      // Only update if there are actual changes
+      if (Object.keys(updateFields).length > 0) {
+        updateFields.updatedAt = new Date().toISOString();
+        await db
+          .update(documents)
+          .set(updateFields)
+          .where(eq(documents.id, params.id));
+      }
+
+      // Return updated document
+      const [doc] = await db
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+          originalFilename: documents.originalFilename,
+          mimeType: documents.mimeType,
+          sizeBytes: documents.sizeBytes,
+          documentType: documents.documentType,
+          documentOwner: documents.documentOwner,
+          expiryDate: documents.expiryDate,
+          category: documents.category,
+          issueDate: documents.issueDate,
+          country: documents.country,
+          amountValue: documents.amountValue,
+          amountCurrency: documents.amountCurrency,
+          metadata: documents.metadata,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
+        .where(eq(documents.id, params.id))
+        .limit(1);
+
+      if (!doc) {
+        notFound('Document not found');
+      }
+
+      return {
+        ...doc,
+        metadata: parseMetadata(doc.metadata),
+      };
     },
   });
 };
