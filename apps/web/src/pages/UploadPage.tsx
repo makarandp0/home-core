@@ -41,22 +41,31 @@ export function UploadPage() {
 
       fileUpload.updateFileStatus(fileEntry.id, 'uploading');
 
-      const result = await api.post('/api/documents/upload', DocumentUploadDataSchema, {
-        file: fileEntry.dataUrl,
-        filename: fileEntry.file.name,
-        provider: settings.activeProvider.providerType,
-      });
+      try {
+        const result = await api.post('/api/documents/upload', DocumentUploadDataSchema, {
+          file: fileEntry.dataUrl,
+          filename: fileEntry.file.name,
+          provider: settings.activeProvider.providerType,
+        });
 
-      if (result.ok) {
-        fileUpload.updateFileStatus(fileEntry.id, 'done');
-        successCount++;
-      } else {
-        const errorMessage = getErrorMessage(result.error);
-        fileUpload.updateFileStatus(
-          fileEntry.id,
-          'error',
-          typeof errorMessage === 'string' ? errorMessage : 'Upload failed'
-        );
+        if (result.ok) {
+          fileUpload.updateFileStatus(fileEntry.id, 'done');
+          successCount++;
+        } else {
+          const errorMessage = getErrorMessage(result.error);
+          fileUpload.updateFileStatus(
+            fileEntry.id,
+            'error',
+            typeof errorMessage === 'string' ? errorMessage : 'Upload failed'
+          );
+          failedCount++;
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error && typeof error.message === 'string'
+            ? error.message
+            : 'Unexpected error during upload';
+        fileUpload.updateFileStatus(fileEntry.id, 'error', message);
         failedCount++;
       }
     }
