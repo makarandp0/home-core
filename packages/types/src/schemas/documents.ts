@@ -119,3 +119,13 @@ export type ThumbnailsRequest = z.infer<typeof ThumbnailsRequestSchema>;
 // Thumbnails response - map of document ID to thumbnail data URL (or null)
 export const ThumbnailsResponseSchema = z.record(z.string(), z.string().nullable());
 export type ThumbnailsResponse = z.infer<typeof ThumbnailsResponseSchema>;
+
+// Document update request - only editable fields, all optional
+export const DocumentUpdateRequestSchema = z.object({
+  originalFilename: z.string().min(1).max(255).optional(),
+  documentOwner: z.string().max(255).nullable().optional(),
+  documentType: z.string().max(100).nullable().optional(),
+  category: z.string().max(50).nullable().optional(),
+});
+
+export type DocumentUpdateRequest = z.infer<typeof DocumentUpdateRequestSchema>;

@@ -41,7 +41,7 @@ interface Schema<T> {
  * @returns Promise<ApiResult<T>> - Typed result with data or error
  */
 async function request<T>(
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   schema: Schema<T>,
   body?: unknown,
@@ -136,6 +136,13 @@ export const api = {
    */
   delete<T>(url: string, schema: Schema<T>, options?: RequestOptions): Promise<ApiResult<T>> {
     return request('DELETE', url, schema, undefined, options);
+  },
+
+  /**
+   * PATCH request
+   */
+  patch<T>(url: string, schema: Schema<T>, body?: unknown, options?: RequestOptions): Promise<ApiResult<T>> {
+    return request('PATCH', url, schema, body, options);
   },
 };
 

@@ -119,7 +119,7 @@ function validateSchema<T>(schema: z.ZodType<T> | undefined, data: unknown): Val
  */
 function createValidatedRoute<TBody = unknown, TParams = unknown, TQuery = unknown, TResponse = unknown>(
   fastify: FastifyInstance,
-  method: 'get' | 'post' | 'put' | 'delete',
+  method: 'get' | 'post' | 'put' | 'patch' | 'delete',
   config: RouteConfig<TBody, TParams, TQuery, TResponse>
 ) {
   fastify[method](config.url, async (request, reply): Promise<ApiResponse<TResponse>> => {
@@ -204,5 +204,9 @@ export function createRouteBuilder(fastify: FastifyInstance) {
     delete: <TBody = unknown, TParams = unknown, TQuery = unknown, TResponse = unknown>(
       config: RouteConfig<TBody, TParams, TQuery, TResponse>
     ) => createValidatedRoute(fastify, 'delete', config),
+
+    patch: <TBody = unknown, TParams = unknown, TQuery = unknown, TResponse = unknown>(
+      config: RouteConfig<TBody, TParams, TQuery, TResponse>
+    ) => createValidatedRoute(fastify, 'patch', config),
   };
 }
