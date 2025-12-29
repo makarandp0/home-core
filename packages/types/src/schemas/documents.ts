@@ -122,7 +122,12 @@ export type ThumbnailsResponse = z.infer<typeof ThumbnailsResponseSchema>;
 
 // Document update request - only editable fields, all optional
 export const DocumentUpdateRequestSchema = z.object({
-  originalFilename: z.string().min(1).max(255).optional(),
+  originalFilename: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/\S/, 'Filename must contain at least one non-whitespace character')
+    .optional(),
   documentOwner: z.string().max(255).nullable().optional(),
   documentType: z.string().max(100).nullable().optional(),
   category: z.string().max(50).nullable().optional(),

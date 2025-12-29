@@ -626,10 +626,8 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         notFound('Document not found');
       }
 
-      // Build update object
-      const updateFields: Record<string, unknown> = {
-        updatedAt: new Date().toISOString(),
-      };
+      // Build update object - only include fields that were provided
+      const updateFields: Record<string, unknown> = {};
 
       if (body.originalFilename !== undefined) {
         updateFields.originalFilename = body.originalFilename;
@@ -644,11 +642,14 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         updateFields.category = body.category;
       }
 
-      // Apply updates
-      await db
-        .update(documents)
-        .set(updateFields)
-        .where(eq(documents.id, params.id));
+      // Only update if there are actual changes
+      if (Object.keys(updateFields).length > 0) {
+        updateFields.updatedAt = new Date().toISOString();
+        await db
+          .update(documents)
+          .set(updateFields)
+          .where(eq(documents.id, params.id));
+      }
 
       // Return updated document
       const [doc] = await db
@@ -673,6 +674,10 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         .from(documents)
         .where(eq(documents.id, params.id))
         .limit(1);
+
+      if (!doc) {
+        notFound('Document not found');
+      }
 
       return {
         ...doc,
