@@ -1,5 +1,11 @@
 export { useProviders } from './useProviders';
-export { useFileUpload, type FileType, type FileUploadState } from './useFileUpload';
+export {
+  useFileUpload,
+  type FileType,
+  type FileStatus,
+  type FileEntry,
+  type FileUploadState,
+} from './useFileUpload';
 export {
   useDocumentAnalysis,
   type ProcessingStep,

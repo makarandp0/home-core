@@ -3,97 +3,134 @@ import { makAssert } from '@home/utils';
 
 export type FileType = 'image' | 'pdf' | null;
 
+export type FileStatus = 'pending' | 'uploading' | 'done' | 'error';
+
+export interface FileEntry {
+  id: string;
+  file: File;
+  fileType: 'image' | 'pdf';
+  preview: string | null;
+  dataUrl: string | null;
+  status: FileStatus;
+  error?: string;
+}
+
 export interface FileUploadState {
-  file: File | null;
-  fileType: FileType;
-  filePreview: string | null;
-  fileDataUrl: string | null;
+  files: FileEntry[];
   error: string | null;
   isProcessing: boolean;
-  showCropModal: boolean;
+  cropFileId: string | null;
+}
+
+let fileIdCounter = 0;
+function generateFileId(): string {
+  return `file-${Date.now()}-${fileIdCounter++}`;
 }
 
 export function useFileUpload() {
   const [state, setState] = React.useState<FileUploadState>({
-    file: null,
-    fileType: null,
-    filePreview: null,
-    fileDataUrl: null,
+    files: [],
     error: null,
     isProcessing: false,
-    showCropModal: false,
+    cropFileId: null,
   });
 
-  const processFile = React.useCallback(async (selectedFile: File) => {
-    const isPdf = selectedFile.type === 'application/pdf';
-    const isImage = selectedFile.type.startsWith('image/');
+  const processFiles = React.useCallback(async (selectedFiles: File[]) => {
+    if (selectedFiles.length === 0) return;
 
-    if (!isPdf && !isImage) {
-      setState((s) => ({ ...s, error: 'Please select an image or PDF file', isProcessing: false }));
-      return;
+    setState((s) => ({ ...s, isProcessing: true, error: null }));
+
+    const newEntries: FileEntry[] = [];
+    const errors: string[] = [];
+
+    for (const file of selectedFiles) {
+      const isPdf = file.type === 'application/pdf';
+      const isImage = file.type.startsWith('image/');
+
+      if (!isPdf && !isImage) {
+        errors.push(`${file.name}: not a valid image or PDF`);
+        continue;
+      }
+
+      // Read file as data URL
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
+            resolve(reader.result);
+          };
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
+
+        newEntries.push({
+          id: generateFileId(),
+          file,
+          fileType: isPdf ? 'pdf' : 'image',
+          preview: isImage ? dataUrl : null,
+          dataUrl,
+          status: 'pending',
+        });
+      } catch {
+        errors.push(`${file.name}: failed to read file`);
+      }
     }
 
-    // Reset state for new file
-    setState({
-      file: selectedFile,
-      fileType: isPdf ? 'pdf' : 'image',
-      filePreview: null,
-      fileDataUrl: null,
-      error: null,
-      isProcessing: true,
-      showCropModal: false,
-    });
-
-    // Read file as data URL (server handles resizing if needed)
-    const reader = new FileReader();
-    reader.onload = () => {
-      makAssert(typeof reader.result === 'string', 'Expected string from readAsDataURL');
-      const dataUrl = reader.result;
-      setState((s) => ({
-        ...s,
-        filePreview: isImage ? dataUrl : null,
-        fileDataUrl: dataUrl,
-        isProcessing: false,
-      }));
-    };
-    reader.onerror = () => {
-      setState((s) => ({
-        ...s,
-        error: `Failed to read ${isImage ? 'image' : 'PDF'} file`,
-        isProcessing: false,
-      }));
-    };
-    reader.readAsDataURL(selectedFile);
+    setState((s) => ({
+      ...s,
+      files: [...s.files, ...newEntries],
+      error: errors.length > 0 ? errors.join(', ') : null,
+      isProcessing: false,
+    }));
   }, []);
 
   const handleFileChange = React.useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFile = e.target.files?.[0];
-      if (!selectedFile) return;
-      await processFile(selectedFile);
+      const selectedFiles = e.target.files;
+      if (!selectedFiles || selectedFiles.length === 0) return;
+      await processFiles(Array.from(selectedFiles));
+      // Reset input so same files can be selected again
+      e.target.value = '';
     },
-    [processFile]
+    [processFiles]
   );
 
   const handleDrop = React.useCallback(
     async (e: React.DragEvent<HTMLElement>) => {
       e.preventDefault();
-      const droppedFile = e.dataTransfer.files?.[0];
-      if (!droppedFile) return;
-      await processFile(droppedFile);
+      const droppedFiles = e.dataTransfer.files;
+      if (!droppedFiles || droppedFiles.length === 0) return;
+      await processFiles(Array.from(droppedFiles));
     },
-    [processFile]
+    [processFiles]
+  );
+
+  const removeFile = React.useCallback((id: string) => {
+    setState((s) => ({
+      ...s,
+      files: s.files.filter((f) => f.id !== id),
+    }));
+  }, []);
+
+  const updateFileStatus = React.useCallback(
+    (id: string, status: FileStatus, error?: string) => {
+      setState((s) => ({
+        ...s,
+        files: s.files.map((f) =>
+          f.id === id ? { ...f, status, error } : f
+        ),
+      }));
+    },
+    []
   );
 
   const reset = React.useCallback(() => {
     setState({
-      file: null,
-      fileType: null,
-      filePreview: null,
-      fileDataUrl: null,
+      files: [],
       error: null,
       isProcessing: false,
-      showCropModal: false,
+      cropFileId: null,
     });
   }, []);
 
@@ -101,50 +138,70 @@ export function useFileUpload() {
     setState((s) => ({ ...s, error: null }));
   }, []);
 
-  const handleCameraCapture = React.useCallback((dataUrl: string) => {
-    // Create a synthetic file object for camera captures
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const syntheticFile = new File([], `camera-capture-${timestamp}.jpg`, {
-      type: 'image/jpeg',
-    });
-
-    setState({
-      file: syntheticFile,
-      fileType: 'image',
-      filePreview: dataUrl,
-      fileDataUrl: dataUrl,
-      error: null,
-      isProcessing: false,
-      showCropModal: false,
-    });
-  }, []);
-
-  const openCropModal = React.useCallback(() => {
-    setState((s) => ({ ...s, showCropModal: true }));
+  const openCropModal = React.useCallback((id: string) => {
+    setState((s) => ({ ...s, cropFileId: id }));
   }, []);
 
   const closeCropModal = React.useCallback(() => {
-    setState((s) => ({ ...s, showCropModal: false }));
+    setState((s) => ({ ...s, cropFileId: null }));
   }, []);
 
   const applyCrop = React.useCallback((croppedImageUrl: string) => {
     setState((s) => ({
       ...s,
-      filePreview: croppedImageUrl,
-      fileDataUrl: croppedImageUrl,
-      showCropModal: false,
+      files: s.files.map((f) =>
+        f.id === s.cropFileId
+          ? { ...f, preview: croppedImageUrl, dataUrl: croppedImageUrl }
+          : f
+      ),
+      cropFileId: null,
     }));
   }, []);
+
+  const handleCameraCapture = React.useCallback((dataUrl: string) => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const syntheticFile = new File([], `camera-capture-${timestamp}.jpg`, {
+      type: 'image/jpeg',
+    });
+
+    const newEntry: FileEntry = {
+      id: generateFileId(),
+      file: syntheticFile,
+      fileType: 'image',
+      preview: dataUrl,
+      dataUrl,
+      status: 'pending',
+    };
+
+    setState((s) => ({
+      ...s,
+      files: [...s.files, newEntry],
+    }));
+  }, []);
+
+  // Computed properties for convenience
+  const pendingFiles = state.files.filter((f) => f.status === 'pending');
+  const hasFiles = state.files.length > 0;
+  const hasPendingFiles = pendingFiles.length > 0;
+  const cropFile = state.cropFileId
+    ? state.files.find((f) => f.id === state.cropFileId) ?? null
+    : null;
 
   return {
     ...state,
     handleFileChange,
     handleDrop,
     handleCameraCapture,
+    removeFile,
+    updateFileStatus,
     reset,
     clearError,
     openCropModal,
     closeCropModal,
     applyCrop,
+    pendingFiles,
+    hasFiles,
+    hasPendingFiles,
+    cropFile,
   };
 }
