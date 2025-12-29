@@ -313,7 +313,11 @@ export function VersionPage() {
         <h2 className="text-lg font-medium mb-3">Mobile Access</h2>
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="bg-white p-3 rounded-lg">
-            <QRCodeSVG value={getNetworkUrl()} size={120} />
+            <QRCodeSVG
+              value={getNetworkUrl()}
+              size={120}
+              aria-label="QR code for mobile access to this application"
+            />
           </div>
           <div className="flex-1 space-y-2">
             <p className="text-sm text-muted-foreground break-all font-mono">

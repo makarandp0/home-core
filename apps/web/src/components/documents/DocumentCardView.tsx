@@ -34,18 +34,28 @@ export function DocumentCardView({
         const thumbnail = thumbnails[doc.id];
         const isPdf = doc.mimeType === 'application/pdf';
 
+        const handleKeyDown = (event: React.KeyboardEvent) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onNavigate(doc.id);
+          }
+        };
+
         // Minimal style - horizontal card with small thumbnail
         if (cardStyle === 'minimal') {
           return (
             <div
               key={doc.id}
               onClick={() => onNavigate(doc.id)}
-              className="group flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+              onKeyDown={handleKeyDown}
+              role="button"
+              tabIndex={0}
+              className="group flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {/* Small Thumbnail */}
               <div className="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex items-center justify-center">
                 {thumbnail ? (
-                  <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+                  <img src={thumbnail} alt={doc.originalFilename} className="w-full h-full object-cover" />
                 ) : (
                   <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {isPdf ? (
@@ -100,12 +110,15 @@ export function DocumentCardView({
           <div
             key={doc.id}
             onClick={() => onNavigate(doc.id)}
-            className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            className="group bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {/* Smaller Square Thumbnail */}
             <div className="relative aspect-square bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
               {thumbnail ? (
-                <img src={thumbnail} alt="" className="w-full h-full object-contain bg-gray-50 dark:bg-gray-800" />
+                <img src={thumbnail} alt={doc.originalFilename} className="w-full h-full object-contain bg-gray-50 dark:bg-gray-800" />
               ) : (
                 <svg className="w-10 h-10 text-gray-300 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {isPdf ? (
