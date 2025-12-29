@@ -103,7 +103,12 @@ export COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export VITE_COMMIT_SHA="$COMMIT_SHA"
 
 # Open browser after API is ready (background)
-WEB_URL="http://localhost:$HOME_WEB_PORT"
+# Use network address for mobile testing compatibility
+if [[ -n "$LOCAL_IP" ]]; then
+  WEB_URL="http://$LOCAL_IP:$HOME_WEB_PORT"
+else
+  WEB_URL="http://localhost:$HOME_WEB_PORT"
+fi
 API_URL="http://localhost:$HOME_API_PORT"
 (
   # Wait for API to be healthy (max 60 seconds)
