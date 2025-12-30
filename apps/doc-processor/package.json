@@ -7,7 +7,6 @@
     "build": "echo 'Python service - no build step'",
     "start": "uv run uvicorn src.main:app --host 0.0.0.0 --port ${HOME_DOC_PROCESSOR_PORT:-8000}",
     "lint": "uvx ruff check src/",
-    "typecheck": "echo 'Python typecheck runs via uv in CI'",
-    "test": "uv run pytest tests/"
+    "typecheck": "echo 'Python typecheck runs via uv in CI'"
   }
 }

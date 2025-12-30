@@ -6,6 +6,7 @@ import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
 import { getDb, documents, eq } from '@home/db';
 import { parseDataUrl } from '../utils/data-url.js';
+import { sanitizeFilename } from '../utils/string-sanitize.js';
 
 export interface DocumentStorageResult {
   id: string;
@@ -111,7 +112,7 @@ export async function storeRawFile(
  */
 export async function storeDocument(
   imageData: string,
-  originalFilename?: string,
+  originalFilename: string,
   metadata?: Record<string, unknown>,
   options?: { baseUuid?: string; suffix?: string }
 ): Promise<DocumentStorageResult | null> {
@@ -151,7 +152,7 @@ export async function storeDocument(
       .insert(documents)
       .values({
         filename,
-        originalFilename: originalFilename || filename,
+        originalFilename: sanitizeFilename(originalFilename),
         mimeType,
         sizeBytes,
         storagePath: fullPath,

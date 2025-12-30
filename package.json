@@ -19,7 +19,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "check": "pnpm build && pnpm typecheck && pnpm lint",
+    "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm test",
     "test": "turbo run test",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
