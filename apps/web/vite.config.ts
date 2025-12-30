@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'node:path';

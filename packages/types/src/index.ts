@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 export type ID = string & { readonly __brand: unique symbol };
 
 // Error can be a simple string or an object with message and details

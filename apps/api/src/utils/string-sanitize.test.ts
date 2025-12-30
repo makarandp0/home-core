@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { describe, it, expect } from 'vitest';
 import { trimField, toTitleCase, sanitizeFilename, trimAndTitleCase } from './string-sanitize.js';
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { createHash } from 'node:crypto';
 import { getDb, llmCache, eq } from '@home/db';
 import type { ExtractTextResult, ParseTextResult, VisionResult } from '../providers/types.js';

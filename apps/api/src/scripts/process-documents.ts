@@ -1,4 +1,6 @@
 #!/usr/bin/env tsx
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * CLI script to process documents from a directory.
  * Uses the unified /api/documents/upload endpoint for both images and PDFs.

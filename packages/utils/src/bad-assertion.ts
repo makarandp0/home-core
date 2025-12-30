@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Intentionally uses `as` to demonstrate the lint rule banning TS `as` assertions
 const value: unknown = 21;
 // This `as` assertion should be flagged by the `TSAsExpression` enforcement in eslint.config.js

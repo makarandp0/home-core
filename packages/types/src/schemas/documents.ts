@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { z } from 'zod';
 import { VisionProviderSchema, DocumentDataSchema } from './vision.js';
 

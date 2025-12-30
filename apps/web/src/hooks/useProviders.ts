@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import * as React from 'react';
 import { ProvidersResponseSchema, type ProviderInfo } from '@home/types';
 import { api, getErrorMessage } from '@/lib/api';

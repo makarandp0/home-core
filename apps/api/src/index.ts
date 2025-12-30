@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import Fastify from 'fastify';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
