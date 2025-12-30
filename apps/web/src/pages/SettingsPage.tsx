@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import type { ProviderConfig, ProviderId } from '@home/types';
 import { ProviderIdSchema } from '@home/types';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { OwnerAliasesCard } from '@/components/OwnerAliasesCard';
 
 type ModalMode = 'add' | 'edit' | null;
 
@@ -292,6 +293,9 @@ export function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Owner Name Aliases */}
+      <OwnerAliasesCard />
 
       {/* Add/Edit Provider Dialog */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => !open && closeModal()}>

@@ -12,6 +12,7 @@ import { userRoutes } from './routes/user.js';
 import { providersRoutes } from './routes/providers.js';
 import { documentsRoutes } from './routes/documents.js';
 import { settingsRoutes } from './routes/settings.js';
+import { ownerAliasRoutes } from './routes/owner-aliases.js';
 
 async function main() {
   // Run database migrations on startup
@@ -94,6 +95,7 @@ async function main() {
   server.register(providersRoutes, { prefix: '/api' });
   server.register(documentsRoutes, { prefix: '/api' });
   server.register(settingsRoutes, { prefix: '/api' });
+  server.register(ownerAliasRoutes, { prefix: '/api' });
 
   // SPA fallback: serve index.html for non-API routes when static is enabled
   server.setNotFoundHandler((req, reply) => {

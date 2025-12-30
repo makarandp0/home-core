@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   type DocumentMetadata,
   DocumentListResponseSchema,
@@ -24,6 +24,7 @@ interface Filters {
   documentType: string;
   category: string;
   expiryStatus: string;
+  recent: boolean;
 }
 
 interface FilterOptions {
@@ -48,6 +49,7 @@ function getExpiryStatus(expiryDate: string | null): string {
 
 export function DocumentsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [documents, setDocuments] = React.useState<DocumentMetadata[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -57,12 +59,13 @@ export function DocumentsPage() {
     return stored === 'compact' ? 'compact' : 'minimal';
   });
 
-  const [filters, setFilters] = React.useState<Filters>({
+  const [filters, setFilters] = React.useState<Filters>(() => ({
     owner: 'all',
     documentType: 'all',
     category: 'all',
     expiryStatus: 'all',
-  });
+    recent: searchParams.get('recent') === 'true',
+  }));
 
   // Persist card style to localStorage
   React.useEffect(() => {
@@ -140,12 +143,18 @@ export function DocumentsPage() {
 
   // Apply filters and compute expiry status once per document
   const filteredDocuments = React.useMemo(() => {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
     return documents
       .map((doc) => ({
         ...doc,
         _expiryStatus: getExpiryStatus(doc.expiryDate),
       }))
       .filter((doc) => {
+        // Recent filter: only show documents from last hour
+        if (filters.recent) {
+          if (new Date(doc.createdAt) < oneHourAgo) return false;
+        }
         // Handle "(not-set)" filter for null values
         if (filters.owner !== 'all') {
           if (filters.owner === '(not-set)') {
@@ -173,7 +182,8 @@ export function DocumentsPage() {
       });
   }, [documents, filters]);
 
-  const activeFilterCount = Object.values(filters).filter((v) => v !== 'all').length;
+  const activeFilterCount =
+    Object.entries(filters).filter(([k, v]) => k === 'recent' ? v === true : v !== 'all').length;
 
   // Memoize document ID list for navigation state
   const documentIdList = React.useMemo(
@@ -187,7 +197,20 @@ export function DocumentsPage() {
       documentType: 'all',
       category: 'all',
       expiryStatus: 'all',
+      recent: false,
     });
+    // Clear URL params
+    setSearchParams({});
+  }
+
+  function toggleRecentFilter() {
+    const newRecent = !filters.recent;
+    setFilters((f) => ({ ...f, recent: newRecent }));
+    if (newRecent) {
+      setSearchParams({ recent: 'true' });
+    } else {
+      setSearchParams({});
+    }
   }
 
   if (loading) {
@@ -280,7 +303,19 @@ export function DocumentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="flex flex-wrap gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg items-end">
+        {/* Recently uploaded filter chip */}
+        <button
+          onClick={toggleRecentFilter}
+          className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+            filters.recent
+              ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200'
+              : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+          }`}
+        >
+          Recently uploaded
+        </button>
+
         {/* Owner filter */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
