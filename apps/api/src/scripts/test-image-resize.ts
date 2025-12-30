@@ -1,4 +1,6 @@
 #!/usr/bin/env tsx
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * CLI script to test image resizing functionality.
  * Tests the resizeImageIfNeeded function with various image files.

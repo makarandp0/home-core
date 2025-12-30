@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { makAssert } from '@home/utils';
 import type { PixelCrop } from 'react-image-crop';
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Makarand Patwardhan
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import sharp from 'sharp';
 import { Jimp } from 'jimp';
 import { parseDataUrl } from '../utils/data-url.js';

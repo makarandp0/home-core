@@ -37,9 +37,9 @@ cp .env.example .env
 
 Edit `.env` with your settings:
 
-| Variable                | Description                                |
-| ----------------------- | ------------------------------------------ |
-| `DOCUMENT_STORAGE_PATH` | Directory for storing uploaded documents   |
+| Variable                | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `DOCUMENT_STORAGE_PATH` | Directory for storing uploaded documents |
 
 API keys for AI providers (Anthropic, OpenAI, Gemini) are configured via the Settings page in the UI.
 
@@ -93,4 +93,7 @@ See [AGENTS.md](AGENTS.md) for development setup, build commands, and contributi
 
 ## License
 
-This project is licensed under the [Elastic License 2.0](LICENSE). You are free to use, modify, and distribute the software, but you may not offer it as a hosted/managed service.
+This project is licensed under the GNU Affero General Public License v3 (AGPLv3).
+
+Self-hosting and modification are encouraged.
+Commercial licensing is available for entities that wish to offer the software as a closed service.
