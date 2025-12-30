@@ -29,6 +29,7 @@ import {
   updateDocumentMetadata,
   type DocumentMetadataUpdate,
 } from '../services/document-storage.js';
+import { trimField, trimAndTitleCase, sanitizeFilename } from '../utils/string-sanitize.js';
 import { getProviderById, Anthropic, OpenAI } from '../providers/index.js';
 import { withExtractTextCache, withParseTextCache } from '../services/llm-cache.js';
 import { getApiKeyForProvider, getActiveApiKey } from '../services/settings-service.js';
@@ -51,10 +52,10 @@ function parseMetadata(raw: unknown): DocumentJsonMetadata | null {
  */
 function buildMetadataUpdate(doc: DocumentData): DocumentMetadataUpdate {
   const update: DocumentMetadataUpdate = {
-    documentType: doc.document_type,
-    documentOwner: doc.name ?? undefined,
+    documentType: trimField(doc.document_type) ?? doc.document_type,
+    documentOwner: trimAndTitleCase(doc.name) ?? undefined,
     expiryDate: doc.expiry_date ?? undefined,
-    category: doc.category ?? undefined,
+    category: trimField(doc.category) ?? undefined,
     issueDate: doc.issue_date ?? undefined,
     country: doc.country ?? undefined,
     amountValue: doc.amount?.value != null ? String(doc.amount.value) : undefined,
@@ -627,19 +628,20 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Build update object - only include fields that were provided
+      // Apply sanitization: trim all fields, title case for originalFilename and documentOwner
       const updateFields: Record<string, unknown> = {};
 
       if (body.originalFilename !== undefined) {
-        updateFields.originalFilename = body.originalFilename;
+        updateFields.originalFilename = sanitizeFilename(body.originalFilename);
       }
       if (body.documentOwner !== undefined) {
-        updateFields.documentOwner = body.documentOwner;
+        updateFields.documentOwner = body.documentOwner === null ? null : trimAndTitleCase(body.documentOwner);
       }
       if (body.documentType !== undefined) {
-        updateFields.documentType = body.documentType;
+        updateFields.documentType = body.documentType === null ? null : trimField(body.documentType);
       }
       if (body.category !== undefined) {
-        updateFields.category = body.category;
+        updateFields.category = body.category === null ? null : trimField(body.category);
       }
 
       // Only update if there are actual changes
