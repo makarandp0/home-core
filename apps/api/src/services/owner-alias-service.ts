@@ -205,8 +205,12 @@ export async function getSuggestedOwnerNames(): Promise<SuggestedOwnerNamesRespo
         regex: new RegExp(alias.aliasName, 'i'),
         canonicalName: alias.canonicalName,
       });
-    } catch {
-      // Invalid regex, skip
+    } catch (e) {
+      // Log invalid regex patterns so they're not silently ignored
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      console.warn(
+        `Skipping invalid owner alias regex pattern "${alias.aliasName}" for canonical name "${alias.canonicalName}": ${message}`
+      );
     }
   }
 

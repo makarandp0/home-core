@@ -74,7 +74,7 @@ export function OwnerAliasesCard() {
       setConfirmState((s) => (s && s.countdown > 1 ? { ...s, countdown: s.countdown - 1 } : null));
     }, 1000);
     return () => clearInterval(timer);
-  }, [confirmState?.id, confirmState && confirmState.countdown > 0]);
+  }, [confirmState]);
 
   const handleSave = async () => {
     setFormError(null);

@@ -115,20 +115,42 @@ export function OwnerNameAutocomplete({
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen || filteredSuggestions.length === 0) return;
+    if (!isOpen) return;
+
+    // Check if we have any items to navigate (pattern match or suggestions)
+    const hasPatternMatch = patternMatch !== null;
+    const hasSuggestions = filteredSuggestions.length > 0;
+    if (!hasPatternMatch && !hasSuggestions) return;
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex((i) => Math.min(i + 1, filteredSuggestions.length - 1));
+        setHighlightedIndex((i) => {
+          // If at pattern match (-2) or not started (-1), move to first suggestion
+          if (i < 0) {
+            return hasSuggestions ? 0 : -1;
+          }
+          // Otherwise move down in suggestions list
+          return Math.min(i + 1, filteredSuggestions.length - 1);
+        });
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setHighlightedIndex((i) => Math.max(i - 1, -1));
+        setHighlightedIndex((i) => {
+          // If at first suggestion or above, move to pattern match if exists
+          if (i <= 0) {
+            return hasPatternMatch ? -2 : -1;
+          }
+          // Otherwise move up in suggestions list
+          return i - 1;
+        });
         break;
       case 'Enter':
         e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
+        // Handle pattern match selection (index -2)
+        if (highlightedIndex === -2 && patternMatch) {
+          handleSelect(patternMatch.canonicalName);
+        } else if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
           handleSelect(filteredSuggestions[highlightedIndex].name);
         }
         break;
@@ -227,10 +249,12 @@ export function OwnerNameAutocomplete({
             <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
               Loading suggestions...
             </li>
-          ) : filteredSuggestions.length === 0 && !patternMatch ? (
-            <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-              {value.trim() ? 'No matches found. Press Enter to use custom name.' : 'No suggestions available'}
-            </li>
+          ) : filteredSuggestions.length === 0 ? (
+            !patternMatch ? (
+              <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                {value.trim() ? 'No matches found. Press Enter to use custom name.' : 'No suggestions available'}
+              </li>
+            ) : null // Pattern match shown above, no need for additional message
           ) : (
             filteredSuggestions.map((suggestion, index) => (
               <li
