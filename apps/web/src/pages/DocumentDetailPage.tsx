@@ -2,11 +2,13 @@ import * as React from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   type DocumentMetadata,
+  type DocumentJsonMetadata,
   DocumentMetadataSchema,
   DeleteResponseSchema,
 } from '@home/types';
 import { api, getErrorMessage } from '@/lib/api';
 import { OwnerNameAutocomplete } from '@/components/OwnerNameAutocomplete';
+import { Collapsible } from '@/components/ui/collapsible';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -16,6 +18,53 @@ function formatDate(dateString: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function formatDateOnly(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatAddress(address: NonNullable<DocumentJsonMetadata>['address']): string | null {
+  if (!address) return null;
+  const parts: string[] = [];
+  if (address.street) parts.push(address.street);
+  const cityStateZip = [address.city, address.state, address.postal_code].filter(Boolean).join(', ');
+  if (cityStateZip) parts.push(cityStateZip);
+  if (address.country) parts.push(address.country);
+  return parts.length > 0 ? parts.join('\n') : null;
+}
+
+function countMetadataFields(doc: DocumentMetadata): number {
+  let count = 0;
+  // Top-level fields not shown in primary
+  if (doc.amountValue) count++;
+  if (doc.sizeBytes) count++;
+  if (doc.mimeType) count++;
+  count++; // Document ID (UUID) is always shown
+  // JSONB metadata fields (may be null)
+  const m = doc.metadata;
+  if (!m) return count;
+  if (m.reference_numbers?.length) count++;
+  if (m.parties?.length) count++;
+  if (m.date_of_birth) count++;
+  if (m.issuing_authority) count++;
+  if (m.state_province) count++;
+  if (m.address && formatAddress(m.address)) count++;
+  if (m.language) count++;
+  if (m.keywords?.length) count++;
+  if (m.confidence) count++;
+  if (m.fields && Object.keys(m.fields).length > 0) count++;
+  return count;
 }
 
 interface LocationState {
@@ -606,10 +655,12 @@ export function DocumentDetailPage() {
                   <dt className="text-gray-500 dark:text-gray-400">Created</dt>
                   <dd className="text-gray-900 dark:text-gray-100">{formatDate(document.createdAt)}</dd>
                 </div>
-                <div>
-                  <dt className="text-gray-500 dark:text-gray-400">Document ID</dt>
-                  <dd className="text-gray-900 dark:text-gray-100 text-xs break-all">{document.id}</dd>
-                </div>
+                {document.metadata?.id && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Document Number</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.id}</dd>
+                  </div>
+                )}
                 {document.documentOwner && (
                   <div>
                     <dt className="text-gray-500 dark:text-gray-400">Document Owner</dt>
@@ -628,15 +679,178 @@ export function DocumentDetailPage() {
                     <dd className="text-gray-900 dark:text-gray-100">{document.category}</dd>
                   </div>
                 )}
+                {document.issueDate && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Issue Date</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{formatDateOnly(document.issueDate)}</dd>
+                  </div>
+                )}
                 {document.expiryDate && (
                   <div>
                     <dt className="text-gray-500 dark:text-gray-400">Expiry Date</dt>
-                    <dd className="text-gray-900 dark:text-gray-100">{document.expiryDate}</dd>
+                    <dd className="text-gray-900 dark:text-gray-100">{formatDateOnly(document.expiryDate)}</dd>
+                  </div>
+                )}
+                {document.country && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Country</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.country}</dd>
                   </div>
                 )}
               </dl>
             )}
           </div>
+
+          {/* More Details - Collapsible section for additional fields */}
+          {countMetadataFields(document) > 0 && (
+            <Collapsible
+              title="More Details"
+              badge={
+                <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
+                  {countMetadataFields(document)}
+                </span>
+              }
+            >
+              <dl className="space-y-3 text-sm">
+                {/* Date of Birth */}
+                {document.metadata?.date_of_birth && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Date of Birth</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.date_of_birth}</dd>
+                  </div>
+                )}
+
+                {/* Issuing Authority */}
+                {document.metadata?.issuing_authority && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Issuing Authority</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.issuing_authority}</dd>
+                  </div>
+                )}
+
+                {/* State/Province */}
+                {document.metadata?.state_province && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">State/Province</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.state_province}</dd>
+                  </div>
+                )}
+
+                {/* Address */}
+                {document.metadata?.address && formatAddress(document.metadata.address) && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Address</dt>
+                    <dd className="text-gray-900 dark:text-gray-100 whitespace-pre-line">
+                      {formatAddress(document.metadata.address)}
+                    </dd>
+                  </div>
+                )}
+
+                {/* Parties */}
+                {document.metadata?.parties && document.metadata.parties.length > 0 && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Parties</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.parties.join(', ')}</dd>
+                  </div>
+                )}
+
+                {/* Reference Numbers */}
+                {document.metadata?.reference_numbers && document.metadata.reference_numbers.length > 0 && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Reference Numbers</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.reference_numbers.join(', ')}</dd>
+                  </div>
+                )}
+
+                {/* Language */}
+                {document.metadata?.language && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Language</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.language}</dd>
+                  </div>
+                )}
+
+                {/* Keywords */}
+                {document.metadata?.keywords && document.metadata.keywords.length > 0 && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Keywords</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.metadata.keywords.join(', ')}</dd>
+                  </div>
+                )}
+
+                {/* Confidence */}
+                {document.metadata?.confidence && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Extraction Confidence</dt>
+                    <dd>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          document.metadata.confidence === 'high'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : document.metadata.confidence === 'medium'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        {document.metadata.confidence.charAt(0).toUpperCase() + document.metadata.confidence.slice(1)}
+                      </span>
+                    </dd>
+                  </div>
+                )}
+
+                {/* Additional Fields */}
+                {document.metadata?.fields && Object.keys(document.metadata.fields).length > 0 && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400 mb-1">Additional Fields</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">
+                      <dl className="pl-2 border-l-2 border-gray-200 dark:border-gray-700 space-y-1">
+                        {Object.entries(document.metadata.fields).map(([key, value]) => (
+                          <div key={key} className="flex gap-2">
+                            <dt className="text-gray-500 dark:text-gray-400 font-medium min-w-0">{key}:</dt>
+                            <dd className="break-all">{String(value)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </dd>
+                  </div>
+                )}
+
+                {/* Amount (top-level) */}
+                {document.amountValue && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">Amount</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">
+                      {document.amountCurrency ? `${document.amountCurrency} ` : ''}
+                      {document.amountValue}
+                    </dd>
+                  </div>
+                )}
+
+                {/* File Size (top-level) */}
+                {document.sizeBytes && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">File Size</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{formatFileSize(document.sizeBytes)}</dd>
+                  </div>
+                )}
+
+                {/* MIME Type (top-level) */}
+                {document.mimeType && (
+                  <div>
+                    <dt className="text-gray-500 dark:text-gray-400">File Type</dt>
+                    <dd className="text-gray-900 dark:text-gray-100">{document.mimeType}</dd>
+                  </div>
+                )}
+
+                {/* Document ID (database UUID) */}
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">Document ID</dt>
+                  <dd className="text-gray-900 dark:text-gray-100 text-xs break-all">{document.id}</dd>
+                </div>
+              </dl>
+            </Collapsible>
+          )}
 
           <a
             href={fileUrl}
