@@ -48,9 +48,8 @@ function countMetadataFields(doc: DocumentMetadata): number {
   let count = 0;
   // Top-level fields not shown in primary
   if (doc.amountValue) count++;
-  if (doc.sizeBytes) count++;
   if (doc.mimeType) count++;
-  count++; // Document ID (UUID) is always shown
+  count += 2; // sizeBytes and Document ID (UUID) are always shown
   // JSONB metadata fields (may be null)
   const m = doc.metadata;
   if (!m) return count;
@@ -65,6 +64,17 @@ function countMetadataFields(doc: DocumentMetadata): number {
   if (m.confidence) count++;
   if (m.fields && Object.keys(m.fields).length > 0) count++;
   return count;
+}
+
+function getConfidenceStyles(confidence: 'high' | 'medium' | 'low'): string {
+  switch (confidence) {
+    case 'high':
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    case 'low':
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+  }
 }
 
 interface LocationState {
@@ -702,15 +712,18 @@ export function DocumentDetailPage() {
           </div>
 
           {/* More Details - Collapsible section for additional fields */}
-          {countMetadataFields(document) > 0 && (
-            <Collapsible
-              title="More Details"
-              badge={
-                <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
-                  {countMetadataFields(document)}
-                </span>
-              }
-            >
+          {(() => {
+            const metadataFieldCount = countMetadataFields(document);
+            if (metadataFieldCount <= 0) return null;
+            return (
+              <Collapsible
+                title="More Details"
+                badge={
+                  <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
+                    {metadataFieldCount}
+                  </span>
+                }
+              >
               <dl className="space-y-3 text-sm">
                 {/* Date of Birth */}
                 {document.metadata?.date_of_birth && (
@@ -784,13 +797,7 @@ export function DocumentDetailPage() {
                     <dt className="text-gray-500 dark:text-gray-400">Extraction Confidence</dt>
                     <dd>
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                          document.metadata.confidence === 'high'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : document.metadata.confidence === 'medium'
-                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getConfidenceStyles(document.metadata.confidence)}`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         {document.metadata.confidence.charAt(0).toUpperCase() + document.metadata.confidence.slice(1)}
@@ -828,12 +835,10 @@ export function DocumentDetailPage() {
                 )}
 
                 {/* File Size (top-level) */}
-                {document.sizeBytes && (
-                  <div>
-                    <dt className="text-gray-500 dark:text-gray-400">File Size</dt>
-                    <dd className="text-gray-900 dark:text-gray-100">{formatFileSize(document.sizeBytes)}</dd>
-                  </div>
-                )}
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">File Size</dt>
+                  <dd className="text-gray-900 dark:text-gray-100">{formatFileSize(document.sizeBytes)}</dd>
+                </div>
 
                 {/* MIME Type (top-level) */}
                 {document.mimeType && (
@@ -850,7 +855,8 @@ export function DocumentDetailPage() {
                 </div>
               </dl>
             </Collapsible>
-          )}
+            );
+          })()}
 
           <a
             href={fileUrl}
