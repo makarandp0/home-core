@@ -68,3 +68,14 @@ export const providerConfigs = pgTable("provider_configs", {
 }, (table) => [
 	uniqueIndex("provider_configs_unique_active").using("btree", table.isActive.asc().nullsLast().op("bool_ops")).where(sql`(is_active = true)`),
 ]);
+
+export const ownerNameAliases = pgTable("owner_name_aliases", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	aliasName: varchar("alias_name", { length: 255 }).notNull(),
+	canonicalName: varchar("canonical_name", { length: 255 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	uniqueIndex("owner_name_aliases_alias_lower_unique").using("btree", sql`lower(${table.aliasName})`),
+	index().using("btree", table.canonicalName.asc().nullsLast().op("text_ops")),
+]);

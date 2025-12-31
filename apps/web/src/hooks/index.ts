@@ -16,3 +16,4 @@ export {
   type AnalysisState,
 } from './useDocumentAnalysis';
 export { SettingsProvider, useSettings } from './useSettings';
+export { useOwnerAliases } from './useOwnerAliases';

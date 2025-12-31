@@ -7,7 +7,7 @@ import { ErrorDisplay } from '../components/ErrorDisplay';
 import { DropZone } from '../components/DropZone';
 import { ImageCropModal } from '../components/ImageCropModal';
 import { useSettings, useFileUpload } from '../hooks';
-import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { DocumentUploadDataSchema } from '@home/types';
 import { api, getErrorMessage } from '@/lib/api';
 
@@ -48,10 +48,7 @@ export function UploadPage() {
           provider: settings.activeProvider.providerType,
         });
 
-        if (result.ok) {
-          fileUpload.updateFileStatus(fileEntry.id, 'done');
-          successCount++;
-        } else {
+        if (!result.ok) {
           const errorMessage = getErrorMessage(result.error);
           fileUpload.updateFileStatus(
             fileEntry.id,
@@ -59,6 +56,9 @@ export function UploadPage() {
             typeof errorMessage === 'string' ? errorMessage : 'Upload failed'
           );
           failedCount++;
+        } else {
+          fileUpload.updateFileStatus(fileEntry.id, 'done');
+          successCount++;
         }
       } catch (error) {
         const message =
@@ -133,6 +133,17 @@ export function UploadPage() {
                   )}
                 </p>
               </div>
+
+              {/* Link to view recently uploaded documents */}
+              {uploadStats.success > 0 && (
+                <Link
+                  to="/documents?recent=true"
+                  className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                >
+                  <span className="text-sm font-medium">View uploaded documents</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
 
               <Button
                 type="button"
