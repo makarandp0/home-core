@@ -137,7 +137,7 @@ export function UploadPage() {
               {/* Link to view recently uploaded documents */}
               {uploadStats.success > 0 && (
                 <Link
-                  to="/documents?recent=true"
+                  to="/documents?recent=1hour"
                   className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg border bg-card hover:bg-muted transition-colors"
                 >
                   <span className="text-sm font-medium">View uploaded documents</span>
