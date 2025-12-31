@@ -4,6 +4,7 @@
       "Read(*)",
       "Write(*)",
       "Edit(*)",
+      "Bash(git:*)",
       "Bash(pnpm:*)",
       "Bash(npm:*)",
       "Bash(node:*)",
@@ -30,7 +31,8 @@
       "WebFetch(domain:localhost)",
       "Bash(lsof:*)",
       "Bash(ps:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh pr create:*)"
     ]
   }
 }

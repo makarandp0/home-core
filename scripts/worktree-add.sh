@@ -34,6 +34,10 @@ echo "Creating worktree..."
 git worktree add -b "$NAME" "$WORKTREE_PATH" main
 info "Worktree created at $WORKTREE_PATH"
 
+# copy over .claude/settings.worktree.json as .claude/settings.local.json
+mkdir -p "$WORKTREE_PATH/.claude"
+cp ".claude/settings.worktree.json" "$WORKTREE_PATH/.claude/settings.local.json"
+info "Copied .claude/settings.worktree.json to .claude/settings.local.json"
 
 # Install dependencies
 echo ""
