@@ -100,6 +100,9 @@ export function DocumentDetailPage() {
     documentOwner: '',
     documentType: '',
     category: '',
+    documentNumber: '',
+    issueDate: '',
+    expiryDate: '',
   });
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
@@ -141,6 +144,9 @@ export function DocumentDetailPage() {
         documentOwner: document.documentOwner ?? '',
         documentType: document.documentType ?? '',
         category: document.category ?? '',
+        documentNumber: document.metadata?.id ?? '',
+        issueDate: document.issueDate ?? '',
+        expiryDate: document.expiryDate ?? '',
       });
     }
   }, [document]);
@@ -155,6 +161,9 @@ export function DocumentDetailPage() {
           documentOwner: document.documentOwner ?? '',
           documentType: document.documentType ?? '',
           category: document.category ?? '',
+          documentNumber: document.metadata?.id ?? '',
+          issueDate: document.issueDate ?? '',
+          expiryDate: document.expiryDate ?? '',
         });
       }
       setSaveError(null);
@@ -182,6 +191,15 @@ export function DocumentDetailPage() {
     }
     if (editForm.category !== (document.category ?? '')) {
       updates.category = editForm.category || null;
+    }
+    if (editForm.documentNumber !== (document.metadata?.id ?? '')) {
+      updates.documentNumber = editForm.documentNumber || null;
+    }
+    if (editForm.issueDate !== (document.issueDate ?? '')) {
+      updates.issueDate = editForm.issueDate || null;
+    }
+    if (editForm.expiryDate !== (document.expiryDate ?? '')) {
+      updates.expiryDate = editForm.expiryDate || null;
     }
 
     // Skip if no changes
@@ -641,6 +659,52 @@ export function DocumentDetailPage() {
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                <div>
+                  <label
+                    htmlFor="documentNumber"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Document Number
+                  </label>
+                  <input
+                    id="documentNumber"
+                    type="text"
+                    value={editForm.documentNumber}
+                    onChange={(e) => handleFormChange('documentNumber', e.target.value)}
+                    placeholder="e.g., AB123456"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="issueDate"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Issue Date
+                  </label>
+                  <input
+                    id="issueDate"
+                    type="date"
+                    value={editForm.issueDate}
+                    onChange={(e) => handleFormChange('issueDate', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="expiryDate"
+                    className="block text-sm text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Expiry Date
+                  </label>
+                  <input
+                    id="expiryDate"
+                    type="date"
+                    value={editForm.expiryDate}
+                    onChange={(e) => handleFormChange('expiryDate', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
 
                 {saveError && (
                   <div className="text-sm text-red-600 dark:text-red-400">{saveError}</div>
@@ -662,7 +726,7 @@ export function DocumentDetailPage() {
                   <dd className="text-gray-900 dark:text-gray-100">{document.originalFilename}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500 dark:text-gray-400">Created</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">Uploaded</dt>
                   <dd className="text-gray-900 dark:text-gray-100">{formatDate(document.createdAt)}</dd>
                 </div>
                 {document.metadata?.id && (
