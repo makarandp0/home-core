@@ -8,6 +8,24 @@ let firebaseApp: App | null = null;
 let firebaseAuth: Auth | null = null;
 let cachedProjectId: string | null = null;
 
+/**
+ * Parse service account JSON, handling potential newline encoding issues.
+ * Tries parsing as-is first, then attempts to fix common newline issues.
+ */
+function parseServiceAccountJson(jsonString: string): Record<string, unknown> {
+  // First, try parsing as-is (handles properly formatted JSON)
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    // If that fails, try normalizing newlines (handles literal newlines in env vars)
+    console.log('[Firebase] Initial parse failed, attempting newline normalization...');
+    const normalizedJson = jsonString
+      .replace(/\r\n/g, '\\n')  // Windows line endings
+      .replace(/\n/g, '\\n');    // Unix line endings
+    return JSON.parse(normalizedJson);
+  }
+}
+
 export interface FirebaseClientConfig {
   apiKey: string;
   authDomain: string;
@@ -54,17 +72,8 @@ export function initializeFirebase(): void {
   }
 
   try {
-    console.log('[Firebase] Normalizing service account JSON...');
-    // Handle newline issues in service account JSON from environment variables:
-    // - Actual newlines in the JSON (control characters) need to be escaped as \n
-    // - This commonly happens when the env var contains literal newlines
-    const normalizedJson = serviceAccountJson
-      .replace(/\r\n/g, '\\n')  // Windows line endings
-      .replace(/\n/g, '\\n');    // Unix line endings
-
     console.log('[Firebase] Parsing service account JSON...');
-    // Parse once and extract both service account and project_id
-    const parsed: Record<string, unknown> = JSON.parse(normalizedJson);
+    const parsed = parseServiceAccountJson(serviceAccountJson);
     console.log(`[Firebase] Parsed successfully, project_id: ${parsed.project_id ?? 'NOT FOUND'}`);
 
     if (typeof parsed.project_id === 'string') {
@@ -77,8 +86,8 @@ export function initializeFirebase(): void {
     console.log('[Firebase] Firebase Admin SDK initialized successfully');
   } catch (err) {
     console.error('[Firebase] ERROR during initialization:', err);
-    // Log first 100 chars of JSON to help debug format issues (no sensitive data in that prefix)
-    console.error('[Firebase] JSON starts with:', serviceAccountJson.substring(0, 100));
+    // Log only first 20 chars to help debug format issues (may still contain some metadata)
+    console.error('[Firebase] JSON starts with:', serviceAccountJson.substring(0, 20));
     throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON: ${err}`);
   }
 }
@@ -121,8 +130,8 @@ export function getFirebaseClientConfig(): FirebaseClientConfig | null {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
     if (serviceAccountJson) {
       try {
-        const serviceAccount = JSON.parse(serviceAccountJson);
-        cachedProjectId = serviceAccount.project_id ?? null;
+        const serviceAccount = parseServiceAccountJson(serviceAccountJson);
+        cachedProjectId = typeof serviceAccount.project_id === 'string' ? serviceAccount.project_id : null;
         console.log(`[Firebase] Extracted project_id: ${cachedProjectId ?? 'null'}`);
       } catch (e) {
         console.warn('[Firebase] Failed to parse service account for project_id:', e);
