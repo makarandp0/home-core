@@ -41,6 +41,24 @@ export const HealthSchema = z.object({
   auth: z
     .object({
       enabled: z.boolean(),
+      // Firebase client config - only present when auth is enabled
+      firebase: z
+        .object({
+          apiKey: z.string(),
+          authDomain: z.string(),
+          projectId: z.string(),
+          appId: z.string(),
+        })
+        .optional(),
+      // Default user - only present when auth is disabled
+      defaultUser: z
+        .object({
+          id: z.string(),
+          email: z.string(),
+          displayName: z.string().nullable(),
+          photoURL: z.string().nullable(),
+        })
+        .optional(),
     })
     .optional(),
 });

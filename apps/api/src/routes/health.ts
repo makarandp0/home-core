@@ -15,7 +15,8 @@ import {
 } from '@home/types';
 import { getDb, sql } from '@home/db';
 import { createRouteBuilder } from '../utils/route-builder.js';
-import { isAuthEnabled } from '../services/firebase-admin.js';
+import { isAuthEnabled, getFirebaseClientConfig } from '../services/firebase-admin.js';
+import { getDefaultUser } from '../middleware/auth.js';
 
 const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 const DOCUMENT_STORAGE_PATH = process.env.DOCUMENT_STORAGE_PATH || null;
@@ -99,13 +100,28 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
         checkDocumentStorage(),
       ]);
 
+      const authEnabled = isAuthEnabled();
+      const firebaseConfig = authEnabled ? getFirebaseClientConfig() : null;
+      const defaultUser = !authEnabled ? getDefaultUser() : null;
+
       const payload = {
         ok: true,
         version,
         docProcessor,
         database: { connected: dbConnected },
         documentStorage: storageStatus,
-        auth: { enabled: isAuthEnabled() },
+        auth: {
+          enabled: authEnabled,
+          ...(firebaseConfig && { firebase: firebaseConfig }),
+          ...(defaultUser && {
+            defaultUser: {
+              id: defaultUser.id,
+              email: defaultUser.email,
+              displayName: defaultUser.displayName,
+              photoURL: defaultUser.photoUrl,
+            },
+          }),
+        },
       };
       return HealthSchema.parse(payload);
     },

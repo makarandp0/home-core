@@ -1,11 +1,19 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { initializeApp, getApps, cert, type ServiceAccount, type App } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 
 let firebaseApp: App | null = null;
 let firebaseAuth: Auth | null = null;
+let cachedProjectId: string | null = null;
+
+export interface FirebaseClientConfig {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  appId: string;
+}
 
 /**
  * Check if authentication is enabled via environment variable
@@ -36,8 +44,13 @@ export function initializeFirebase(): void {
   }
 
   try {
-    const serviceAccount: ServiceAccount = JSON.parse(serviceAccountJson);
-    firebaseApp = initializeApp({ credential: cert(serviceAccount) });
+    // Parse once and extract both service account and project_id
+    const parsed: Record<string, unknown> = JSON.parse(serviceAccountJson);
+    if (typeof parsed.project_id === 'string') {
+      cachedProjectId = parsed.project_id;
+    }
+    // cert() accepts the parsed object directly
+    firebaseApp = initializeApp({ credential: cert(parsed) });
     firebaseAuth = getAuth(firebaseApp);
     console.log('Firebase Admin SDK initialized');
   } catch (err) {
@@ -63,4 +76,44 @@ export function getFirebaseAuth(): Auth {
   }
 
   return firebaseAuth;
+}
+
+/**
+ * Get Firebase client configuration for the frontend.
+ * Returns null if auth is disabled or required config is missing.
+ */
+export function getFirebaseClientConfig(): FirebaseClientConfig | null {
+  if (!isAuthEnabled()) {
+    return null;
+  }
+
+  // Ensure Firebase is initialized to get the project ID
+  if (!cachedProjectId) {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (serviceAccountJson) {
+      try {
+        const serviceAccount = JSON.parse(serviceAccountJson);
+        cachedProjectId = serviceAccount.project_id ?? null;
+      } catch {
+        // Ignore parse errors, will be caught during proper initialization
+      }
+    }
+  }
+
+  const apiKey = process.env.FIREBASE_CLIENT_API_KEY;
+  const appId = process.env.FIREBASE_CLIENT_APP_ID;
+
+  if (!apiKey || !appId || !cachedProjectId) {
+    console.warn(
+      'Firebase client config incomplete. Required: FIREBASE_CLIENT_API_KEY, FIREBASE_CLIENT_APP_ID, and project_id in service account'
+    );
+    return null;
+  }
+
+  return {
+    apiKey,
+    authDomain: `${cachedProjectId}.firebaseapp.com`,
+    projectId: cachedProjectId,
+    appId,
+  };
 }

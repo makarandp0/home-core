@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { ApiError } from '@home/types';
-import { authEnabled, getFirebaseAuth } from './firebase';
+import { getFirebaseAuth } from './firebase';
 
 /**
  * Result type for API calls - either success with data or failure with error
@@ -20,13 +20,9 @@ interface RequestOptions {
 
 /**
  * Get the current user's ID token for API requests.
- * Returns null if auth is disabled or user is not signed in.
+ * Returns null if auth is disabled (Firebase not initialized) or user is not signed in.
  */
 async function getAuthToken(): Promise<string | null> {
-  if (!authEnabled) {
-    return null;
-  }
-
   const auth = getFirebaseAuth();
   if (!auth?.currentUser) {
     return null;

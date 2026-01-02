@@ -26,7 +26,7 @@ declare module 'fastify' {
 /**
  * Get the default anonymous user for when auth is disabled
  */
-function getDefaultUser(): AuthenticatedUser {
+export function getDefaultUser(): AuthenticatedUser {
   return {
     id: DEFAULT_USER_ID,
     firebaseUid: 'anonymous',
@@ -114,13 +114,16 @@ export function registerAuthMiddleware(app: FastifyInstance): void {
   const publicPaths = ['/health', '/api/health'];
 
   app.addHook('onRequest', async (request, reply) => {
+    // Get path without query string
+    const path = request.url.split('?')[0];
+
     // Skip auth for public paths
-    if (publicPaths.includes(request.url)) {
+    if (publicPaths.includes(path)) {
       return;
     }
 
     // Apply auth to all /api routes
-    if (request.url.startsWith('/api/')) {
+    if (path.startsWith('/api/')) {
       await authMiddleware(request, reply);
     }
   });
