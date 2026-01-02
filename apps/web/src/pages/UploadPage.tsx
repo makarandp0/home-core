@@ -177,32 +177,50 @@ export function UploadPage() {
 
               {displayError && <ErrorDisplay error={displayError} />}
 
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                disabled={
-                  isUploading ||
-                  !hasFilesToUpload ||
-                  !isConfigured ||
-                  settings.loading ||
-                  fileUpload.isProcessing
-                }
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    {hasFilesToUpload
-                      ? `Upload ${pendingCount} Document${pendingCount !== 1 ? 's' : ''}`
-                      : 'Select Files to Upload'}
-                  </>
-                )}
-              </Button>
+              {!isConfigured && !settings.loading ? (
+                <div className="space-y-3">
+                  <div className="rounded-md border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-950/50">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                      No provider configured
+                    </p>
+                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+                      Configure a provider to start uploading documents.
+                    </p>
+                  </div>
+                  <Button size="lg" className="w-full" variant="outline" asChild>
+                    <Link to="/settings">
+                      <SettingsIcon className="h-4 w-4" />
+                      Configure Provider
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={
+                    isUploading ||
+                    !hasFilesToUpload ||
+                    settings.loading ||
+                    fileUpload.isProcessing
+                  }
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {hasFilesToUpload
+                        ? `Upload ${pendingCount} Document${pendingCount !== 1 ? 's' : ''}`
+                        : 'Select Files to Upload'}
+                    </>
+                  )}
+                </Button>
+              )}
             </form>
           )}
         </CardContent>
