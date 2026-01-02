@@ -8,6 +8,14 @@ let firebaseApp: App | null = null;
 let firebaseAuth: Auth | null = null;
 let cachedProjectId: string | null = null;
 
+/**
+ * Decode and parse Firebase service account from base64 string.
+ */
+function decodeServiceAccount(base64: string): Record<string, unknown> {
+  const jsonString = Buffer.from(base64, 'base64').toString('utf-8');
+  return JSON.parse(jsonString);
+}
+
 export interface FirebaseClientConfig {
   apiKey: string;
   authDomain: string;
@@ -27,34 +35,47 @@ export function isAuthEnabled(): boolean {
  * Only called when AUTH_ENABLED=true
  */
 export function initializeFirebase(): void {
+  console.log('[Firebase] initializeFirebase called');
+  console.log(`[Firebase] AUTH_ENABLED="${process.env.AUTH_ENABLED}"`);
+
   if (!isAuthEnabled()) {
-    console.log('Authentication disabled (AUTH_ENABLED != true)');
+    console.log('[Firebase] Authentication disabled (AUTH_ENABLED != true)');
     return;
   }
 
   if (firebaseApp || getApps().length > 0) {
+    console.log('[Firebase] Already initialized, skipping');
     return;
   }
 
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJson) {
+  const base64Value = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  console.log(`[Firebase] FIREBASE_SERVICE_ACCOUNT_BASE64 present: ${!!base64Value}, length: ${base64Value?.length ?? 0}`);
+
+  if (!base64Value) {
+    console.error('[Firebase] ERROR: FIREBASE_SERVICE_ACCOUNT_BASE64 is missing');
+    console.error('[Firebase] Available env vars:', Object.keys(process.env).filter(k => k.includes('FIREBASE') || k.includes('AUTH')).join(', '));
     throw new Error(
-      'FIREBASE_SERVICE_ACCOUNT_JSON environment variable is required when AUTH_ENABLED=true'
+      'FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is required when AUTH_ENABLED=true'
     );
   }
 
   try {
-    // Parse once and extract both service account and project_id
-    const parsed: Record<string, unknown> = JSON.parse(serviceAccountJson);
+    console.log('[Firebase] Decoding base64 service account...');
+    const parsed = decodeServiceAccount(base64Value);
+    console.log(`[Firebase] Parsed successfully, project_id: ${parsed.project_id ?? 'NOT FOUND'}`);
+
     if (typeof parsed.project_id === 'string') {
       cachedProjectId = parsed.project_id;
     }
     // cert() accepts the parsed object directly
+    console.log('[Firebase] Initializing Firebase app with credentials...');
     firebaseApp = initializeApp({ credential: cert(parsed) });
     firebaseAuth = getAuth(firebaseApp);
-    console.log('Firebase Admin SDK initialized');
+    console.log('[Firebase] Firebase Admin SDK initialized successfully');
   } catch (err) {
-    throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON: ${err}`);
+    console.error('[Firebase] ERROR during initialization:', err);
+    const errMessage = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64: ${errMessage}`);
   }
 }
 
@@ -83,33 +104,44 @@ export function getFirebaseAuth(): Auth {
  * Returns null if auth is disabled or required config is missing.
  */
 export function getFirebaseClientConfig(): FirebaseClientConfig | null {
+  console.log('[Firebase] getFirebaseClientConfig called');
+
   if (!isAuthEnabled()) {
+    console.log('[Firebase] Auth disabled, returning null config');
     return null;
   }
 
   // Ensure Firebase is initialized to get the project ID
   if (!cachedProjectId) {
-    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (serviceAccountJson) {
+    console.log('[Firebase] No cached project_id, attempting to extract from service account');
+    const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+    if (base64) {
       try {
-        const serviceAccount = JSON.parse(serviceAccountJson);
-        cachedProjectId = serviceAccount.project_id ?? null;
-      } catch {
+        const serviceAccount = decodeServiceAccount(base64);
+        cachedProjectId = typeof serviceAccount.project_id === 'string' ? serviceAccount.project_id : null;
+        console.log(`[Firebase] Extracted project_id: ${cachedProjectId ?? 'null'}`);
+      } catch (e) {
+        console.warn('[Firebase] Failed to parse service account for project_id:', e);
         // Ignore parse errors, will be caught during proper initialization
       }
+    } else {
+      console.warn('[Firebase] No FIREBASE_SERVICE_ACCOUNT_BASE64 available for project_id extraction');
     }
   }
 
   const apiKey = process.env.FIREBASE_CLIENT_API_KEY;
   const appId = process.env.FIREBASE_CLIENT_APP_ID;
 
+  console.log(`[Firebase] Client config check - apiKey: ${apiKey ? 'present' : 'MISSING'}, appId: ${appId ? 'present' : 'MISSING'}, projectId: ${cachedProjectId ?? 'MISSING'}`);
+
   if (!apiKey || !appId || !cachedProjectId) {
     console.warn(
-      'Firebase client config incomplete. Required: FIREBASE_CLIENT_API_KEY, FIREBASE_CLIENT_APP_ID, and project_id in service account'
+      '[Firebase] Client config incomplete. Required: FIREBASE_CLIENT_API_KEY, FIREBASE_CLIENT_APP_ID, and project_id in service account'
     );
     return null;
   }
 
+  console.log('[Firebase] Returning complete client config');
   return {
     apiKey,
     authDomain: `${cachedProjectId}.firebaseapp.com`,
