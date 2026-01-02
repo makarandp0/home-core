@@ -189,7 +189,7 @@ export function UploadPage() {
                   </div>
                   <Button size="lg" className="w-full" variant="outline" asChild>
                     <Link to="/settings">
-                      <SettingsIcon className="h-4 w-4" />
+                      <SettingsIcon className="mr-2 h-4 w-4" />
                       Configure Provider
                     </Link>
                   </Button>

@@ -260,7 +260,7 @@ export function DocumentsPage() {
           </p>
           <Button asChild>
             <Link to="/upload">
-              <Plus className="h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Document
             </Link>
           </Button>
@@ -279,7 +279,7 @@ export function DocumentsPage() {
         <div className="flex items-center gap-3">
           <Button size="sm" asChild>
             <Link to="/upload">
-              <Plus className="h-4 w-4" />
+              <Plus className="mr-1 h-4 w-4" />
               Add
             </Link>
           </Button>
