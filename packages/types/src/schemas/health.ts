@@ -37,6 +37,12 @@ export const HealthSchema = z.object({
       error: z.string().optional(),
     })
     .optional(),
+  // Authentication status
+  auth: z
+    .object({
+      enabled: z.boolean(),
+    })
+    .optional(),
 });
 
 export type Health = z.infer<typeof HealthSchema>;

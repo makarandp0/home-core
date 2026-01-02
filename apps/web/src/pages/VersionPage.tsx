@@ -106,6 +106,7 @@ export function VersionPage() {
     accessible: boolean;
     error?: string;
   } | null>(null);
+  const [authEnabled, setAuthEnabled] = React.useState<boolean | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [loadingModel, setLoadingModel] = React.useState(false);
   const [loadModelError, setLoadModelError] = React.useState<string | null>(null);
@@ -123,11 +124,13 @@ export function VersionPage() {
       setDocProcessor(result.data.docProcessor ?? null);
       setDatabaseConnected(result.data.database?.connected ?? null);
       setDocumentStorage(result.data.documentStorage ?? null);
+      setAuthEnabled(result.data.auth?.enabled ?? null);
     } else {
       setBackendVersion(null);
       setDocProcessor(null);
       setDatabaseConnected(null);
       setDocumentStorage(null);
+      setAuthEnabled(null);
     }
   }, []);
 
@@ -185,6 +188,10 @@ export function VersionPage() {
               </div>
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
                 <span className="font-medium text-sm">Document Storage</span>
+                <span className="text-sm text-muted-foreground">Loading...</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Authentication</span>
                 <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
             </>
@@ -298,6 +305,15 @@ export function VersionPage() {
                     {documentStorage.error}
                   </p>
                 )}
+              </div>
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
+                <span className="font-medium text-sm">Authentication</span>
+                <span className={cn(
+                  "text-sm font-medium",
+                  authEnabled ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                )}>
+                  {authEnabled ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </>
           )}

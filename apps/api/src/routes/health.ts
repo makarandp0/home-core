@@ -15,6 +15,7 @@ import {
 } from '@home/types';
 import { getDb, sql } from '@home/db';
 import { createRouteBuilder } from '../utils/route-builder.js';
+import { isAuthEnabled } from '../services/firebase-admin.js';
 
 const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 const DOCUMENT_STORAGE_PATH = process.env.DOCUMENT_STORAGE_PATH || null;
@@ -104,6 +105,7 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
         docProcessor,
         database: { connected: dbConnected },
         documentStorage: storageStatus,
+        auth: { enabled: isAuthEnabled() },
       };
       return HealthSchema.parse(payload);
     },
