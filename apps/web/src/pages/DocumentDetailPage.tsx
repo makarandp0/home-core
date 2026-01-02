@@ -6,7 +6,7 @@ import {
   DocumentMetadataSchema,
   DeleteResponseSchema,
 } from '@home/types';
-import { api, getErrorMessage } from '@/lib/api';
+import { api, getAuthToken, getErrorMessage } from '@/lib/api';
 import { OwnerNameAutocomplete } from '@/components/OwnerNameAutocomplete';
 import { Collapsible } from '@/components/ui/collapsible';
 
@@ -107,6 +107,14 @@ export function DocumentDetailPage() {
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
+  // Blob URL for authenticated file access
+  const [fileBlob, setFileBlob] = React.useState<{ url: string; loading: boolean; error: string | null }>({
+    url: '',
+    loading: false,
+    error: null,
+  });
+  const blobUrlRef = React.useRef<string>('');
+
   // Get document IDs from router state (passed from filtered list)
   // If accessed directly via URL, navigation will be disabled
   React.useEffect(() => {
@@ -135,6 +143,62 @@ export function DocumentDetailPage() {
 
     fetchDocument();
   }, [id]);
+
+  // Fetch file with authentication and create blob URL
+  React.useEffect(() => {
+    if (!document) return;
+
+    let cancelled = false;
+
+    // Revoke previous blob URL if any
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = '';
+    }
+
+    async function fetchFile() {
+      setFileBlob({ url: '', loading: true, error: null });
+
+      try {
+        const token = await getAuthToken();
+
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`/api/documents/${document!.id}/file`, { headers });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load file: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        if (cancelled) return;
+
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setFileBlob({ url, loading: false, error: null });
+      } catch (err) {
+        if (cancelled) return;
+        setFileBlob({
+          url: '',
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to load file',
+        });
+      }
+    }
+
+    fetchFile();
+
+    return () => {
+      cancelled = true;
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = '';
+      }
+    };
+  }, [document?.id]);
 
   // Sync edit form when document loads or changes
   React.useEffect(() => {
@@ -474,7 +538,6 @@ export function DocumentDetailPage() {
 
   const isImage = document.mimeType.startsWith('image/');
   const isPdf = document.mimeType === 'application/pdf';
-  const fileUrl = `/api/documents/${document.id}/file`;
 
   // Drag direction indicator
   const dragDirection = dragOffset > 20 ? 'prev' : dragOffset < -20 ? 'next' : null;
@@ -560,24 +623,38 @@ export function DocumentDetailPage() {
         {/* Document preview */}
         <div className="lg:col-span-2">
           <div className="border dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900">
-            {isImage && (
-              <img
-                src={fileUrl}
-                alt={document.originalFilename}
-                className="w-full h-auto max-h-[70vh] object-contain"
-              />
-            )}
-            {isPdf && (
-              <iframe
-                src={fileUrl}
-                title={document.originalFilename}
-                className="w-full h-[70vh]"
-              />
-            )}
-            {!isImage && !isPdf && (
+            {fileBlob.loading && (
               <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-                Preview not available for this file type
+                Loading file...
               </div>
+            )}
+            {fileBlob.error && (
+              <div className="flex items-center justify-center h-64 text-red-500 dark:text-red-400">
+                {fileBlob.error}
+              </div>
+            )}
+            {!fileBlob.loading && !fileBlob.error && fileBlob.url && (
+              <>
+                {isImage && (
+                  <img
+                    src={fileBlob.url}
+                    alt={document.originalFilename}
+                    className="w-full h-auto max-h-[70vh] object-contain"
+                  />
+                )}
+                {isPdf && (
+                  <iframe
+                    src={fileBlob.url}
+                    title={document.originalFilename}
+                    className="w-full h-[70vh]"
+                  />
+                )}
+                {!isImage && !isPdf && (
+                  <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                    Preview not available for this file type
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -922,13 +999,22 @@ export function DocumentDetailPage() {
             );
           })()}
 
-          <a
-            href={fileUrl}
-            download={document.originalFilename}
-            className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Download
-          </a>
+          {fileBlob.url ? (
+            <a
+              href={fileBlob.url}
+              download={document.originalFilename}
+              className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Download
+            </a>
+          ) : (
+            <button
+              disabled
+              className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg opacity-50 cursor-not-allowed"
+            >
+              {fileBlob.loading ? 'Loading...' : 'Download unavailable'}
+            </button>
+          )}
 
           <button
             onClick={handleDelete}
