@@ -654,6 +654,33 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.category !== undefined) {
         updateFields.category = body.category === null ? null : trimField(body.category);
       }
+      if (body.issueDate !== undefined) {
+        updateFields.issueDate = body.issueDate === null ? null : trimField(body.issueDate);
+      }
+      if (body.expiryDate !== undefined) {
+        updateFields.expiryDate = body.expiryDate === null ? null : trimField(body.expiryDate);
+      }
+
+      // Handle documentNumber (stored in metadata.id JSONB field)
+      if (body.documentNumber !== undefined) {
+        // Get existing metadata
+        const [existingDoc] = await db
+          .select({ metadata: documents.metadata })
+          .from(documents)
+          .where(eq(documents.id, params.id))
+          .limit(1);
+
+        const existingMetadata = parseMetadata(existingDoc?.metadata) ?? {};
+        const updatedMetadata = { ...existingMetadata };
+
+        if (body.documentNumber === null || body.documentNumber === '') {
+          delete updatedMetadata.id;
+        } else {
+          updatedMetadata.id = trimField(body.documentNumber) ?? body.documentNumber;
+        }
+
+        updateFields.metadata = updatedMetadata;
+      }
 
       // Only update if there are actual changes
       if (Object.keys(updateFields).length > 0) {

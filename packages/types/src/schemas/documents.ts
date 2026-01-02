@@ -134,6 +134,9 @@ export const DocumentUpdateRequestSchema = z.object({
   documentOwner: z.string().max(255).nullable().optional(),
   documentType: z.string().max(100).nullable().optional(),
   category: z.string().max(50).nullable().optional(),
+  documentNumber: z.string().max(100).nullable().optional(),
+  issueDate: z.string().nullable().optional(),
+  expiryDate: z.string().nullable().optional(),
 });
 
 export type DocumentUpdateRequest = z.infer<typeof DocumentUpdateRequestSchema>;
