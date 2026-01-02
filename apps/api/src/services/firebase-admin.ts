@@ -9,14 +9,9 @@ let firebaseAuth: Auth | null = null;
 let cachedProjectId: string | null = null;
 
 /**
- * Decode and parse Firebase service account from base64-encoded env var.
+ * Decode and parse Firebase service account from base64 string.
  */
-function getServiceAccountFromEnv(): Record<string, unknown> | null {
-  const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!base64) {
-    return null;
-  }
-
+function decodeServiceAccount(base64: string): Record<string, unknown> {
   const jsonString = Buffer.from(base64, 'base64').toString('utf-8');
   return JSON.parse(jsonString);
 }
@@ -66,10 +61,7 @@ export function initializeFirebase(): void {
 
   try {
     console.log('[Firebase] Decoding base64 service account...');
-    const parsed = getServiceAccountFromEnv();
-    if (!parsed) {
-      throw new Error('Failed to decode service account');
-    }
+    const parsed = decodeServiceAccount(base64Value);
     console.log(`[Firebase] Parsed successfully, project_id: ${parsed.project_id ?? 'NOT FOUND'}`);
 
     if (typeof parsed.project_id === 'string') {
@@ -82,7 +74,8 @@ export function initializeFirebase(): void {
     console.log('[Firebase] Firebase Admin SDK initialized successfully');
   } catch (err) {
     console.error('[Firebase] ERROR during initialization:', err);
-    throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64: ${err}`);
+    const errMessage = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse FIREBASE_SERVICE_ACCOUNT_BASE64: ${errMessage}`);
   }
 }
 
@@ -121,17 +114,18 @@ export function getFirebaseClientConfig(): FirebaseClientConfig | null {
   // Ensure Firebase is initialized to get the project ID
   if (!cachedProjectId) {
     console.log('[Firebase] No cached project_id, attempting to extract from service account');
-    try {
-      const serviceAccount = getServiceAccountFromEnv();
-      if (serviceAccount) {
+    const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+    if (base64) {
+      try {
+        const serviceAccount = decodeServiceAccount(base64);
         cachedProjectId = typeof serviceAccount.project_id === 'string' ? serviceAccount.project_id : null;
         console.log(`[Firebase] Extracted project_id: ${cachedProjectId ?? 'null'}`);
-      } else {
-        console.warn('[Firebase] No FIREBASE_SERVICE_ACCOUNT_BASE64 available for project_id extraction');
+      } catch (e) {
+        console.warn('[Firebase] Failed to parse service account for project_id:', e);
+        // Ignore parse errors, will be caught during proper initialization
       }
-    } catch (e) {
-      console.warn('[Firebase] Failed to parse service account for project_id:', e);
-      // Ignore parse errors, will be caught during proper initialization
+    } else {
+      console.warn('[Firebase] No FIREBASE_SERVICE_ACCOUNT_BASE64 available for project_id extraction');
     }
   }
 
