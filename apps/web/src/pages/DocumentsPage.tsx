@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   type DocumentMetadata,
   DocumentListResponseSchema,
@@ -253,9 +255,15 @@ export function DocumentsPage() {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
             No Documents
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Upload documents via the Vision page to see them here.
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Upload your first document to get started.
           </p>
+          <Button asChild>
+            <Link to="/upload">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Document
+            </Link>
+          </Button>
         </div>
       </div>
     );
@@ -269,6 +277,12 @@ export function DocumentsPage() {
           {activeFilterCount > 0 && ` of ${documents.length}`})
         </h2>
         <div className="flex items-center gap-3">
+          <Button size="sm" asChild>
+            <Link to="/upload">
+              <Plus className="mr-1 h-4 w-4" />
+              Add
+            </Link>
+          </Button>
           {activeFilterCount > 0 && (
             <button
               onClick={clearFilters}
