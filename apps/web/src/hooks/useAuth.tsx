@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -79,6 +79,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Firebase user reference for getIdToken
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
+  // Ref to store unsubscribe function for proper cleanup
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
   // Fetch config from backend and initialize Firebase
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (cancelled) return;
 
       if (!result.ok) {
+        // Backend unavailable - leave authEnabled false, no user
         setError('Failed to fetch auth config');
         setLoading(false);
         return;
@@ -98,10 +102,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const firebaseConfig: FirebaseConfig | undefined = result.data.auth?.firebase;
       const defaultUser = result.data.auth?.defaultUser;
 
-      setAuthEnabled(isAuthEnabled);
-
       if (!isAuthEnabled) {
         // Auth disabled - use default user from backend
+        setAuthEnabled(false);
         if (defaultUser) {
           setUser(defaultUser);
         }
@@ -110,6 +113,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (!firebaseConfig) {
+        // Auth enabled but config missing - treat as error, keep authEnabled false
         setError('Firebase config not available from backend');
         setLoading(false);
         return;
@@ -120,10 +124,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const auth = getFirebaseAuth();
       if (!auth) {
+        // Firebase init failed - treat as error, keep authEnabled false
         setError('Failed to initialize Firebase');
         setLoading(false);
         return;
       }
+
+      // Only set authEnabled to true after successful Firebase initialization
+      setAuthEnabled(true);
 
       // Subscribe to auth state changes
       const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
@@ -138,14 +146,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setLoading(false);
       });
 
-      return () => unsubscribe();
+      // Store unsubscribe in ref for cleanup
+      unsubscribeRef.current = unsubscribe;
     }
 
-    const cleanup = fetchConfigAndInitialize();
+    fetchConfigAndInitialize();
 
     return () => {
       cancelled = true;
-      cleanup?.then((unsubscribe) => unsubscribe?.());
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
     };
   }, []);
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { initializeApp, getApps, cert, type ServiceAccount, type App } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 
 let firebaseApp: App | null = null;
@@ -44,13 +44,13 @@ export function initializeFirebase(): void {
   }
 
   try {
-    const serviceAccount: ServiceAccount = JSON.parse(serviceAccountJson);
-    // Extract project_id from the raw JSON (ServiceAccount type doesn't include it)
-    const rawJson: Record<string, unknown> = JSON.parse(serviceAccountJson);
-    if (typeof rawJson.project_id === 'string') {
-      cachedProjectId = rawJson.project_id;
+    // Parse once and extract both service account and project_id
+    const parsed: Record<string, unknown> = JSON.parse(serviceAccountJson);
+    if (typeof parsed.project_id === 'string') {
+      cachedProjectId = parsed.project_id;
     }
-    firebaseApp = initializeApp({ credential: cert(serviceAccount) });
+    // cert() accepts the parsed object directly
+    firebaseApp = initializeApp({ credential: cert(parsed) });
     firebaseAuth = getAuth(firebaseApp);
     console.log('Firebase Admin SDK initialized');
   } catch (err) {

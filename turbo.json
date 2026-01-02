@@ -1,6 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalPassThroughEnv": ["*"],
+  "globalPassThroughEnv": [
+    "COMMIT_SHA",
+    "VITE_COMMIT_SHA",
+    "VITE_GIT_BRANCH",
+    "DATABASE_URL",
+    "DOCUMENT_STORAGE_PATH",
+    "HOME_API_PORT",
+    "HOME_WEB_PORT",
+    "HOME_DOC_PROCESSOR_PORT",
+    "HOME_DOC_PROCESSOR_URL",
+    "AUTH_ENABLED",
+    "FIREBASE_SERVICE_ACCOUNT_JSON",
+    "FIREBASE_CLIENT_API_KEY",
+    "FIREBASE_CLIENT_APP_ID"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
