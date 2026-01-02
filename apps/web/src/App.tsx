@@ -1,15 +1,19 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider } from './hooks/useTheme';
+import { AuthProvider } from './hooks/useAuth';
 import { SettingsProvider } from './hooks';
 import { ThemeToggle } from './components/ThemeToggle';
 import { HamburgerMenu } from './components/HamburgerMenu';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { UserMenu } from './components/UserMenu';
 import { HomePage } from './pages/HomePage';
 import { VersionPage } from './pages/VersionPage';
 import { UploadPage } from './pages/UploadPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { DocumentDetailPage } from './pages/DocumentDetailPage';
+import { LoginPage } from './pages/LoginPage';
 import { Home as HomeIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -42,37 +46,50 @@ function isLocalDevelopment(hostname: string): boolean {
 export function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <SettingsProvider>
-        <div className="min-h-screen bg-background text-foreground p-6">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
-                <span>home-core web</span>
-              </Link>
-              {typeof window !== 'undefined' && isLocalDevelopment(window.location.hostname) && (
-                <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>
-                  Local{import.meta.env.VITE_GIT_BRANCH ? `:${import.meta.env.VITE_GIT_BRANCH}` : ''}
-                </Badge>
-              )}
-            </h1>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <HamburgerMenu />
-            </div>
-          </div>
+      <AuthProvider>
+        <BrowserRouter>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/version" element={<VersionPage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/documents" element={<DocumentsPage />} />
-            <Route path="/documents/:id" element={<DocumentDetailPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <SettingsProvider>
+                    <div className="min-h-screen bg-background text-foreground p-6">
+                      <div className="mb-4 flex items-center justify-between gap-4">
+                        <h1 className="text-2xl font-semibold flex items-center gap-2">
+                          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
+                            <span>home-core web</span>
+                          </Link>
+                          {typeof window !== 'undefined' && isLocalDevelopment(window.location.hostname) && (
+                            <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>
+                              Local{import.meta.env.VITE_GIT_BRANCH ? `:${import.meta.env.VITE_GIT_BRANCH}` : ''}
+                            </Badge>
+                          )}
+                        </h1>
+                        <div className="flex items-center gap-2">
+                          <UserMenu />
+                          <ThemeToggle />
+                          <HamburgerMenu />
+                        </div>
+                      </div>
+                      <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/version" element={<VersionPage />} />
+                        <Route path="/upload" element={<UploadPage />} />
+                        <Route path="/documents" element={<DocumentsPage />} />
+                        <Route path="/documents/:id" element={<DocumentDetailPage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                      </Routes>
+                    </div>
+                  </SettingsProvider>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
-        </div>
-        </SettingsProvider>
-      </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

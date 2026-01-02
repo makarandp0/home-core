@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { getDb, providerConfigs, eq } from '@home/db';
+import { getDb, providerConfigs, eq, and } from '@home/db';
 import type { ProviderId, ProviderConfig, ProviderConfigCreate, ProviderConfigUpdate } from '@home/types';
 import { ProviderIdSchema } from '@home/types';
 
@@ -61,37 +61,41 @@ function toProviderConfig(row: {
 }
 
 /**
- * Get all provider configurations (with redacted keys).
+ * Get all provider configurations (with redacted keys) for a user.
  */
-export async function getProviderConfigs(): Promise<ProviderConfig[]> {
+export async function getProviderConfigs(userId: string): Promise<ProviderConfig[]> {
   const db = getDb();
-  const rows = await db.select().from(providerConfigs).orderBy(providerConfigs.createdAt);
+  const rows = await db
+    .select()
+    .from(providerConfigs)
+    .where(eq(providerConfigs.userId, userId))
+    .orderBy(providerConfigs.createdAt);
   return rows.map(toProviderConfig);
 }
 
 /**
- * Get the active provider configuration.
+ * Get the active provider configuration for a user.
  */
-export async function getActiveProvider(): Promise<ProviderConfig | null> {
+export async function getActiveProvider(userId: string): Promise<ProviderConfig | null> {
   const db = getDb();
   const [row] = await db
     .select()
     .from(providerConfigs)
-    .where(eq(providerConfigs.isActive, true))
+    .where(and(eq(providerConfigs.isActive, true), eq(providerConfigs.userId, userId)))
     .limit(1);
   return row ? toProviderConfig(row) : null;
 }
 
 /**
- * Get the API key for a specific provider type (from active provider).
+ * Get the API key for a specific provider type (from active provider) for a user.
  * Used internally by vision routes.
  */
-export async function getApiKey(providerType: string): Promise<string | null> {
+export async function getApiKey(providerType: string, userId: string): Promise<string | null> {
   const db = getDb();
   const [row] = await db
     .select()
     .from(providerConfigs)
-    .where(eq(providerConfigs.isActive, true))
+    .where(and(eq(providerConfigs.isActive, true), eq(providerConfigs.userId, userId)))
     .limit(1);
 
   if (!row) return null;
@@ -100,30 +104,30 @@ export async function getApiKey(providerType: string): Promise<string | null> {
 }
 
 /**
- * Get the API key for a specific provider type, regardless of active status.
+ * Get the API key for a specific provider type for a user, regardless of active status.
  * Useful for CLI scripts that specify a provider explicitly.
  */
-export async function getApiKeyForProvider(providerType: string): Promise<string | null> {
+export async function getApiKeyForProvider(providerType: string, userId: string): Promise<string | null> {
   const db = getDb();
   const [row] = await db
     .select()
     .from(providerConfigs)
-    .where(eq(providerConfigs.providerType, providerType))
+    .where(and(eq(providerConfigs.providerType, providerType), eq(providerConfigs.userId, userId)))
     .limit(1);
 
   return row?.apiKey ?? null;
 }
 
 /**
- * Get the active provider's API key regardless of provider type.
+ * Get the active provider's API key for a user regardless of provider type.
  * Returns both the key and the provider type.
  */
-export async function getActiveApiKey(): Promise<{ apiKey: string; providerType: string } | null> {
+export async function getActiveApiKey(userId: string): Promise<{ apiKey: string; providerType: string } | null> {
   const db = getDb();
   const [row] = await db
     .select()
     .from(providerConfigs)
-    .where(eq(providerConfigs.isActive, true))
+    .where(and(eq(providerConfigs.isActive, true), eq(providerConfigs.userId, userId)))
     .limit(1);
 
   if (!row) return null;
@@ -131,9 +135,9 @@ export async function getActiveApiKey(): Promise<{ apiKey: string; providerType:
 }
 
 /**
- * Create a new provider configuration.
+ * Create a new provider configuration for a user.
  */
-export async function createProviderConfig(data: ProviderConfigCreate): Promise<ProviderConfig> {
+export async function createProviderConfig(data: ProviderConfigCreate, userId: string): Promise<ProviderConfig> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -144,6 +148,7 @@ export async function createProviderConfig(data: ProviderConfigCreate): Promise<
       providerType: data.providerType,
       apiKey: data.apiKey,
       isActive: false,
+      userId,
       createdAt: now,
       updatedAt: now,
     })
@@ -153,11 +158,12 @@ export async function createProviderConfig(data: ProviderConfigCreate): Promise<
 }
 
 /**
- * Update a provider configuration.
+ * Update a provider configuration for a user.
  */
 export async function updateProviderConfig(
   id: string,
-  data: ProviderConfigUpdate
+  data: ProviderConfigUpdate,
+  userId: string
 ): Promise<ProviderConfig | null> {
   const db = getDb();
   const now = new Date().toISOString();
@@ -169,44 +175,45 @@ export async function updateProviderConfig(
   const [row] = await db
     .update(providerConfigs)
     .set(updateData)
-    .where(eq(providerConfigs.id, id))
+    .where(and(eq(providerConfigs.id, id), eq(providerConfigs.userId, userId)))
     .returning();
 
   return row ? toProviderConfig(row) : null;
 }
 
 /**
- * Delete a provider configuration.
+ * Delete a provider configuration for a user.
  */
-export async function deleteProviderConfig(id: string): Promise<boolean> {
+export async function deleteProviderConfig(id: string, userId: string): Promise<boolean> {
   const db = getDb();
   const result = await db
     .delete(providerConfigs)
-    .where(eq(providerConfigs.id, id))
+    .where(and(eq(providerConfigs.id, id), eq(providerConfigs.userId, userId)))
     .returning();
 
   return result.length > 0;
 }
 
 /**
- * Set a provider as active (deactivates all others).
+ * Set a provider as active for a user (deactivates all others for that user).
  * Uses a transaction to ensure atomicity.
  */
-export async function setActiveProvider(id: string): Promise<ProviderConfig | null> {
+export async function setActiveProvider(id: string, userId: string): Promise<ProviderConfig | null> {
   const db = getDb();
   const now = new Date().toISOString();
 
   const result = await db.transaction(async (tx) => {
-    // First, deactivate all providers
+    // First, deactivate all providers for this user
     await tx
       .update(providerConfigs)
-      .set({ isActive: false, updatedAt: now });
+      .set({ isActive: false, updatedAt: now })
+      .where(eq(providerConfigs.userId, userId));
 
-    // Then, activate the specified provider
+    // Then, activate the specified provider (only if owned by user)
     const [row] = await tx
       .update(providerConfigs)
       .set({ isActive: true, updatedAt: now })
-      .where(eq(providerConfigs.id, id))
+      .where(and(eq(providerConfigs.id, id), eq(providerConfigs.userId, userId)))
       .returning();
 
     return row ?? null;
@@ -216,13 +223,13 @@ export async function setActiveProvider(id: string): Promise<ProviderConfig | nu
 }
 
 /**
- * Get full settings response (providers + activeProviderId).
+ * Get full settings response for a user (providers + activeProviderId).
  */
-export async function getSettingsResponse(): Promise<{
+export async function getSettingsResponse(userId: string): Promise<{
   providers: ProviderConfig[];
   activeProviderId: string | null;
 }> {
-  const providers = await getProviderConfigs();
+  const providers = await getProviderConfigs(userId);
   const activeProviderId = providers.find((p) => p.isActive)?.id ?? null;
 
   return { providers, activeProviderId };

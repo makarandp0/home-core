@@ -24,7 +24,7 @@ import {
   type IdParams,
   type DocumentUpdateRequest,
 } from '@home/types';
-import { getDb, documents, desc, eq, inArray } from '@home/db';
+import { getDb, documents, desc, eq, inArray, and } from '@home/db';
 import {
   storeDocument,
   storeRawFile,
@@ -157,7 +157,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (requestedProvider) {
       providerId = requestedProvider;
-      const key = await getApiKeyForProvider(providerId);
+      const key = await getApiKeyForProvider(providerId, request.user.id);
       if (!key) {
         reply.code(400);
         return {
@@ -167,7 +167,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       }
       apiKey = key;
     } else {
-      const active = await getActiveApiKey();
+      const active = await getActiveApiKey(request.user.id);
       if (!active) {
         reply.code(400);
         return {
@@ -217,6 +217,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           const stored = await storeDocument(imageData, filename, undefined, {
             baseUuid: docUuid,
             suffix: '_resized',
+            userId: request.user.id,
           });
           if (!stored) {
             reply.code(500);
@@ -227,6 +228,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           // No resizing needed - store single copy without suffix
           const stored = await storeDocument(imageData, filename, undefined, {
             baseUuid: docUuid,
+            userId: request.user.id,
           });
           if (!stored) {
             reply.code(500);
@@ -290,7 +292,9 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         // Store the document
         const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/png';
         const dataUrl = `data:${mimeType};base64,${base64Content}`;
-        const stored = await storeDocument(dataUrl, filename);
+        const stored = await storeDocument(dataUrl, filename, undefined, {
+          userId: request.user.id,
+        });
         if (!stored) {
           reply.code(500);
           return { ok: false, error: 'Document storage is not configured on the server' };
@@ -420,11 +424,12 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
    * POST /api/documents/thumbnails
    * Get thumbnails for multiple documents (for lazy loading).
    * Returns a map of document ID to thumbnail data URL.
+   * Only returns thumbnails for documents owned by the authenticated user.
    */
   routes.post<ThumbnailsRequest, unknown, unknown, Record<string, string | null>>({
     url: '/documents/thumbnails',
     schema: { body: ThumbnailsRequestSchema },
-    handler: async ({ body }) => {
+    handler: async ({ body, request }) => {
       const db = getDb();
       const docs = await db
         .select({
@@ -432,7 +437,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           thumbnail: documents.thumbnail,
         })
         .from(documents)
-        .where(inArray(documents.id, body.ids));
+        .where(and(inArray(documents.id, body.ids), eq(documents.userId, request.user.id)));
 
       // Build map of id -> thumbnail
       const thumbnailMap: Record<string, string | null> = {};
@@ -446,12 +451,12 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
    * GET /api/documents
-   * List all stored documents with metadata.
+   * List all stored documents with metadata for the authenticated user.
    * Returns all fields needed for client-side filtering/search.
    */
   routes.get<unknown, unknown, unknown, DocumentListResponse>({
     url: '/documents',
-    handler: async () => {
+    handler: async ({ request }) => {
       const db = getDb();
       const docs = await db
         .select({
@@ -477,6 +482,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           updatedAt: documents.updatedAt,
         })
         .from(documents)
+        .where(eq(documents.userId, request.user.id))
         .orderBy(desc(documents.createdAt));
 
       // Parse metadata from JSONB to typed structure
@@ -494,12 +500,12 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
    * GET /api/documents/:id
-   * Get document metadata by ID.
+   * Get document metadata by ID (only for documents owned by the authenticated user).
    */
   routes.get<unknown, IdParams, unknown, DocumentMetadata>({
     url: '/documents/:id',
     schema: { params: IdParamsSchema },
-    handler: async ({ params }) => {
+    handler: async ({ params, request }) => {
       const db = getDb();
       const [doc] = await db
         .select({
@@ -525,7 +531,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           updatedAt: documents.updatedAt,
         })
         .from(documents)
-        .where(eq(documents.id, params.id))
+        .where(and(eq(documents.id, params.id), eq(documents.userId, request.user.id)))
         .limit(1);
 
       if (!doc) {
@@ -542,7 +548,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
    * GET /api/documents/:id/file
-   * Serve the actual document file.
+   * Serve the actual document file (only for documents owned by the authenticated user).
    *
    * Note: This route uses raw Fastify due to file streaming requirements.
    */
@@ -560,7 +566,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           originalFilename: documents.originalFilename,
         })
         .from(documents)
-        .where(eq(documents.id, id))
+        .where(and(eq(documents.id, id), eq(documents.userId, request.user.id)))
         .limit(1);
 
       if (!doc) {
@@ -591,12 +597,13 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * DELETE /api/documents/:id
    * Delete a document by ID (removes both file and database entry).
+   * Only allows deleting documents owned by the authenticated user.
    */
   routes.delete<unknown, IdParams, unknown, { deleted: boolean }>({
     url: '/documents/:id',
     schema: { params: IdParamsSchema },
-    handler: async ({ params }) => {
-      const success = await deleteDocument(params.id);
+    handler: async ({ params, request }) => {
+      const success = await deleteDocument(params.id, request.user.id);
 
       if (!success) {
         notFound('Document not found or could not be deleted');
@@ -609,6 +616,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * PATCH /api/documents/:id
    * Update document metadata (partial update).
+   * Only allows updating documents owned by the authenticated user.
    */
   routes.patch<DocumentUpdateRequest, IdParams, unknown, DocumentMetadata>({
     url: '/documents/:id',
@@ -616,14 +624,14 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
       body: DocumentUpdateRequestSchema,
       params: IdParamsSchema,
     },
-    handler: async ({ params, body }) => {
+    handler: async ({ params, body, request }) => {
       const db = getDb();
 
-      // First verify document exists
+      // First verify document exists and belongs to user
       const [existing] = await db
         .select({ id: documents.id })
         .from(documents)
-        .where(eq(documents.id, params.id))
+        .where(and(eq(documents.id, params.id), eq(documents.userId, request.user.id)))
         .limit(1);
 
       if (!existing) {
@@ -680,7 +688,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         await db
           .update(documents)
           .set(updateFields)
-          .where(eq(documents.id, params.id));
+          .where(and(eq(documents.id, params.id), eq(documents.userId, request.user.id)));
       }
 
       // Return updated document
@@ -704,7 +712,7 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
           updatedAt: documents.updatedAt,
         })
         .from(documents)
-        .where(eq(documents.id, params.id))
+        .where(and(eq(documents.id, params.id), eq(documents.userId, request.user.id)))
         .limit(1);
 
       if (!doc) {

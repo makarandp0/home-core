@@ -10,11 +10,12 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
 
   routes.get<unknown, unknown, unknown, User>({
     url: '/user',
-    handler: async () => {
+    handler: async ({ request }) => {
+      // Return the authenticated user from the auth middleware
       return UserSchema.parse({
-        id: 'u_1',
-        name: 'Ada Lovelace',
-        email: 'ada@example.com',
+        id: request.user.id,
+        name: request.user.displayName ?? 'User',
+        email: request.user.email,
       });
     },
   });
