@@ -44,3 +44,4 @@ documents/*
 
 # Local seed scripts with API keys
 scripts/seed-providers.ts
+railway-vars.json

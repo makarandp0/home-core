@@ -26,13 +26,19 @@
       "Bash(file:*)",
       "Bash(stat:*)",
       "Bash(curl:*)",
-      "Bash(gh pr view:*)",
-      "WebSearch",
-      "WebFetch(domain:localhost)",
       "Bash(lsof:*)",
       "Bash(ps:*)",
+      "Bash(gh pr view:*)",
       "Bash(gh api:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(gh pr comment:*)",
+      "WebSearch",
+      "WebFetch(domain:localhost)",
+      "Bash(railway variables:*)",
+      "Bash(railway link:*)",
+      "Bash(railway whoami:*)",
+      "Bash(railway list:*)",
+      "Bash(railway service:*)"
     ]
   }
 }
