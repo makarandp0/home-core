@@ -6,13 +6,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import fastifyStatic from '@fastify/static';
-import fastifyBasicAuth from '@fastify/basic-auth';
 import { healthRoutes } from './routes/health.js';
 import { userRoutes } from './routes/user.js';
 import { providersRoutes } from './routes/providers.js';
 import { documentsRoutes } from './routes/documents.js';
 import { settingsRoutes } from './routes/settings.js';
 import { ownerAliasRoutes } from './routes/owner-aliases.js';
+import { initializeFirebase, isAuthEnabled } from './services/firebase-admin.js';
+import { registerAuthMiddleware } from './middleware/auth.js';
 
 async function main() {
   // Run database migrations on startup
@@ -48,30 +49,18 @@ async function main() {
     });
   });
 
-  // Basic auth configuration (optional - only enabled if credentials are set)
-  const BASIC_AUTH_USER = process.env.BASIC_AUTH_USER;
-  const BASIC_AUTH_PASS = process.env.BASIC_AUTH_PASS;
-  const basicAuthEnabled = Boolean(BASIC_AUTH_USER && BASIC_AUTH_PASS);
+  // Initialize Firebase Admin SDK (only when AUTH_ENABLED=true)
+  initializeFirebase();
 
-  if (basicAuthEnabled) {
-    console.log('Basic authentication enabled');
-    await server.register(fastifyBasicAuth, {
-      validate: async (username, password, _req, _reply) => {
-        if (username !== BASIC_AUTH_USER || password !== BASIC_AUTH_PASS) {
-          return new Error('Invalid credentials');
-        }
-      },
-      authenticate: { realm: 'home-core' },
-    });
+  // Register authentication middleware
+  // When AUTH_ENABLED=true: Requires Firebase token for /api routes
+  // When AUTH_ENABLED=false: Uses default anonymous user
+  registerAuthMiddleware(server);
 
-    // Apply basic auth to all routes except /health (needed for liveness probes)
-    server.addHook('onRequest', (request, reply, done) => {
-      if (request.url === '/health') {
-        done();
-        return;
-      }
-      server.basicAuth(request, reply, done);
-    });
+  if (isAuthEnabled()) {
+    console.log('Firebase authentication enabled');
+  } else {
+    console.log('Authentication disabled - using anonymous user');
   }
 
   // Only serve static assets outside development (or when explicitly enabled)

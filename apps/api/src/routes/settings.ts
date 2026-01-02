@@ -25,32 +25,32 @@ import { createRouteBuilder, notFound, badRequest } from '../utils/route-builder
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
   const routes = createRouteBuilder(app);
 
-  // GET /api/settings - Get all settings (providers + active)
+  // GET /api/settings - Get all settings for the authenticated user (providers + active)
   routes.get<unknown, unknown, unknown, SettingsResponse>({
     url: '/settings',
-    handler: async () => {
-      return await getSettingsResponse();
+    handler: async ({ request }) => {
+      return await getSettingsResponse(request.user.id);
     },
   });
 
-  // POST /api/settings/providers - Create new provider config
+  // POST /api/settings/providers - Create new provider config for the authenticated user
   routes.post<ProviderConfigCreate, unknown, unknown, ProviderConfig>({
     url: '/settings/providers',
     schema: { body: ProviderConfigCreateSchema },
-    handler: async ({ body }) => {
-      return await createProviderConfig(body);
+    handler: async ({ body, request }) => {
+      return await createProviderConfig(body, request.user.id);
     },
   });
 
-  // PUT /api/settings/providers/:id - Update provider config
+  // PUT /api/settings/providers/:id - Update provider config for the authenticated user
   routes.put<ProviderConfigUpdate, IdParams, unknown, ProviderConfig>({
     url: '/settings/providers/:id',
     schema: {
       body: ProviderConfigUpdateSchema,
       params: IdParamsSchema,
     },
-    handler: async ({ body, params }) => {
-      const provider = await updateProviderConfig(params.id, body);
+    handler: async ({ body, params, request }) => {
+      const provider = await updateProviderConfig(params.id, body, request.user.id);
       if (!provider) {
         notFound('Provider configuration not found');
       }
@@ -58,21 +58,21 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
     },
   });
 
-  // DELETE /api/settings/providers/:id - Delete provider config
+  // DELETE /api/settings/providers/:id - Delete provider config for the authenticated user
   routes.delete<unknown, IdParams, unknown, { deleted: boolean }>({
     url: '/settings/providers/:id',
     schema: { params: IdParamsSchema },
-    handler: async ({ params }) => {
+    handler: async ({ params, request }) => {
       // Prevent deleting the active provider if there are other providers to switch to
-      const activeProvider = await getActiveProvider();
+      const activeProvider = await getActiveProvider(request.user.id);
       if (activeProvider && activeProvider.id === params.id) {
-        const settings = await getSettingsResponse();
+        const settings = await getSettingsResponse(request.user.id);
         if (settings.providers.length > 1) {
           badRequest('Cannot delete the active provider. Please activate another provider first.');
         }
       }
 
-      const deleted = await deleteProviderConfig(params.id);
+      const deleted = await deleteProviderConfig(params.id, request.user.id);
       if (!deleted) {
         notFound('Provider configuration not found');
       }
@@ -81,12 +81,12 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
     },
   });
 
-  // POST /api/settings/providers/:id/activate - Set provider as active
+  // POST /api/settings/providers/:id/activate - Set provider as active for the authenticated user
   routes.post<unknown, IdParams, unknown, ProviderConfig>({
     url: '/settings/providers/:id/activate',
     schema: { params: IdParamsSchema },
-    handler: async ({ params }) => {
-      const provider = await setActiveProvider(params.id);
+    handler: async ({ params, request }) => {
+      const provider = await setActiveProvider(params.id, request.user.id);
       if (!provider) {
         notFound('Provider configuration not found');
       }

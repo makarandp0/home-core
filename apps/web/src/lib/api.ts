@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { ApiError } from '@home/types';
+import { authEnabled, getFirebaseAuth } from './firebase';
 
 /**
  * Result type for API calls - either success with data or failure with error
@@ -15,6 +16,28 @@ export type ApiResult<T> =
  */
 interface RequestOptions {
   signal?: AbortSignal;
+}
+
+/**
+ * Get the current user's ID token for API requests.
+ * Returns null if auth is disabled or user is not signed in.
+ */
+async function getAuthToken(): Promise<string | null> {
+  if (!authEnabled) {
+    return null;
+  }
+
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) {
+    return null;
+  }
+
+  try {
+    return await auth.currentUser.getIdToken();
+  } catch (err) {
+    console.error('Failed to get auth token:', err);
+    return null;
+  }
 }
 
 /**
@@ -51,13 +74,25 @@ async function request<T>(
   options?: RequestOptions
 ): Promise<ApiResult<T>> {
   try {
+    const headers: Record<string, string> = {};
+
+    // Add auth header if token available
+    const token = await getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const init: RequestInit = {
       method,
+      headers,
       signal: options?.signal,
     };
 
     if (body !== undefined) {
-      init.headers = { 'Content-Type': 'application/json' };
       init.body = JSON.stringify(body);
     }
 

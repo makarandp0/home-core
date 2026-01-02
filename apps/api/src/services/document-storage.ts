@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
-import { getDb, documents, eq } from '@home/db';
+import { getDb, documents, eq, and } from '@home/db';
 import { parseDataUrl } from '../utils/data-url.js';
 import { sanitizeFilename } from '../utils/string-sanitize.js';
 
@@ -107,14 +107,14 @@ export async function storeRawFile(
  * @param imageData - The base64 data URL of the document
  * @param originalFilename - The original filename (optional)
  * @param metadata - Optional metadata to store with the document
- * @param options - Optional settings: baseUuid for consistent naming, suffix for filename
+ * @param options - Settings: baseUuid for consistent naming, suffix for filename, userId for ownership (required)
  * @returns DocumentStorageResult or null if storage is not configured
  */
 export async function storeDocument(
   imageData: string,
   originalFilename: string,
   metadata?: Record<string, unknown>,
-  options?: { baseUuid?: string; suffix?: string }
+  options?: { baseUuid?: string; suffix?: string; userId: string }
 ): Promise<DocumentStorageResult | null> {
   const storagePath = getStoragePath();
   if (!storagePath) {
@@ -148,6 +148,11 @@ export async function storeDocument(
 
     // Create database entry
     const db = getDb();
+    if (!options?.userId) {
+      console.error('userId is required for document storage');
+      return null;
+    }
+
     const [doc] = await db
       .insert(documents)
       .values({
@@ -157,6 +162,7 @@ export async function storeDocument(
         sizeBytes,
         storagePath: fullPath,
         metadata: metadata || {},
+        userId: options.userId,
       })
       .returning({ id: documents.id });
 
@@ -233,21 +239,27 @@ export async function updateDocumentMetadata(
  * Delete a document from disk and database.
  *
  * @param documentId - The UUID of the document to delete
+ * @param userId - Optional user ID for authorization check (only delete if owned by this user)
  * @returns true if deletion succeeded, false otherwise
  */
-export async function deleteDocument(documentId: string): Promise<boolean> {
+export async function deleteDocument(documentId: string, userId?: string): Promise<boolean> {
   try {
     const db = getDb();
+
+    // Build the where clause - include userId check if provided
+    const whereConditions = userId
+      ? and(eq(documents.id, documentId), eq(documents.userId, userId))
+      : eq(documents.id, documentId);
 
     // First, get the storage path
     const [doc] = await db
       .select({ storagePath: documents.storagePath })
       .from(documents)
-      .where(eq(documents.id, documentId))
+      .where(whereConditions)
       .limit(1);
 
     if (!doc) {
-      console.error(`Document not found: ${documentId}`);
+      console.error(`Document not found or not owned by user: ${documentId}`);
       return false;
     }
 
@@ -261,7 +273,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
     }
 
     // Delete from database
-    await db.delete(documents).where(eq(documents.id, documentId));
+    await db.delete(documents).where(whereConditions);
 
     console.log(`Document deleted: ${documentId}`);
     return true;

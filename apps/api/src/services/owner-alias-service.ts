@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { getDb, ownerNameAliases, documents, eq, ilike, sql, isNotNull } from '@home/db';
+import { getDb, ownerNameAliases, documents, eq, ilike, sql, isNotNull, and } from '@home/db';
 import type { OwnerAlias, OwnerAliasCreate, OwnerAliasUpdate, OwnerAliasBatchApplyResponse, SuggestedOwnerNamesResponse } from '@home/types';
 
 /**
@@ -37,32 +37,36 @@ function toOwnerAlias(row: {
 }
 
 /**
- * Get all owner name aliases.
+ * Get all owner name aliases for a user.
  */
-export async function getOwnerAliases(): Promise<OwnerAlias[]> {
+export async function getOwnerAliases(userId: string): Promise<OwnerAlias[]> {
   const db = getDb();
-  const rows = await db.select().from(ownerNameAliases).orderBy(ownerNameAliases.aliasName);
+  const rows = await db
+    .select()
+    .from(ownerNameAliases)
+    .where(eq(ownerNameAliases.userId, userId))
+    .orderBy(ownerNameAliases.aliasName);
   return rows.map(toOwnerAlias);
 }
 
 /**
- * Get an owner alias by ID.
+ * Get an owner alias by ID for a user.
  */
-export async function getOwnerAliasById(id: string): Promise<OwnerAlias | null> {
+export async function getOwnerAliasById(id: string, userId: string): Promise<OwnerAlias | null> {
   const db = getDb();
   const [row] = await db
     .select()
     .from(ownerNameAliases)
-    .where(eq(ownerNameAliases.id, id))
+    .where(and(eq(ownerNameAliases.id, id), eq(ownerNameAliases.userId, userId)))
     .limit(1);
   return row ? toOwnerAlias(row) : null;
 }
 
 /**
- * Create a new owner alias.
+ * Create a new owner alias for a user.
  * The aliasName is treated as a regex pattern.
  */
-export async function createOwnerAlias(data: OwnerAliasCreate): Promise<OwnerAlias> {
+export async function createOwnerAlias(data: OwnerAliasCreate, userId: string): Promise<OwnerAlias> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -75,6 +79,7 @@ export async function createOwnerAlias(data: OwnerAliasCreate): Promise<OwnerAli
     .values({
       aliasName: pattern,
       canonicalName: data.canonicalName.trim(),
+      userId,
       createdAt: now,
       updatedAt: now,
     })
@@ -84,12 +89,13 @@ export async function createOwnerAlias(data: OwnerAliasCreate): Promise<OwnerAli
 }
 
 /**
- * Update an existing owner alias.
+ * Update an existing owner alias for a user.
  * The aliasName is treated as a regex pattern.
  */
 export async function updateOwnerAlias(
   id: string,
-  data: OwnerAliasUpdate
+  data: OwnerAliasUpdate,
+  userId: string
 ): Promise<OwnerAlias | null> {
   const db = getDb();
   const now = new Date().toISOString();
@@ -105,63 +111,66 @@ export async function updateOwnerAlias(
   const [row] = await db
     .update(ownerNameAliases)
     .set(updateData)
-    .where(eq(ownerNameAliases.id, id))
+    .where(and(eq(ownerNameAliases.id, id), eq(ownerNameAliases.userId, userId)))
     .returning();
 
   return row ? toOwnerAlias(row) : null;
 }
 
 /**
- * Delete an owner alias.
+ * Delete an owner alias for a user.
  */
-export async function deleteOwnerAlias(id: string): Promise<boolean> {
+export async function deleteOwnerAlias(id: string, userId: string): Promise<boolean> {
   const db = getDb();
   const result = await db
     .delete(ownerNameAliases)
-    .where(eq(ownerNameAliases.id, id))
+    .where(and(eq(ownerNameAliases.id, id), eq(ownerNameAliases.userId, userId)))
     .returning();
 
   return result.length > 0;
 }
 
 /**
- * Resolve an owner name to its canonical form (if alias exists).
+ * Resolve an owner name to its canonical form (if alias exists) for a user.
  * Used during document upload and update.
  * Returns the canonical name if a matching alias is found (case-insensitive),
  * otherwise returns the original name.
  */
-export async function resolveOwnerName(name: string | null | undefined): Promise<string | null | undefined> {
+export async function resolveOwnerName(name: string | null | undefined, userId: string): Promise<string | null | undefined> {
   if (name == null) return name;
 
   const db = getDb();
   const trimmedName = name.trim();
 
-  // Case-insensitive lookup
+  // Case-insensitive lookup for this user
   const [alias] = await db
     .select({ canonicalName: ownerNameAliases.canonicalName })
     .from(ownerNameAliases)
-    .where(ilike(ownerNameAliases.aliasName, trimmedName))
+    .where(and(ilike(ownerNameAliases.aliasName, trimmedName), eq(ownerNameAliases.userId, userId)))
     .limit(1);
 
   return alias?.canonicalName ?? trimmedName;
 }
 
 /**
- * Apply all aliases retroactively to existing documents.
+ * Apply all aliases retroactively to existing documents for a user.
  * For each alias, updates all documents where documentOwner matches the alias pattern (regex, case-insensitive).
  * Returns the count of updated documents per alias.
  */
-export async function applyAliasesRetroactively(): Promise<OwnerAliasBatchApplyResponse> {
+export async function applyAliasesRetroactively(userId: string): Promise<OwnerAliasBatchApplyResponse> {
   const db = getDb();
 
-  // Get all aliases
-  const aliases = await db.select().from(ownerNameAliases);
+  // Get all aliases for this user
+  const aliases = await db
+    .select()
+    .from(ownerNameAliases)
+    .where(eq(ownerNameAliases.userId, userId));
 
   let totalUpdated = 0;
   const results: OwnerAliasBatchApplyResponse['aliases'] = [];
 
   for (const alias of aliases) {
-    // Update documents where documentOwner matches alias pattern (case-insensitive regex)
+    // Update documents where documentOwner matches alias pattern (case-insensitive regex) for this user
     // Using PostgreSQL's ~* operator for case-insensitive regex matching
     const updated = await db
       .update(documents)
@@ -169,7 +178,10 @@ export async function applyAliasesRetroactively(): Promise<OwnerAliasBatchApplyR
         documentOwner: alias.canonicalName,
         updatedAt: new Date().toISOString(),
       })
-      .where(sql`${documents.documentOwner} ~* ${alias.aliasName}`)
+      .where(and(
+        sql`${documents.documentOwner} ~* ${alias.aliasName}`,
+        eq(documents.userId, userId)
+      ))
       .returning({ id: documents.id });
 
     totalUpdated += updated.length;
@@ -187,15 +199,18 @@ export async function applyAliasesRetroactively(): Promise<OwnerAliasBatchApplyR
 }
 
 /**
- * Get suggested owner names for autocomplete.
+ * Get suggested owner names for autocomplete for a user.
  * Combines canonical names from aliases table with unique owner names from documents.
  * Document owners that match an alias pattern are excluded (the canonical name is suggested instead).
  */
-export async function getSuggestedOwnerNames(): Promise<SuggestedOwnerNamesResponse> {
+export async function getSuggestedOwnerNames(userId: string): Promise<SuggestedOwnerNamesResponse> {
   const db = getDb();
 
-  // Get all aliases (pattern + canonical)
-  const aliasRows = await db.select().from(ownerNameAliases);
+  // Get all aliases for this user (pattern + canonical)
+  const aliasRows = await db
+    .select()
+    .from(ownerNameAliases)
+    .where(eq(ownerNameAliases.userId, userId));
 
   // Build regex patterns for matching
   const aliasPatterns: { regex: RegExp; canonicalName: string }[] = [];
@@ -216,14 +231,14 @@ export async function getSuggestedOwnerNames(): Promise<SuggestedOwnerNamesRespo
 
   const canonicalNames = new Set(aliasRows.map(r => r.canonicalName));
 
-  // Get unique owner names from documents with counts
+  // Get unique owner names from documents for this user with counts
   const documentOwnerRows = await db
     .select({
       documentOwner: documents.documentOwner,
       count: sql<number>`count(*)::int`,
     })
     .from(documents)
-    .where(isNotNull(documents.documentOwner))
+    .where(and(isNotNull(documents.documentOwner), eq(documents.userId, userId)))
     .groupBy(documents.documentOwner)
     .orderBy(sql`count(*) desc`);
 

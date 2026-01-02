@@ -30,6 +30,8 @@ pnpm-debug.log*
 .env.bak
 .env.local
 .env.*.local
+.env.authEnabled
+.env.authDisabled
 railway-vars.txt
 
 # Drizzle-kit artifacts (we use node-pg-migrate for migrations)
