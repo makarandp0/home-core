@@ -22,7 +22,7 @@ interface RequestOptions {
  * Get the current user's ID token for API requests.
  * Returns null if auth is disabled (Firebase not initialized) or user is not signed in.
  */
-async function getAuthToken(): Promise<string | null> {
+export async function getAuthToken(): Promise<string | null> {
   const auth = getFirebaseAuth();
   if (!auth?.currentUser) {
     return null;

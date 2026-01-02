@@ -6,10 +6,9 @@ import {
   DocumentMetadataSchema,
   DeleteResponseSchema,
 } from '@home/types';
-import { api, getErrorMessage } from '@/lib/api';
+import { api, getAuthToken, getErrorMessage } from '@/lib/api';
 import { OwnerNameAutocomplete } from '@/components/OwnerNameAutocomplete';
 import { Collapsible } from '@/components/ui/collapsible';
-import { getFirebaseAuth } from '@/lib/firebase';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -114,6 +113,7 @@ export function DocumentDetailPage() {
     loading: false,
     error: null,
   });
+  const blobUrlRef = React.useRef<string>('');
 
   // Get document IDs from router state (passed from filtered list)
   // If accessed directly via URL, navigation will be disabled
@@ -149,14 +149,18 @@ export function DocumentDetailPage() {
     if (!document) return;
 
     let cancelled = false;
-    let blobUrl = '';
+
+    // Revoke previous blob URL if any
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = '';
+    }
 
     async function fetchFile() {
       setFileBlob({ url: '', loading: true, error: null });
 
       try {
-        const auth = getFirebaseAuth();
-        const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
+        const token = await getAuthToken();
 
         const headers: Record<string, string> = {};
         if (token) {
@@ -172,8 +176,9 @@ export function DocumentDetailPage() {
         const blob = await response.blob();
         if (cancelled) return;
 
-        blobUrl = URL.createObjectURL(blob);
-        setFileBlob({ url: blobUrl, loading: false, error: null });
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setFileBlob({ url, loading: false, error: null });
       } catch (err) {
         if (cancelled) return;
         setFileBlob({
@@ -188,8 +193,9 @@ export function DocumentDetailPage() {
 
     return () => {
       cancelled = true;
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = '';
       }
     };
   }, [document?.id]);
