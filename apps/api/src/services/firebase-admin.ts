@@ -44,8 +44,15 @@ export function initializeFirebase(): void {
   }
 
   try {
+    // Handle newline issues in service account JSON from environment variables:
+    // - Actual newlines in the JSON (control characters) need to be escaped as \n
+    // - This commonly happens when the env var contains literal newlines
+    const normalizedJson = serviceAccountJson
+      .replace(/\r\n/g, '\\n')  // Windows line endings
+      .replace(/\n/g, '\\n');    // Unix line endings
+
     // Parse once and extract both service account and project_id
-    const parsed: Record<string, unknown> = JSON.parse(serviceAccountJson);
+    const parsed: Record<string, unknown> = JSON.parse(normalizedJson);
     if (typeof parsed.project_id === 'string') {
       cachedProjectId = parsed.project_id;
     }
