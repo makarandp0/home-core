@@ -7,7 +7,7 @@ import { ErrorDisplay } from '../components/ErrorDisplay';
 import { DropZone } from '../components/DropZone';
 import { ImageCropModal } from '../components/ImageCropModal';
 import { useSettings, useFileUpload } from '../hooks';
-import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2, ArrowRight, AlertCircle, XCircle } from 'lucide-react';
 import { DocumentUploadDataSchema } from '@home/types';
 import { api, getErrorMessage } from '@/lib/api';
 
@@ -115,24 +115,73 @@ export function UploadPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Success State - All uploads complete */}
+          {/* Upload Complete State */}
           {uploadComplete && allFilesDone ? (
             <div className="space-y-4">
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-green-200 bg-green-50 p-8 dark:border-green-900 dark:bg-green-950/30">
-                <CheckCircle2 className="mb-3 h-12 w-12 text-green-600 dark:text-green-500" />
-                <h3 className="text-lg font-medium text-green-900 dark:text-green-100">
-                  Upload complete!
-                </h3>
-                <p className="mt-1 text-sm text-green-700 dark:text-green-400">
-                  {uploadStats.success} document{uploadStats.success !== 1 ? 's' : ''} uploaded
-                  successfully
-                  {uploadStats.failed > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      , {uploadStats.failed} failed
-                    </span>
-                  )}
-                </p>
-              </div>
+              {/* All succeeded */}
+              {uploadStats.success > 0 && uploadStats.failed === 0 && (
+                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-green-200 bg-green-50 p-8 dark:border-green-900 dark:bg-green-950/30">
+                  <CheckCircle2 className="mb-3 h-12 w-12 text-green-600 dark:text-green-500" />
+                  <h3 className="text-lg font-medium text-green-900 dark:text-green-100">
+                    Upload complete!
+                  </h3>
+                  <p className="mt-1 text-sm text-green-700 dark:text-green-400">
+                    {uploadStats.success} document{uploadStats.success !== 1 ? 's' : ''} uploaded
+                    successfully
+                  </p>
+                </div>
+              )}
+
+              {/* Partial success */}
+              {uploadStats.success > 0 && uploadStats.failed > 0 && (
+                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-amber-200 bg-amber-50 p-8 dark:border-amber-900 dark:bg-amber-950/30">
+                  <AlertCircle className="mb-3 h-12 w-12 text-amber-600 dark:text-amber-500" />
+                  <h3 className="text-lg font-medium text-amber-900 dark:text-amber-100">
+                    Upload partially complete
+                  </h3>
+                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+                    {uploadStats.success} document{uploadStats.success !== 1 ? 's' : ''} uploaded,{' '}
+                    {uploadStats.failed} failed
+                  </p>
+                </div>
+              )}
+
+              {/* All failed */}
+              {uploadStats.success === 0 && uploadStats.failed > 0 && (
+                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-red-200 bg-red-50 p-8 dark:border-red-900 dark:bg-red-950/30">
+                  <XCircle className="mb-3 h-12 w-12 text-red-600 dark:text-red-500" />
+                  <h3 className="text-lg font-medium text-red-900 dark:text-red-100">
+                    Upload failed
+                  </h3>
+                  <p className="mt-1 text-sm text-red-700 dark:text-red-400">
+                    {uploadStats.failed} document{uploadStats.failed !== 1 ? 's' : ''} failed to
+                    upload
+                  </p>
+                </div>
+              )}
+
+              {/* Show failed files with their errors */}
+              {uploadStats.failed > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Failed uploads:</p>
+                  {fileUpload.files
+                    .filter((f) => f.status === 'error')
+                    .map((f) => (
+                      <div
+                        key={f.id}
+                        className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900 dark:bg-red-950/20"
+                      >
+                        <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{f.file.name}</p>
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            {f.error || 'Unknown error'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
 
               {/* Link to view recently uploaded documents */}
               {uploadStats.success > 0 && (
