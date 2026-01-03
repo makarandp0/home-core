@@ -1,6 +1,7 @@
 """FastAPI document processing service."""
 
 import base64
+import logging
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -35,6 +36,8 @@ from .processors import (
     ocr_pdf_pages,
     pdf_first_page_thumbnail,
 )
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Document Processor",
@@ -80,10 +83,14 @@ async def process_document_bytes(
         image_confidences: list[float] = []
 
         for img_bytes in embedded_images:
-            img_text, confidence = ocr_image(img_bytes)
-            if img_text.strip():
-                image_texts.append(img_text)
-                image_confidences.append(confidence)
+            try:
+                img_text, confidence = ocr_image(img_bytes)
+                if img_text.strip():
+                    image_texts.append(img_text)
+                    image_confidences.append(confidence)
+            except Exception as e:
+                logger.warning("Failed to OCR embedded image: %s", e)
+                continue
 
         # Combine native text with OCR'd image text
         if image_texts:
