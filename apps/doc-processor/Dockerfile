@@ -64,6 +64,8 @@ COPY --from=builder /root/.EasyOCR /root/.EasyOCR
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PORT=8000
+# Suppress torchvision CUDA warning (we run on CPU intentionally)
+ENV PYTHONWARNINGS="ignore:Failed to load image Python extension:UserWarning"
 
 EXPOSE 8000
 
