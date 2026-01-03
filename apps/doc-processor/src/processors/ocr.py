@@ -83,7 +83,18 @@ def ocr_image(image_bytes: bytes, resize: bool = True) -> tuple[str, float]:
 
     # Run OCR with data output to get confidence scores
     ocr_start = time.time()
-    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    try:
+        data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    except pytesseract.TesseractNotFoundError as exc:
+        logger.error("[OCR] Tesseract executable not found")
+        raise RuntimeError(
+            "Tesseract OCR not found. Ensure tesseract-ocr is installed."
+        ) from exc
+    except pytesseract.TesseractError as exc:
+        logger.error("[OCR] Tesseract failed: %s", exc)
+        raise RuntimeError(f"Tesseract OCR failed: {exc}") from exc
+    finally:
+        img.close()
     ocr_duration = time.time() - ocr_start
     logger.info("[OCR] Tesseract completed in %.2fs", ocr_duration)
 

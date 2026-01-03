@@ -7,6 +7,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from .config import (
+    LOG_LEVEL,
     MAX_FILE_SIZE,
     MAX_IMAGES_TO_OCR,
     MIN_IMAGE_SIZE_FOR_OCR,
@@ -43,9 +44,9 @@ from .processors import (
     pdf_first_page_thumbnail,
 )
 
-# Configure logging to show INFO level messages
+# Configure logging (level configurable via LOG_LEVEL env var, default INFO)
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
