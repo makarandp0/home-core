@@ -1,18 +1,15 @@
 """Tests for document processors."""
 
-import os
 from pathlib import Path
 
-import pytest
-
-from src.processors.pdf import (
-    extract_pdf_text,
-    extract_pdf_images,
-    extract_pdf_text_and_images,
-    pdf_to_images,
-    pdf_first_page_thumbnail,
-)
 from src.processors.ocr import ocr_image
+from src.processors.pdf import (
+    extract_pdf_images,
+    extract_pdf_text,
+    extract_pdf_text_and_images,
+    pdf_first_page_thumbnail,
+    pdf_to_images,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
