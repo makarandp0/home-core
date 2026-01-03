@@ -53,6 +53,36 @@ def pdf_to_images(file_bytes: bytes, dpi: int = 200) -> list[bytes]:
     return images
 
 
+def extract_pdf_images(file_bytes: bytes) -> list[bytes]:
+    """
+    Extract embedded images from a PDF file.
+
+    Args:
+        file_bytes: Raw PDF file bytes
+
+    Returns:
+        List of image bytes (PNG format) for each embedded image
+    """
+    doc = fitz.open(stream=BytesIO(file_bytes), filetype="pdf")
+    images: list[bytes] = []
+
+    for page in doc:
+        image_list = page.get_images(full=True)
+
+        for img_info in image_list:
+            xref = img_info[0]
+            try:
+                base_image = doc.extract_image(xref)
+                if base_image:
+                    images.append(base_image["image"])
+            except Exception:
+                # Skip images that can't be extracted
+                continue
+
+    doc.close()
+    return images
+
+
 def pdf_first_page_thumbnail(file_bytes: bytes, max_size: int = 150) -> tuple[bytes, int, int]:
     """
     Generate a thumbnail from the first page of a PDF.
