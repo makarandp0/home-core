@@ -12,3 +12,9 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # OCR configuration
 OCR_LANGUAGES = ["en"]  # English only for now
+
+# Image OCR optimization settings
+MAX_IMAGES_TO_OCR = 2  # Maximum number of embedded images to OCR
+MIN_IMAGE_SIZE_FOR_OCR = 10000  # Minimum image size in bytes to consider for OCR
+OCR_IMAGE_MAX_DIMENSION = 1500  # Resize images to this max width/height before OCR
+NATIVE_TEXT_THRESHOLD = 20  # Skip image OCR if native text has more chars than this

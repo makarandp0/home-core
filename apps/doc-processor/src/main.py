@@ -6,7 +6,13 @@ import logging
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
-from .config import MAX_FILE_SIZE, VERSION
+from .config import (
+    MAX_FILE_SIZE,
+    MAX_IMAGES_TO_OCR,
+    MIN_IMAGE_SIZE_FOR_OCR,
+    NATIVE_TEXT_THRESHOLD,
+    VERSION,
+)
 from .models import (
     DocumentData,
     FaceCacheClearResult,
@@ -77,12 +83,41 @@ async def process_document_bytes(
     if is_pdf(filename):
         # Extract native PDF text and embedded images in a single pass
         native_text, page_count, embedded_images = extract_pdf_text_and_images(file_bytes)
+        native_text_stripped = native_text.strip()
 
-        # OCR embedded images
+        # Skip image OCR if we have meaningful native text
+        if len(native_text_stripped) > NATIVE_TEXT_THRESHOLD:
+            logger.info(
+                "Skipping image OCR: native text (%d chars) exceeds threshold (%d)",
+                len(native_text_stripped),
+                NATIVE_TEXT_THRESHOLD,
+            )
+            return DocumentData(
+                text=native_text,
+                page_count=page_count,
+                method="native",
+                confidence=None,
+            )
+
+        # Filter images: skip small images (likely decorative)
+        images_to_ocr = [
+            img for img in embedded_images if len(img) >= MIN_IMAGE_SIZE_FOR_OCR
+        ]
+
+        # Limit number of images to OCR for performance
+        if len(images_to_ocr) > MAX_IMAGES_TO_OCR:
+            logger.info(
+                "Limiting OCR to %d images (found %d)",
+                MAX_IMAGES_TO_OCR,
+                len(images_to_ocr),
+            )
+            images_to_ocr = images_to_ocr[:MAX_IMAGES_TO_OCR]
+
+        # OCR filtered images
         image_texts: list[str] = []
         image_confidences: list[float] = []
 
-        for img_bytes in embedded_images:
+        for img_bytes in images_to_ocr:
             try:
                 img_text, confidence = ocr_image(img_bytes)
                 if img_text.strip():
@@ -94,7 +129,7 @@ async def process_document_bytes(
 
         # Combine native text with OCR'd image text
         if image_texts:
-            combined_text = native_text.strip()
+            combined_text = native_text_stripped
             if combined_text:
                 combined_text += "\n\n--- Text from embedded images ---\n\n"
             combined_text += "\n\n".join(image_texts)
@@ -108,7 +143,7 @@ async def process_document_bytes(
             )
 
         # No embedded images with text - check if we have native text
-        if native_text.strip():
+        if native_text_stripped:
             return DocumentData(
                 text=native_text,
                 page_count=page_count,
