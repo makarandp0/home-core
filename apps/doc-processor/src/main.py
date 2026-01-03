@@ -2,6 +2,7 @@
 
 import base64
 import logging
+import time
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -39,7 +40,6 @@ from .processors import (
     face_get_model_info,
     face_load_model,
     ocr_image,
-    ocr_pdf_pages,
     pdf_first_page_thumbnail,
 )
 
@@ -81,9 +81,20 @@ async def process_document_bytes(
         return {"error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)}MB"}
 
     if is_pdf(filename):
+        start_time = time.time()
+
         # Extract native PDF text and embedded images in a single pass
         native_text, page_count, embedded_images = extract_pdf_text_and_images(file_bytes)
         native_text_stripped = native_text.strip()
+
+        extract_time = time.time() - start_time
+        logger.info(
+            "PDF extraction: %d pages, %d chars native text, %d embedded images (%.2fs)",
+            page_count,
+            len(native_text_stripped),
+            len(embedded_images),
+            extract_time,
+        )
 
         # Skip image OCR if we have meaningful native text
         if len(native_text_stripped) > NATIVE_TEXT_THRESHOLD:
@@ -104,6 +115,13 @@ async def process_document_bytes(
             img for img in embedded_images if len(img) >= MIN_IMAGE_SIZE_FOR_OCR
         ]
 
+        logger.info(
+            "Images for OCR: %d (filtered from %d, min size %d bytes)",
+            len(images_to_ocr),
+            len(embedded_images),
+            MIN_IMAGE_SIZE_FOR_OCR,
+        )
+
         # Limit number of images to OCR for performance
         if len(images_to_ocr) > MAX_IMAGES_TO_OCR:
             logger.info(
@@ -117,14 +135,24 @@ async def process_document_bytes(
         image_texts: list[str] = []
         image_confidences: list[float] = []
 
-        for img_bytes in images_to_ocr:
+        for i, img_bytes in enumerate(images_to_ocr):
             try:
+                ocr_start = time.time()
                 img_text, confidence = ocr_image(img_bytes)
+                ocr_time = time.time() - ocr_start
+                logger.info(
+                    "OCR image %d/%d: %d bytes, %d chars extracted (%.2fs)",
+                    i + 1,
+                    len(images_to_ocr),
+                    len(img_bytes),
+                    len(img_text),
+                    ocr_time,
+                )
                 if img_text.strip():
                     image_texts.append(img_text)
                     image_confidences.append(confidence)
             except Exception as e:
-                logger.warning("Failed to OCR embedded image: %s", e)
+                logger.warning("Failed to OCR embedded image %d: %s", i + 1, e)
                 continue
 
         # Combine native text with OCR'd image text
@@ -135,6 +163,9 @@ async def process_document_bytes(
             combined_text += "\n\n".join(image_texts)
             avg_confidence = sum(image_confidences) / len(image_confidences)
 
+            total_time = time.time() - start_time
+            logger.info("PDF processing complete: native+ocr method (%.2fs total)", total_time)
+
             return DocumentData(
                 text=combined_text,
                 page_count=page_count,
@@ -142,22 +173,20 @@ async def process_document_bytes(
                 confidence=avg_confidence,
             )
 
-        # No embedded images with text - check if we have native text
-        if native_text_stripped:
-            return DocumentData(
-                text=native_text,
-                page_count=page_count,
-                method="native",
-                confidence=None,
-            )
+        # No embedded images with text - return native text (even if minimal)
+        # NOTE: Full page OCR disabled due to performance issues on CPU
+        total_time = time.time() - start_time
+        logger.info(
+            "PDF processing complete: native method, %d chars (%.2fs total)",
+            len(native_text_stripped),
+            total_time,
+        )
 
-        # Fall back to full page OCR for scanned PDFs
-        text, page_count, confidence = ocr_pdf_pages(file_bytes)
         return DocumentData(
-            text=text,
+            text=native_text,
             page_count=page_count,
-            method="ocr",
-            confidence=confidence,
+            method="native",
+            confidence=None,
         )
 
     elif is_image(filename):
