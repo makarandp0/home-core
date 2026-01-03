@@ -8,11 +8,9 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "python-multipart>=0.0.12",
     "pymupdf>=1.24.0",
-    "easyocr>=1.7.0",
+    "pytesseract>=0.3.10",
     "pillow>=10.0.0",
     "pydantic>=2.0.0",
-    "torch>=2.0.0,<2.2.0",  # 2.2+ dropped macOS x86_64 support
-    "numpy<2",  # torch 2.1.x requires numpy 1.x
     # Face recognition
     "insightface>=0.7.3",
     "onnxruntime>=1.19.0",
@@ -26,16 +24,6 @@ dev = [
     "ruff>=0.6.0",
     "pyright>=1.1.0",
 ]
-
-# Use CPU-only PyTorch (saves ~1.5GB in Docker image)
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }
-torchvision = { index = "pytorch-cpu" }
 
 [tool.ruff]
 target-version = "py311"

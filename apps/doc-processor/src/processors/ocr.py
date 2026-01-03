@@ -1,23 +1,12 @@
-"""OCR processing using EasyOCR."""
+"""OCR processing using Tesseract."""
 
 from io import BytesIO
 
-import easyocr
+import pytesseract
 from PIL import Image
 
-from ..config import OCR_IMAGE_MAX_DIMENSION, OCR_LANGUAGES
+from ..config import OCR_IMAGE_MAX_DIMENSION
 from .pdf import pdf_to_images
-
-# Lazy-loaded OCR reader (downloads model on first use)
-_reader: easyocr.Reader | None = None
-
-
-def _get_reader() -> easyocr.Reader:
-    """Get or create the OCR reader instance."""
-    global _reader
-    if _reader is None:
-        _reader = easyocr.Reader(OCR_LANGUAGES, gpu=False)
-    return _reader
 
 
 def resize_image_for_ocr(image_bytes: bytes, max_dimension: int | None = None) -> bytes:
@@ -64,34 +53,38 @@ def resize_image_for_ocr(image_bytes: bytes, max_dimension: int | None = None) -
 
 def ocr_image(image_bytes: bytes, resize: bool = True) -> tuple[str, float]:
     """
-    Extract text from an image using OCR.
+    Extract text from an image using Tesseract OCR.
 
     Args:
         image_bytes: Raw image file bytes (PNG, JPEG, etc.)
         resize: Whether to resize large images before OCR (improves speed)
 
     Returns:
-        Tuple of (extracted_text, average_confidence)
+        Tuple of (extracted_text, confidence)
+        Note: Tesseract confidence is estimated from word-level data
     """
-    reader = _get_reader()
-
     # Resize large images to speed up OCR
     if resize:
         image_bytes = resize_image_for_ocr(image_bytes)
 
-    # EasyOCR accepts bytes directly
-    # Run OCR - returns list of (bbox, text, confidence)
-    results = reader.readtext(image_bytes)
+    # Open image for Tesseract
+    img = Image.open(BytesIO(image_bytes))
 
-    if not results:
-        return "", 0.0
+    # Run OCR with data output to get confidence scores
+    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
 
     texts: list[str] = []
     confidences: list[float] = []
 
-    for _bbox, text, confidence in results:
-        texts.append(text)
-        confidences.append(confidence)
+    for i, text in enumerate(data["text"]):
+        # Filter out empty strings and low-confidence results
+        conf = data["conf"][i]
+        if text.strip() and conf != -1:  # -1 means no confidence available
+            texts.append(text)
+            confidences.append(float(conf) / 100.0)  # Convert to 0-1 range
+
+    if not texts:
+        return "", 0.0
 
     combined_text = " ".join(texts)
     avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
