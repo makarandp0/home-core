@@ -1,8 +1,11 @@
 """PDF text extraction using PyMuPDF."""
 
+import logging
 from io import BytesIO
 
 import fitz  # PyMuPDF
+
+logger = logging.getLogger(__name__)
 
 
 def extract_pdf_text(file_bytes: bytes) -> tuple[str, int]:
@@ -61,7 +64,7 @@ def extract_pdf_images(file_bytes: bytes) -> list[bytes]:
         file_bytes: Raw PDF file bytes
 
     Returns:
-        List of image bytes (PNG format) for each embedded image
+        List of image bytes for each embedded image (in original format as stored in the PDF)
     """
     doc = fitz.open(stream=BytesIO(file_bytes), filetype="pdf")
     images: list[bytes] = []
@@ -75,12 +78,49 @@ def extract_pdf_images(file_bytes: bytes) -> list[bytes]:
                 base_image = doc.extract_image(xref)
                 if base_image:
                     images.append(base_image["image"])
-            except Exception:
-                # Skip images that can't be extracted
+            except (RuntimeError, ValueError, KeyError) as e:
+                logger.debug("Failed to extract image xref=%s: %s", xref, e)
                 continue
 
     doc.close()
     return images
+
+
+def extract_pdf_text_and_images(file_bytes: bytes) -> tuple[str, int, list[bytes]]:
+    """
+    Extract both native text and embedded images from a PDF in a single pass.
+
+    Args:
+        file_bytes: Raw PDF file bytes
+
+    Returns:
+        Tuple of (extracted_text, page_count, list of image bytes)
+    """
+    doc = fitz.open(stream=BytesIO(file_bytes), filetype="pdf")
+    text_parts: list[str] = []
+    images: list[bytes] = []
+    page_count = doc.page_count
+
+    for page in doc:
+        # Extract text
+        page_text = page.get_text()
+        if page_text.strip():
+            text_parts.append(page_text)
+
+        # Extract embedded images
+        image_list = page.get_images(full=True)
+        for img_info in image_list:
+            xref = img_info[0]
+            try:
+                base_image = doc.extract_image(xref)
+                if base_image:
+                    images.append(base_image["image"])
+            except (RuntimeError, ValueError, KeyError) as e:
+                logger.debug("Failed to extract image xref=%s: %s", xref, e)
+                continue
+
+    doc.close()
+    return "\n\n".join(text_parts), page_count, images
 
 
 def pdf_first_page_thumbnail(file_bytes: bytes, max_size: int = 150) -> tuple[bytes, int, int]:

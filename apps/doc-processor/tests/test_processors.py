@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from src.processors.pdf import extract_pdf_text, pdf_to_images, pdf_first_page_thumbnail
+from src.processors.pdf import (
+    extract_pdf_text,
+    extract_pdf_images,
+    extract_pdf_text_and_images,
+    pdf_to_images,
+    pdf_first_page_thumbnail,
+)
 from src.processors.ocr import ocr_image
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -89,6 +95,44 @@ class TestPdfProcessor:
         # But if we had a truly empty PDF with 0 pages, it would raise ValueError
         image_bytes, width, height = pdf_first_page_thumbnail(pdf_bytes)
         assert isinstance(image_bytes, bytes)
+
+    def test_extract_pdf_images_no_images(self):
+        """Test extracting images from a PDF with no embedded images."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        images = extract_pdf_images(pdf_bytes)
+
+        # sample.pdf has no embedded images, should return empty list
+        assert isinstance(images, list)
+        assert len(images) == 0
+
+    def test_extract_pdf_text_and_images(self):
+        """Test combined text and image extraction."""
+        pdf_path = FIXTURES_DIR / "sample.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        text, page_count, images = extract_pdf_text_and_images(pdf_bytes)
+
+        assert page_count == 1
+        assert "Test Document" in text
+        assert isinstance(images, list)
+        # sample.pdf has no embedded images
+        assert len(images) == 0
+
+    def test_extract_pdf_text_and_images_empty_pdf(self):
+        """Test combined extraction on empty PDF."""
+        pdf_path = FIXTURES_DIR / "empty.pdf"
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        text, page_count, images = extract_pdf_text_and_images(pdf_bytes)
+
+        assert page_count == 1
+        assert text.strip() == ""
+        assert isinstance(images, list)
 
 
 class TestOcrProcessor:

@@ -24,8 +24,7 @@ from .models import (
     ThumbnailResult,
 )
 from .processors import (
-    extract_pdf_images,
-    extract_pdf_text,
+    extract_pdf_text_and_images,
     face_clear_cache,
     face_compare,
     face_embed,
@@ -73,11 +72,10 @@ async def process_document_bytes(
         return {"error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)}MB"}
 
     if is_pdf(filename):
-        # Extract native PDF text
-        native_text, page_count = extract_pdf_text(file_bytes)
+        # Extract native PDF text and embedded images in a single pass
+        native_text, page_count, embedded_images = extract_pdf_text_and_images(file_bytes)
 
-        # Extract and OCR embedded images
-        embedded_images = extract_pdf_images(file_bytes)
+        # OCR embedded images
         image_texts: list[str] = []
         image_confidences: list[float] = []
 
