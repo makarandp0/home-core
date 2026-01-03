@@ -390,10 +390,13 @@ export const documentsRoutes: FastifyPluginAsync = async (fastify) => {
         return { ok: false, error: `Anthropic API error: ${err.message}` };
       }
 
-      // Check if it's a connection error
+      // Check if it's a connection error to doc-processor
       if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
         reply.code(503);
-        return { ok: false, error: 'Doc processor service unavailable' };
+        return {
+          ok: false,
+          error: `Doc processor service is not running at ${DOC_PROCESSOR_URL}. Ensure the doc-processor container is started.`,
+        };
       }
 
       reply.code(500);
