@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { VisionProviderSchema, DocumentDataSchema } from './vision.js';
 
 // Extraction method used
-export const ExtractionMethodSchema = z.enum(['native', 'ocr', 'llm']);
+export const ExtractionMethodSchema = z.enum(['native', 'ocr', 'native+ocr', 'llm']);
 export type ExtractionMethod = z.infer<typeof ExtractionMethodSchema>;
 
 // JSONB metadata stored with documents (for client-side filtering)

@@ -1,6 +1,7 @@
 """FastAPI document processing service."""
 
 import base64
+import logging
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -24,7 +25,7 @@ from .models import (
     ThumbnailResult,
 )
 from .processors import (
-    extract_pdf_text,
+    extract_pdf_text_and_images,
     face_clear_cache,
     face_compare,
     face_embed,
@@ -35,6 +36,8 @@ from .processors import (
     ocr_pdf_pages,
     pdf_first_page_thumbnail,
 )
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Document Processor",
@@ -72,18 +75,48 @@ async def process_document_bytes(
         return {"error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)}MB"}
 
     if is_pdf(filename):
-        # Try native PDF text extraction first
-        text, page_count = extract_pdf_text(file_bytes)
+        # Extract native PDF text and embedded images in a single pass
+        native_text, page_count, embedded_images = extract_pdf_text_and_images(file_bytes)
 
-        if text.strip():
+        # OCR embedded images
+        image_texts: list[str] = []
+        image_confidences: list[float] = []
+
+        for img_bytes in embedded_images:
+            try:
+                img_text, confidence = ocr_image(img_bytes)
+                if img_text.strip():
+                    image_texts.append(img_text)
+                    image_confidences.append(confidence)
+            except Exception as e:
+                logger.warning("Failed to OCR embedded image: %s", e)
+                continue
+
+        # Combine native text with OCR'd image text
+        if image_texts:
+            combined_text = native_text.strip()
+            if combined_text:
+                combined_text += "\n\n--- Text from embedded images ---\n\n"
+            combined_text += "\n\n".join(image_texts)
+            avg_confidence = sum(image_confidences) / len(image_confidences)
+
             return DocumentData(
-                text=text,
+                text=combined_text,
+                page_count=page_count,
+                method="native+ocr",
+                confidence=avg_confidence,
+            )
+
+        # No embedded images with text - check if we have native text
+        if native_text.strip():
+            return DocumentData(
+                text=native_text,
                 page_count=page_count,
                 method="native",
                 confidence=None,
             )
 
-        # Fall back to OCR for scanned PDFs
+        # Fall back to full page OCR for scanned PDFs
         text, page_count, confidence = ocr_pdf_pages(file_bytes)
         return DocumentData(
             text=text,

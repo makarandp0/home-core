@@ -8,9 +8,9 @@ class DocumentData(BaseModel):
 
     text: str = Field(description="Extracted text content")
     page_count: int = Field(description="Number of pages processed")
-    method: Literal["native", "ocr"] = Field(description="Extraction method used")
+    method: Literal["native", "ocr", "native+ocr"] = Field(description="Extraction method used")
     confidence: float | None = Field(
-        default=None, description="OCR confidence score (0-1), only for OCR method"
+        default=None, description="OCR confidence score (0-1), for 'ocr' and 'native+ocr' methods"
     )
 
 

@@ -21,6 +21,7 @@
     "lint": "turbo run lint",
     "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm test",
     "test": "turbo run test",
+    "test:doc-processor": "docker compose build doc-processor && docker compose run --rm -v $(pwd)/apps/doc-processor/tests:/app/tests doc-processor sh -c 'uv pip install pytest httpx && pytest tests/ -v'",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "e2e:install": "playwright install --with-deps",

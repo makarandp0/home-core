@@ -109,7 +109,7 @@ interface PythonServiceResponse {
   data?: {
     text: string;
     page_count: number;
-    method: 'native' | 'ocr';
+    method: 'native' | 'ocr' | 'native+ocr';
     confidence?: number;
   };
   error?: string;
