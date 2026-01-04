@@ -23,8 +23,8 @@ import {
   type ThumbnailsRequest,
   type IdParams,
   type DocumentUpdateRequest,
-} from '@home/types';
-import { getDb, documents, desc, eq, inArray, and } from '@home/db';
+} from '@ohs/types';
+import { getDb, documents, desc, eq, inArray, and } from '@ohs/db';
 import {
   storeDocument,
   storeRawFile,
@@ -102,7 +102,7 @@ function isImageFile(filename: string): boolean {
   return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'].includes(ext);
 }
 
-const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
+const DOC_PROCESSOR_URL = process.env.OHS_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 
 interface PythonServiceResponse {
   ok: boolean;

@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/select';
 import { useSettings } from '../hooks';
 import { cn } from '@/lib/utils';
-import type { ProviderConfig, ProviderId } from '@home/types';
-import { ProviderIdSchema } from '@home/types';
+import type { ProviderConfig, ProviderId } from '@ohs/types';
+import { ProviderIdSchema } from '@ohs/types';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { OwnerAliasesCard } from '@/components/OwnerAliasesCard';
 

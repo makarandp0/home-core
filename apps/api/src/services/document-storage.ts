@@ -4,7 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
-import { getDb, documents, eq, and } from '@home/db';
+import { getDb, documents, eq, and } from '@ohs/db';
 import { parseDataUrl } from '../utils/data-url.js';
 import { sanitizeFilename } from '../utils/string-sanitize.js';
 

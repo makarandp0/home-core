@@ -25,7 +25,7 @@ async function main() {
       console.log('Running database migrations...');
       // Use migrate:up:prod in production (no dotenv wrapper needed since DATABASE_URL is already set)
       const script = process.env.NODE_ENV === 'production' ? 'migrate:up:prod' : 'migrate:up';
-      execSync(`pnpm --filter @home/db ${script}`, { stdio: 'inherit' });
+      execSync(`pnpm --filter @ohs/db ${script}`, { stdio: 'inherit' });
       console.log('Migrations complete');
     } catch (err) {
       console.error('Migration failed:', err);
@@ -94,7 +94,7 @@ async function main() {
     reply.code(404).send({ ok: false, error: 'Not Found' });
   });
 
-  const port = Number(process.env.HOME_API_PORT ?? process.env.PORT ?? 3001);
+  const port = Number(process.env.OHS_API_PORT ?? process.env.PORT ?? 3001);
   const address = await server.listen({ port, host: '0.0.0.0' });
   console.log(`API listening on ${address}`);
 }

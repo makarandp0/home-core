@@ -1,4 +1,4 @@
-import type { DocumentData } from '@home/types';
+import type { DocumentData } from '@ohs/types';
 
 interface DocumentDataDisplayProps {
   document: DocumentData;

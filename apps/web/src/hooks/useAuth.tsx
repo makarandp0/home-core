@@ -17,7 +17,7 @@ import {
   type FirebaseConfig,
 } from '../lib/firebase';
 import { api } from '../lib/api';
-import { HealthSchema } from '@home/types';
+import { HealthSchema } from '@ohs/types';
 
 /**
  * User type for the auth context.

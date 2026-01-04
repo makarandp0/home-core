@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { makAssert } from '@home/utils';
+import { makAssert } from '@ohs/utils';
 
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB (under Anthropic's 5MB limit)
 

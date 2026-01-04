@@ -1,6 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { HealthSchema, type DocProcessorStatus } from '@home/types';
+import { HealthSchema, type DocProcessorStatus } from '@ohs/types';
 import { FRONTEND_VERSION } from '../version';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ interface PrInfo {
   url: string;
 }
 
-const GITHUB_REPO = 'makarandp0/home-core';
+const GITHUB_REPO = 'makarandp0/ohs';
 
 function CommitDisplay({ commit }: { commit: string }) {
   const [prInfo, setPrInfo] = React.useState<PrInfo | null>(null);

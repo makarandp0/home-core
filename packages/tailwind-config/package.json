@@ -1,5 +1,5 @@
 {
-  "name": "@home/tailwind-config",
+  "name": "@ohs/tailwind-config",
   "version": "0.1.0",
   "private": true,
   "main": "tailwind.config.js",

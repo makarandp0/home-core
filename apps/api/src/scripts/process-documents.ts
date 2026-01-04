@@ -13,7 +13,7 @@
  *
  * Options:
  *   --provider <name>   Provider to use: gemini, openai, anthropic (default: gemini)
- *   --api-url <url>     API base URL (default: uses HOME_API_PORT env var)
+ *   --api-url <url>     API base URL (default: uses OHS_API_PORT env var)
  *   --clear-cache       Clear LLM cache before processing (requires DATABASE_URL)
  *   --dry-run           Show what would be processed without actually processing
  *
@@ -84,7 +84,7 @@ NOTE: The --clear-cache option requires direct database access (DATABASE_URL)
 
 Options:
   --provider <name>   Provider to use: gemini, openai, anthropic (default: gemini)
-  --api-url <url>     API base URL (default: uses HOME_API_PORT env var)
+  --api-url <url>     API base URL (default: uses OHS_API_PORT env var)
   --clear-cache       Clear LLM cache before processing (requires DATABASE_URL)
   --dry-run           Show what would be processed without actually processing
   -h, --help          Show this help message
@@ -97,7 +97,7 @@ Examples:
   }
 
   const directory = args[0];
-  const apiPort = process.env.HOME_API_PORT ?? '3001';
+  const apiPort = process.env.OHS_API_PORT ?? '3001';
   const options: ProcessOptions = {
     provider: 'gemini',
     apiUrl: `http://localhost:${apiPort}`,
@@ -204,7 +204,7 @@ async function clearCache(_apiUrl: string): Promise<boolean> {
   // 1. Future support of an API-based cache clear endpoint
   // 2. Consistency with other functions that use the apiUrl option
   // This means --clear-cache requires DATABASE_URL to be set in addition to the API server.
-  const { getDb, llmCache } = await import('@home/db');
+  const { getDb, llmCache } = await import('@ohs/db');
   const db = getDb();
   await db.delete(llmCache);
   return true;

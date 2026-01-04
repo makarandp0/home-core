@@ -32,7 +32,7 @@ if docker compose ps postgres 2>/dev/null | grep -q "running"; then
   info "PostgreSQL running"
 else
   EXISTING_PG=$(docker ps --filter "publish=5432" --format "{{.Names}}" 2>/dev/null)
-  if [[ -n "$EXISTING_PG" && "$EXISTING_PG" == *"home-core"*"postgres"* ]]; then
+  if [[ -n "$EXISTING_PG" && "$EXISTING_PG" == *"ohs"*"postgres"* ]]; then
     info "Reusing PostgreSQL ($EXISTING_PG)"
   elif [[ -n "$EXISTING_PG" ]]; then
     error "Port 5432 in use by $EXISTING_PG"
@@ -52,7 +52,7 @@ if docker compose ps doc-processor 2>/dev/null | grep -q "running"; then
   info "Doc-processor running"
 else
   EXISTING_DP=$(docker ps --filter "publish=8000" --format "{{.Names}}" 2>/dev/null)
-  if [[ -n "$EXISTING_DP" && "$EXISTING_DP" == *"home-core"*"doc-processor"* ]]; then
+  if [[ -n "$EXISTING_DP" && "$EXISTING_DP" == *"ohs"*"doc-processor"* ]]; then
     info "Reusing doc-processor ($EXISTING_DP)"
   elif [[ -n "$EXISTING_DP" ]]; then
     error "Port 8000 in use by $EXISTING_DP"
@@ -73,8 +73,8 @@ fi
 # Calculate ports from branch name
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 OFFSET=$(get_port_offset "$BRANCH")
-export HOME_WEB_PORT=$((5173 + OFFSET))
-export HOME_API_PORT=$((3001 + OFFSET))
+export OHS_WEB_PORT=$((5173 + OFFSET))
+export OHS_API_PORT=$((3001 + OFFSET))
 
 info "Branch '$BRANCH' → offset $OFFSET"
 
@@ -82,34 +82,34 @@ info "Branch '$BRANCH' → offset $OFFSET"
 LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "")
 
 echo ""
-echo "  Web:           http://localhost:$HOME_WEB_PORT"
+echo "  Web:           http://localhost:$OHS_WEB_PORT"
 if [[ -n "$LOCAL_IP" ]]; then
-  echo "  Web (network): http://$LOCAL_IP:$HOME_WEB_PORT"
+  echo "  Web (network): http://$LOCAL_IP:$OHS_WEB_PORT"
 fi
-echo "  API:           http://localhost:$HOME_API_PORT"
+echo "  API:           http://localhost:$OHS_API_PORT"
 echo "  Doc Processor: http://localhost:8000"
 echo ""
 
 # Show QR code for mobile testing if qrencode is available
 if [[ -n "$LOCAL_IP" ]] && command -v qrencode &> /dev/null; then
   echo "  Scan to open on mobile:"
-  qrencode -t ANSIUTF8 -m 2 "http://$LOCAL_IP:$HOME_WEB_PORT"
+  qrencode -t ANSIUTF8 -m 2 "http://$LOCAL_IP:$OHS_WEB_PORT"
   echo ""
 fi
 
 # Set additional env vars
-export HOME_DOC_PROCESSOR_URL="http://localhost:8000"
+export OHS_DOC_PROCESSOR_URL="http://localhost:8000"
 export COMMIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export VITE_COMMIT_SHA="$COMMIT_SHA"
 
 # Open browser after API is ready (background)
 # Use network address for mobile testing compatibility
 if [[ -n "$LOCAL_IP" ]]; then
-  WEB_URL="http://$LOCAL_IP:$HOME_WEB_PORT"
+  WEB_URL="http://$LOCAL_IP:$OHS_WEB_PORT"
 else
-  WEB_URL="http://localhost:$HOME_WEB_PORT"
+  WEB_URL="http://localhost:$OHS_WEB_PORT"
 fi
-API_URL="http://localhost:$HOME_API_PORT"
+API_URL="http://localhost:$OHS_API_PORT"
 (
   # Wait for API to be healthy (max 60 seconds)
   for i in {1..60}; do
@@ -128,4 +128,4 @@ API_URL="http://localhost:$HOME_API_PORT"
 ) &
 
 # Run dev for all packages except doc-processor (runs in Docker)
-exec pnpm turbo run dev --parallel --filter='!@home/doc-processor'
+exec pnpm turbo run dev --parallel --filter='!@ohs/doc-processor'

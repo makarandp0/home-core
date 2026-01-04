@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { useOwnerAliases } from '@/hooks';
 import { cn } from '@/lib/utils';
-import type { OwnerAlias } from '@home/types';
+import type { OwnerAlias } from '@ohs/types';
 import { Pencil, Trash2, Plus, ArrowRight } from 'lucide-react';
 
 type ModalMode = 'add' | 'edit' | null;

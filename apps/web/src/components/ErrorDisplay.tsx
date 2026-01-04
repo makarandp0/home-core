@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { type ApiError, normalizeApiError } from '@home/types';
+import { type ApiError, normalizeApiError } from '@ohs/types';
 
 interface ErrorDisplayProps {
   error: ApiError | null | undefined;

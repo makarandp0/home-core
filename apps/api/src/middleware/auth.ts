@@ -3,7 +3,7 @@
 
 import type { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { getFirebaseAuth, isAuthEnabled } from '../services/firebase-admin.js';
-import { getDb, users, eq } from '@home/db';
+import { getDb, users, eq } from '@ohs/db';
 
 // Fixed UUID for the default anonymous user (must match migration)
 export const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001';

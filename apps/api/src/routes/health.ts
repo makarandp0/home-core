@@ -8,13 +8,13 @@ import {
   HealthSchema,
   type Health,
   type DocProcessorStatus,
-} from '@home/types';
-import { getDb, sql } from '@home/db';
+} from '@ohs/types';
+import { getDb, sql } from '@ohs/db';
 import { createRouteBuilder } from '../utils/route-builder.js';
 import { isAuthEnabled, getFirebaseClientConfig } from '../services/firebase-admin.js';
 import { getDefaultUser } from '../middleware/auth.js';
 
-const DOC_PROCESSOR_URL = process.env.HOME_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
+const DOC_PROCESSOR_URL = process.env.OHS_DOC_PROCESSOR_URL ?? 'http://localhost:8000';
 const DOCUMENT_STORAGE_PATH = process.env.DOCUMENT_STORAGE_PATH || null;
 
 interface DocProcessorHealthResponse {

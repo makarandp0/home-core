@@ -1,5 +1,5 @@
 {
-  "name": "@home/db",
+  "name": "@ohs/db",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -34,7 +34,7 @@
     "tsx": "^4.19.1"
   },
   "devDependencies": {
-    "@home/tsconfig": "workspace:*",
+    "@ohs/tsconfig": "workspace:*",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.6.2"

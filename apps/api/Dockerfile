@@ -60,7 +60,7 @@ COPY --from=builder /app/packages/types/package.json ./packages/types/package.js
 COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
 
 # Install only production dependencies for the API workspace (resolves workspaces)
-RUN pnpm install --frozen-lockfile --prod --filter @home/api...
+RUN pnpm install --frozen-lockfile --prod --filter @ohs/api...
 
 # Copy built artifacts for API, its workspace deps, and Web (for static serving)
 COPY --from=builder /app/packages/types/dist ./packages/types/dist

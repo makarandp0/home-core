@@ -2,7 +2,7 @@ import os
 
 # Server configuration
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("HOME_DOC_PROCESSOR_PORT", os.getenv("PORT", "8000")))
+PORT = int(os.getenv("OHS_DOC_PROCESSOR_PORT", os.getenv("PORT", "8000")))
 
 # Logging configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()

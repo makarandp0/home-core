@@ -1,10 +1,10 @@
-# home-core
+# openHomeStorage
 
 A self-hosted document management platform. Deploy to your own infrastructure for full control over your data.
 
 ## Overview
 
-home-core is built for self-hosters who want to organize and search their important documents without relying on cloud services. Upload your PDFs and images, and the system will extract metadata using AI to make everything searchable.
+openHomeStorage is built for self-hosters who want to organize and search their important documents without relying on cloud services. Upload your PDFs and images, and the system will extract metadata using AI to make everything searchable.
 
 **Key features:**
 
@@ -28,8 +28,8 @@ The easiest way to deploy is with Docker Compose:
 
 ```bash
 # Clone the repo
-git clone https://github.com/makarandp0/home-core.git
-cd home-core
+git clone https://github.com/makarandp0/ohs.git
+cd ohs
 
 # Configure environment
 cp .env.example .env

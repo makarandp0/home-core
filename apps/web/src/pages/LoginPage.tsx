@@ -79,7 +79,7 @@ export function LoginPage() {
           <div className="flex justify-center mb-4">
             <HomeIcon className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">home-core</CardTitle>
+          <CardTitle className="text-2xl">openHomeStorage</CardTitle>
           <CardDescription>
             {isSignUp ? 'Create an account to get started' : 'Sign in to your account'}
           </CardDescription>
