@@ -33,7 +33,7 @@ export function LandingPage() {
         <img
           src="/ohsWithName.png"
           alt="openHome Storage"
-          className="h-20"
+          className="h-20 w-auto"
           width={395}
           height={424}
           loading="eager"
@@ -52,7 +52,7 @@ export function LandingPage() {
           src="/ohsNoName.png"
           alt=""
           aria-hidden="true"
-          className="h-64 mx-auto mb-6"
+          className="h-64 w-auto mx-auto mb-6"
           width={430}
           height={378}
           loading="eager"

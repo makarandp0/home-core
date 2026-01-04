@@ -80,7 +80,7 @@ export function LoginPage() {
             <img
               src="/ohsNoName.png"
               alt="openHome Storage"
-              className="h-20"
+              className="h-20 w-auto"
               width={430}
               height={378}
               loading="eager"

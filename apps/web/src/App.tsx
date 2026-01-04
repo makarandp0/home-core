@@ -63,7 +63,7 @@ export function App() {
                             <img
                               src="/ohsWithName.png"
                               alt="openHome Storage"
-                              className="h-16"
+                              className="h-16 w-auto"
                               width={395}
                               height={424}
                               loading="eager"
