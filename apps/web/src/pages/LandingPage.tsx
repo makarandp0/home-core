@@ -85,14 +85,7 @@ export function LandingPage() {
 
       {/* Footer */}
       <footer className="text-center py-8 text-sm text-muted-foreground">
-        <a
-          href="https://github.com/makarandp0/home-core"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-foreground transition-colors"
-        >
-          GitHub
-        </a>
+        <span>© {new Date().getFullYear()} home-core</span>
       </footer>
     </div>
   );
