@@ -16,7 +16,7 @@
           location.hostname.startsWith('192.168.') ||
           location.hostname.startsWith('10.') ||
           /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(location.hostname);
-        document.title = (isLocal ? '🏠 LOCAL | ' : '🚂 PROD | ') + document.title;
+        document.title = (isLocal ? 'LOCAL | ' : '') + document.title;
       })();
     </script>
     <script>
