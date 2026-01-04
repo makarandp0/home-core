@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
 export function LoginPage() {
@@ -77,16 +77,17 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img
-              src="/ohsNoName.png"
-              alt="openHome Storage"
-              className="h-20 w-auto"
-              width={430}
-              height={378}
-              loading="eager"
-            />
+            <Link to="/">
+              <img
+                src="/ohsWithName.png"
+                alt="openHome Storage"
+                className="h-24 w-auto"
+                width={395}
+                height={424}
+                loading="eager"
+              />
+            </Link>
           </div>
-          <CardTitle className="text-2xl">openHome Storage</CardTitle>
           <CardDescription>
             {isSignUp ? 'Create an account to get started' : 'Sign in to your account'}
           </CardDescription>
