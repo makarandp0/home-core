@@ -15,7 +15,6 @@ import { SettingsPage } from './pages/SettingsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { DocumentDetailPage } from './pages/DocumentDetailPage';
 import { LoginPage } from './pages/LoginPage';
-import { Home as HomeIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const branchColors = [
@@ -60,9 +59,8 @@ export function App() {
                     <div className="min-h-screen bg-background text-foreground p-6">
                       <div className="mb-4 flex items-center justify-between gap-4">
                         <h1 className="text-2xl font-semibold flex items-center gap-2">
-                          <Link to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                            <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
-                            <span>home-core web</span>
+                          <Link to="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
+                            <img src="/ohsWithName.png" alt="openHome Storage" className="h-16" />
                           </Link>
                           {typeof window !== 'undefined' && isLocalDevelopment(window.location.hostname) && (
                             <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>
