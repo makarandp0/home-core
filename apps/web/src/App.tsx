@@ -60,7 +60,14 @@ export function App() {
                       <div className="mb-4 flex items-center justify-between gap-4">
                         <h1 className="text-2xl font-semibold flex items-center gap-2">
                           <Link to="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
-                            <img src="/ohsWithName.png" alt="openHome Storage" className="h-16" />
+                            <img
+                              src="/ohsWithName.png"
+                              alt="openHome Storage"
+                              className="h-16"
+                              width={395}
+                              height={424}
+                              loading="eager"
+                            />
                           </Link>
                           {typeof window !== 'undefined' && isLocalDevelopment(window.location.hostname) && (
                             <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>

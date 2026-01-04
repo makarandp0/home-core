@@ -30,7 +30,14 @@ export function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="flex items-center justify-between p-6">
-        <img src="/ohsWithName.png" alt="openHome Storage" className="h-20" />
+        <img
+          src="/ohsWithName.png"
+          alt="openHome Storage"
+          className="h-20"
+          width={395}
+          height={424}
+          loading="eager"
+        />
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button asChild>
@@ -41,7 +48,15 @@ export function LandingPage() {
 
       {/* Hero */}
       <main className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <img src="/ohsNoName.png" alt="" aria-hidden="true" className="h-64 mx-auto mb-6" />
+        <img
+          src="/ohsNoName.png"
+          alt=""
+          aria-hidden="true"
+          className="h-64 mx-auto mb-6"
+          width={430}
+          height={378}
+          loading="eager"
+        />
         <h1 className="text-4xl font-bold mb-4">openHome Storage</h1>
         <p className="text-xl text-muted-foreground mb-8">
           A self-hosted document management platform with AI-powered metadata extraction.

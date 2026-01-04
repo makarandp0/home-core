@@ -77,7 +77,14 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/ohsNoName.png" alt="openHome Storage" className="h-20" />
+            <img
+              src="/ohsNoName.png"
+              alt="openHome Storage"
+              className="h-20"
+              width={430}
+              height={378}
+              loading="eager"
+            />
           </div>
           <CardTitle className="text-2xl">openHome Storage</CardTitle>
           <CardDescription>
