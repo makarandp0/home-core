@@ -1,12 +1,10 @@
 # Build stage
 FROM python:3.11-slim AS builder
 
-# Install system dependencies for PyMuPDF, Tesseract, and InsightFace
-# g++ is required to compile insightface's C++ extensions
+# Install system dependencies for PyMuPDF
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
-    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -35,7 +33,6 @@ ENV COMMIT_SHA=${COMMIT_SHA:-${RAILWAY_GIT_COMMIT_SHA}}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
-    build-essential \
     tesseract-ocr \
     tesseract-ocr-eng \
     curl \

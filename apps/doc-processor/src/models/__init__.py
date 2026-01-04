@@ -1,13 +1,5 @@
 from .schemas import (
     DocumentData,
-    FaceCacheClearResult,
-    FaceCacheInfo,
-    FaceCompareBody,
-    FaceCompareResult,
-    FaceEmbedResult,
-    FaceImageBody,
-    FaceLoadModelBody,
-    FaceLoadModelResult,
     HealthResponse,
     ProcessingResult,
     ProcessRequest,
@@ -18,14 +10,6 @@ from .schemas import (
 
 __all__ = [
     "DocumentData",
-    "FaceCacheClearResult",
-    "FaceCacheInfo",
-    "FaceCompareBody",
-    "FaceCompareResult",
-    "FaceEmbedResult",
-    "FaceImageBody",
-    "FaceLoadModelBody",
-    "FaceLoadModelResult",
     "HealthResponse",
     "ProcessingResult",
     "ProcessRequest",
