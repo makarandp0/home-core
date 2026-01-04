@@ -18,14 +18,14 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // If auth is disabled, redirect to home
+  // If auth is disabled, redirect to dashboard
   if (!authEnabled) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
-  // If already logged in, redirect to home
+  // If already logged in, redirect to dashboard
   if (user && !loading) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {

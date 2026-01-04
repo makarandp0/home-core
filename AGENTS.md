@@ -187,15 +187,21 @@ pnpm start:web  # Build and preview web on :4173
 
 ## Environment Variables
 
-How configuration is handled across deployment scenarios:
+See `.env.example` for the full list with comments. Key variables:
 
-| Variable | Dev (`pnpm dev`) | Self-host (docker-compose) | Railway |
-|----------|------------------|---------------------------|---------|
-| `DATABASE_URL` | Set in `.env` | Set in `.env` or use default | Auto-set by Railway Postgres |
-| `DOCUMENT_STORAGE_PATH` | Set in `.env` | Set in `.env` | Railway volume path |
-| `HOME_DOC_PROCESSOR_URL` | Auto-set to `http://localhost:8000` | Auto-set to `http://doc-processor:8000` | **Must configure** |
-| `HOME_API_PORT` | Branch-specific (3001 + offset) | Optional, default 3001 | Railway assigns |
-| `HOME_WEB_PORT` | Branch-specific (5173 + offset) | Optional, default 5173 | Railway assigns |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/home_dev` |
+| `DOCUMENT_STORAGE_PATH` | Directory for uploaded documents | `./documents` |
+| `AUTH_ENABLED` | Enable Firebase authentication | `false` (single-user mode) |
+| `HOME_DOC_PROCESSOR_URL` | Doc processor service URL | `http://localhost:8000` |
+| `HOME_API_PORT` | API server port | `3001` (+ branch offset in dev) |
+| `HOME_WEB_PORT` | Web server port | `5173` (+ branch offset in dev) |
+
+**Authentication** (only when `AUTH_ENABLED=true`):
+- `FIREBASE_SERVICE_ACCOUNT_BASE64` — Base64-encoded service account JSON
+- `FIREBASE_CLIENT_API_KEY` — Firebase client API key
+- `FIREBASE_CLIENT_APP_ID` — Firebase client app ID
 
 **Notes:**
 - **Dev**: PostgreSQL and doc-processor run in Docker on fixed ports (5432, 8000) shared across worktrees. Web and API get branch-specific ports.

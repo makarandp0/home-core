@@ -11,9 +11,9 @@ home-core is built for self-hosters who want to organize and search their import
 - Upload and store important documents (PDFs, images)
 - Browse and search your document library
 - AI-powered metadata extraction for better searchability
-- Bring your own API key (Claude or Gemini) — no data leaves your server except for AI processing
+- Bring your own API key (Claude, GPT, or Gemini) — no data leaves your server except for AI processing
 
-You supply your own Anthropic (Claude) or Google (Gemini) API key. Documents are processed locally, with only the content sent to the AI provider you choose for metadata extraction.
+You supply your own Anthropic (Claude), OpenAI (GPT), or Google (Gemini) API key. Documents are processed locally, with only the content sent to the AI provider you choose for metadata extraction.
 
 ## What's Included
 
@@ -28,7 +28,7 @@ The easiest way to deploy is with Docker Compose:
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/home-core.git
+git clone https://github.com/makarandp0/home-core.git
 cd home-core
 
 # Configure environment
@@ -37,11 +37,14 @@ cp .env.example .env
 
 Edit `.env` with your settings:
 
-| Variable                | Description                              |
-| ----------------------- | ---------------------------------------- |
-| `DOCUMENT_STORAGE_PATH` | Directory for storing uploaded documents |
+| Variable                | Description                              | Default |
+| ----------------------- | ---------------------------------------- | ------- |
+| `DOCUMENT_STORAGE_PATH` | Directory for storing uploaded documents | `./documents` |
+| `AUTH_ENABLED`          | Enable user authentication               | `false` |
 
-API keys for AI providers (Anthropic, OpenAI, Gemini) are configured via the Settings page in the UI.
+**Authentication** is optional. When `AUTH_ENABLED=false` (default), the app runs in single-user mode. To enable Firebase auth, set `AUTH_ENABLED=true` and configure the Firebase variables in `.env` (see `.env.example` for details).
+
+**AI provider keys** (Anthropic, OpenAI, Gemini) are configured via the Settings page in the UI after deployment.
 
 ```bash
 # Run all services
@@ -83,9 +86,9 @@ Database migrations run automatically on startup.
 | Issue                      | Solution                                                      |
 | -------------------------- | ------------------------------------------------------------- |
 | Port already in use        | Change port in docker-compose.yml or stop conflicting service |
-| API keys not working       | Check `.env` format at repo root, no quotes needed            |
 | Database connection failed | Ensure PostgreSQL is running and `DATABASE_URL` is correct    |
 | Doc processor timeout      | Large files may need increased timeout or splitting           |
+| AI extraction not working  | Check API key configuration in Settings page                  |
 
 ## Contributing
 
