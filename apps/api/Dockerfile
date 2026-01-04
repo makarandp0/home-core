@@ -56,12 +56,14 @@ COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 # Include all workspace package.json files so pnpm can resolve workspace members
+# Required for pnpm filter to work (pnpm-workspace.yaml uses apps/* and packages/*)
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
 COPY --from=builder /app/packages/utils/package.json ./packages/utils/package.json
 COPY --from=builder /app/packages/tsconfig/package.json ./packages/tsconfig/package.json
 COPY --from=builder /app/packages/tailwind-config/package.json ./packages/tailwind-config/package.json
 COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/apps/doc-processor/package.json ./apps/doc-processor/package.json
 
 # Install only production dependencies for the API workspace (resolves workspaces)
 RUN pnpm install --frozen-lockfile --prod --filter @ohs/api...
