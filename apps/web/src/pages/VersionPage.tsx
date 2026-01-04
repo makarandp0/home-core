@@ -1,9 +1,8 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { HealthSchema, LoadFaceModelResponseSchema, type DocProcessorStatus } from '@home/types';
+import { HealthSchema, type DocProcessorStatus } from '@home/types';
 import { FRONTEND_VERSION } from '../version';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 
@@ -15,7 +14,7 @@ interface PrInfo {
 
 const GITHUB_REPO = 'makarandp0/home-core';
 
-function CommitLink({ commit, label }: { commit: string; label: string }) {
+function CommitDisplay({ commit }: { commit: string }) {
   const [prInfo, setPrInfo] = React.useState<PrInfo | null>(null);
   const [loading, setLoading] = React.useState(true);
   const isValidCommit = commit && commit !== 'unknown' && commit !== 'dev' && commit.length >= 7;
@@ -58,41 +57,49 @@ function CommitLink({ commit, label }: { commit: string; label: string }) {
     fetchPrInfo();
   }, [commit, isValidCommit]);
 
+  if (!isValidCommit) {
+    return <span className="font-mono text-xs text-muted-foreground">{shortCommit}</span>;
+  }
+
+  if (loading) {
+    return <span className="font-mono text-xs text-muted-foreground">{shortCommit}</span>;
+  }
+
+  if (prInfo) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-xs text-muted-foreground" title={prInfo.title}>
+          {prInfo.title.length > 30 ? `${prInfo.title.slice(0, 30)}...` : prInfo.title}
+        </span>
+        <a
+          href={prInfo.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
+        >
+          #{prInfo.number}
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={`https://github.com/${GITHUB_REPO}/commit/${commit}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
+    >
+      {shortCommit}
+    </a>
+  );
+}
+
+function CommitLink({ commit, label }: { commit: string; label: string }) {
   return (
     <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
       <span className="font-medium text-sm">{label}</span>
-      {isValidCommit ? (
-        <div className="flex items-center gap-2">
-          {loading ? (
-            <span className="font-mono text-xs text-muted-foreground">{shortCommit}</span>
-          ) : prInfo ? (
-            <>
-              <span className="font-mono text-xs text-muted-foreground" title={prInfo.title}>
-                {prInfo.title.length > 30 ? `${prInfo.title.slice(0, 30)}...` : prInfo.title}
-              </span>
-              <a
-                href={prInfo.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
-              >
-                #{prInfo.number}
-              </a>
-            </>
-          ) : (
-            <a
-              href={`https://github.com/${GITHUB_REPO}/commit/${commit}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
-            >
-              {shortCommit}
-            </a>
-          )}
-        </div>
-      ) : (
-        <span className="font-mono text-xs text-muted-foreground">{shortCommit}</span>
-      )}
+      <CommitDisplay commit={commit} />
     </div>
   );
 }
@@ -108,8 +115,6 @@ export function VersionPage() {
   } | null>(null);
   const [authEnabled, setAuthEnabled] = React.useState<boolean | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [loadingModel, setLoadingModel] = React.useState(false);
-  const [loadModelError, setLoadModelError] = React.useState<string | null>(null);
 
   // Generate the network URL for QR code (for mobile access)
   const getNetworkUrl = () => {
@@ -141,29 +146,6 @@ export function VersionPage() {
     };
     run();
   }, [fetchHealth]);
-
-  const handleLoadModel = async () => {
-    setLoadingModel(true);
-    setLoadModelError(null);
-    try {
-      const res = await fetch('/api/doc-processor/load-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'buffalo_l' }),
-      });
-      const json = await res.json();
-      const parsed = LoadFaceModelResponseSchema.parse(json);
-      if (!parsed.ok) {
-        setLoadModelError(parsed.error ?? 'Unknown error');
-      } else {
-        await fetchHealth();
-      }
-    } catch (err) {
-      setLoadModelError(err instanceof Error ? err.message : 'Failed to load model');
-    } finally {
-      setLoadingModel(false);
-    }
-  };
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -201,71 +183,18 @@ export function VersionPage() {
               <div className="p-3 bg-secondary/50 rounded-md border border-border/50">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">Doc Processor</span>
-                  <div className="flex items-center gap-2">
-                    {docProcessor?.available ? (
-                      <>
-                        <span className={cn(
-                          "text-xs font-medium",
-                          "text-green-600 dark:text-green-400"
-                        )}>
-                          Available
-                        </span>
-                        {docProcessor.version && (
-                          <a
-                            href={`https://github.com/${GITHUB_REPO}/commit/${docProcessor.version}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-mono text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
-                          >
-                            {docProcessor.version.slice(0, 7)}
-                          </a>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                        Unavailable
-                      </span>
-                    )}
-                  </div>
+                  {docProcessor?.available ? (
+                    <CommitDisplay commit={docProcessor.version || 'unknown'} />
+                  ) : (
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                      Unavailable
+                    </span>
+                  )}
                 </div>
                 {docProcessor?.url && (
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
                     {docProcessor.url}
                   </p>
-                )}
-                {docProcessor?.available && (
-                  <div className="mt-2 pt-2 border-t border-border/30">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Face Model</span>
-                      <div className="flex items-center gap-2">
-                        {docProcessor.faceModel?.loaded ? (
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                            {docProcessor.faceModel.model || 'Loaded'}
-                          </span>
-                        ) : (
-                          <>
-                            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
-                              Not Loaded
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={handleLoadModel}
-                              disabled={loadingModel}
-                              className="h-6 px-2 text-xs"
-                            >
-                              {loadingModel ? 'Loading...' : 'Load'}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {loadModelError && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                        {loadModelError}
-                      </p>
-                    )}
-                  </div>
                 )}
               </div>
               <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-md border border-border/50">
