@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home as HomeIcon, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const { user, loading, error, authEnabled, signInWithEmail, signUpWithEmail, signInWithGoogle, clearError } = useAuth();
@@ -77,9 +77,16 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <HomeIcon className="h-12 w-12 text-primary" />
+            <img
+              src="/ohsNoName.png"
+              alt="openHome Storage"
+              className="h-20 w-auto"
+              width={430}
+              height={378}
+              loading="eager"
+            />
           </div>
-          <CardTitle className="text-2xl">openHomeStorage</CardTitle>
+          <CardTitle className="text-2xl">openHome Storage</CardTitle>
           <CardDescription>
             {isSignUp ? 'Create an account to get started' : 'Sign in to your account'}
           </CardDescription>

@@ -2,7 +2,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Button } from '@/components/ui/button';
-import { Home as HomeIcon, Github, Loader2 } from 'lucide-react';
+import { Github, Loader2 } from 'lucide-react';
 
 export function LandingPage() {
   const { user, loading, authEnabled } = useAuth();
@@ -30,10 +30,14 @@ export function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="flex items-center justify-between p-6">
-        <div className="flex items-center gap-2">
-          <HomeIcon className="h-6 w-6 text-primary" aria-hidden="true" />
-          <span className="text-xl font-semibold">openHomeStorage</span>
-        </div>
+        <img
+          src="/ohsWithName.png"
+          alt="openHome Storage"
+          className="h-20 w-auto"
+          width={395}
+          height={424}
+          loading="eager"
+        />
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button asChild>
@@ -44,8 +48,16 @@ export function LandingPage() {
 
       {/* Hero */}
       <main className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <HomeIcon aria-hidden="true" className="h-16 w-16 text-primary mx-auto mb-6" />
-        <h1 className="text-4xl font-bold mb-4">openHomeStorage</h1>
+        <img
+          src="/ohsNoName.png"
+          alt=""
+          aria-hidden="true"
+          className="h-64 w-auto mx-auto mb-6"
+          width={430}
+          height={378}
+          loading="eager"
+        />
+        <h1 className="text-4xl font-bold mb-4">openHome Storage</h1>
         <p className="text-xl text-muted-foreground mb-8">
           A self-hosted document management platform with AI-powered metadata extraction.
           Upload your PDFs and images, and let AI organize them for you.
