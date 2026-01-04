@@ -8,7 +8,7 @@ import {
   type ProviderConfig,
   type ProviderConfigCreate,
   type ProviderConfigUpdate,
-} from '@home/types';
+} from '@ohs/types';
 import { api, getErrorMessage } from '@/lib/api';
 
 interface SettingsContextValue {

@@ -1,5 +1,5 @@
 {
-  "extends": "@home/tsconfig/react-app.json",
+  "extends": "@ohs/tsconfig/react-app.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

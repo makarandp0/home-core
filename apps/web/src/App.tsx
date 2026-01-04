@@ -62,7 +62,7 @@ export function App() {
                         <h1 className="text-2xl font-semibold flex items-center gap-2">
                           <Link to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
-                            <span>home-core web</span>
+                            <span>openHomeStorage</span>
                           </Link>
                           {typeof window !== 'undefined' && isLocalDevelopment(window.location.hostname) && (
                             <Badge variant="secondary" className={`ml-1 text-sm ${import.meta.env.VITE_GIT_BRANCH ? getBranchColor(import.meta.env.VITE_GIT_BRANCH) : branchColors[0]}`}>

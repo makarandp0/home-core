@@ -1,7 +1,7 @@
 // Tailwind config for the web app, extending the shared preset
 module.exports = {
     darkMode: ['class'],
-    presets: [require('@home/tailwind-config/tailwind.config')],
+    presets: [require('@ohs/tailwind-config/tailwind.config')],
   content: ['./index.html', './src/**/*.{ts,tsx}', '../../packages/ui/src/**/*.{ts,tsx}'],
     plugins: [require("tailwindcss-animate")],
     theme: {

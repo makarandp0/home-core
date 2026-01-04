@@ -1,4 +1,4 @@
-import type { ExtractionMethod } from '@home/types';
+import type { ExtractionMethod } from '@ohs/types';
 
 interface ExtractionBadgesProps {
   method: ExtractionMethod | null;

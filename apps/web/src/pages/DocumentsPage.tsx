@@ -6,7 +6,7 @@ import {
   type DocumentMetadata,
   DocumentListResponseSchema,
   ThumbnailsResponseSchema,
-} from '@home/types';
+} from '@ohs/types';
 import { DocumentCardView, type CardStyle } from '../components/documents';
 import { api, getErrorMessage } from '@/lib/api';
 

@@ -8,7 +8,7 @@ import { DropZone } from '../components/DropZone';
 import { ImageCropModal } from '../components/ImageCropModal';
 import { useSettings, useFileUpload } from '../hooks';
 import { Settings as SettingsIcon, Sparkles, CheckCircle2, Loader2, ArrowRight, AlertCircle, XCircle } from 'lucide-react';
-import { DocumentUploadDataSchema } from '@home/types';
+import { DocumentUploadDataSchema } from '@ohs/types';
 import { api, getErrorMessage } from '@/lib/api';
 
 export function UploadPage() {

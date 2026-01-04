@@ -32,7 +32,7 @@ export function LandingPage() {
       <header className="flex items-center justify-between p-6">
         <div className="flex items-center gap-2">
           <HomeIcon className="h-6 w-6 text-primary" aria-hidden="true" />
-          <span className="text-xl font-semibold">home-core</span>
+          <span className="text-xl font-semibold">openHomeStorage</span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -45,7 +45,7 @@ export function LandingPage() {
       {/* Hero */}
       <main className="max-w-2xl mx-auto px-6 py-16 text-center">
         <HomeIcon aria-hidden="true" className="h-16 w-16 text-primary mx-auto mb-6" />
-        <h1 className="text-4xl font-bold mb-4">home-core</h1>
+        <h1 className="text-4xl font-bold mb-4">openHomeStorage</h1>
         <p className="text-xl text-muted-foreground mb-8">
           A self-hosted document management platform with AI-powered metadata extraction.
           Upload your PDFs and images, and let AI organize them for you.
@@ -63,7 +63,7 @@ export function LandingPage() {
           </p>
           <Button variant="outline" asChild>
             <a
-              href="https://github.com/makarandp0/home-core"
+              href="https://github.com/makarandp0/ohs"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -86,7 +86,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="text-center py-8 text-sm text-muted-foreground">
         <a
-          href="https://github.com/makarandp0/home-core"
+          href="https://github.com/makarandp0/ohs"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-foreground transition-colors"

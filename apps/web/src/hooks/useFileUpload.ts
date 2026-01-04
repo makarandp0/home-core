@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
-import { makAssert } from '@home/utils';
+import { makAssert } from '@ohs/utils';
 
 export type FileType = 'image' | 'pdf' | null;
 

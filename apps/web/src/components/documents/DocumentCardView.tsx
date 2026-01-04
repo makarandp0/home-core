@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { DocumentMetadata } from '@home/types';
+import type { DocumentMetadata } from '@ohs/types';
 
 interface DocumentWithExpiry extends DocumentMetadata {
   _expiryStatus: string;

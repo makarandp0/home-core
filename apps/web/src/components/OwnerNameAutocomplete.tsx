@@ -6,7 +6,7 @@ import {
   SuggestedOwnerNamesResponseSchema,
   OwnerAliasListResponseSchema,
   type OwnerAlias,
-} from '@home/types';
+} from '@ohs/types';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

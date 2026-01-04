@@ -1,4 +1,4 @@
-# Docker Compose for home-core
+# Docker Compose for openHomeStorage
 #
 # Self-hosting (pulls pre-built images):
 #   cp .env.example .env && docker compose up -d
@@ -12,9 +12,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - '${HOME_POSTGRES_PORT:-5432}:5432'
+      - '${OHS_POSTGRES_PORT:-5432}:5432'
     environment:
-      POSTGRES_DB: home_dev
+      POSTGRES_DB: ohs_dev
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
@@ -26,17 +26,17 @@ services:
       retries: 5
 
   api:
-    image: ghcr.io/makarandp0/home-core/api:${VERSION:-latest}
+    image: ghcr.io/makarandp0/ohs/api:${VERSION:-latest}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     ports:
-      - '${HOME_API_PORT:-3001}:3001'
+      - '${OHS_API_PORT:-3001}:3001'
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/home_dev
-      - HOME_DOC_PROCESSOR_URL=http://doc-processor:8000
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/ohs_dev
+      - OHS_DOC_PROCESSOR_URL=http://doc-processor:8000
       - DOCUMENT_STORAGE_PATH=/app/documents
     volumes:
       - documents:/app/documents
@@ -47,13 +47,13 @@ services:
         condition: service_started
 
   doc-processor:
-    image: ghcr.io/makarandp0/home-core/doc-processor:${VERSION:-latest}
+    image: ghcr.io/makarandp0/ohs/doc-processor:${VERSION:-latest}
     build:
       context: apps/doc-processor
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - '${HOME_DOC_PROCESSOR_PORT:-8000}:8000'
+      - '${OHS_DOC_PROCESSOR_PORT:-8000}:8000'
 
 volumes:
   pgdata:

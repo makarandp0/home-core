@@ -1,5 +1,5 @@
 {
-  "name": "@home/types",
+  "name": "@ohs/types",
   "version": "0.1.0",
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
@@ -25,7 +25,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@home/tsconfig": "workspace:*",
+    "@ohs/tsconfig": "workspace:*",
     "typescript": "^5.6.2"
   }
 }

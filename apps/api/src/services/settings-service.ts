@@ -1,9 +1,9 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { getDb, providerConfigs, eq, and } from '@home/db';
-import type { ProviderId, ProviderConfig, ProviderConfigCreate, ProviderConfigUpdate } from '@home/types';
-import { ProviderIdSchema } from '@home/types';
+import { getDb, providerConfigs, eq, and } from '@ohs/db';
+import type { ProviderId, ProviderConfig, ProviderConfigCreate, ProviderConfigUpdate } from '@ohs/types';
+import { ProviderIdSchema } from '@ohs/types';
 
 /**
  * Redact an API key for display.
