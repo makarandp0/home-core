@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,9 +76,9 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
+          <Link to="/" className="flex justify-center mb-4 hover:opacity-80 transition-opacity" aria-label="Go to home page">
             <HomeIcon className="h-12 w-12 text-primary" />
-          </div>
+          </Link>
           <CardTitle className="text-2xl">home-core</CardTitle>
           <CardDescription>
             {isSignUp ? 'Create an account to get started' : 'Sign in to your account'}
