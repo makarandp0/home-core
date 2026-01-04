@@ -11,7 +11,7 @@ import {
   type ProviderConfigCreate,
   type ProviderConfigUpdate,
   type IdParams,
-} from '@home/types';
+} from '@ohs/types';
 import {
   getSettingsResponse,
   createProviderConfig,

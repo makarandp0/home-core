@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
-import { ProvidersResponseSchema, type ProviderInfo } from '@home/types';
+import { ProvidersResponseSchema, type ProviderInfo } from '@ohs/types';
 import { api, getErrorMessage } from '@/lib/api';
 
 export function useProviders() {

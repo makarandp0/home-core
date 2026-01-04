@@ -3,7 +3,7 @@
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import type { ApiResponse } from '@home/types';
+import type { ApiResponse } from '@ohs/types';
 
 /**
  * Format Zod validation errors into a user-friendly string.

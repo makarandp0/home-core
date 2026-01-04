@@ -16,6 +16,13 @@ import { initializeFirebase, isAuthEnabled } from './services/firebase-admin.js'
 import { registerAuthMiddleware } from './middleware/auth.js';
 
 async function main() {
+  // Log startup info for debugging
+  console.log('=== openHomeStorage API Starting ===');
+  console.log(`Version: ${process.env.COMMIT_SHA ?? 'dev'}`);
+  console.log(`Node: ${process.version}`);
+  console.log(`Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  console.log(`Working directory: ${process.cwd()}`);
+
   // Run database migrations on startup
   // TODO: Consider using Railway's release command instead for production deployments
   // TODO: With multiple replicas, concurrent migrations could cause issues - consider using advisory locks
@@ -25,12 +32,23 @@ async function main() {
       console.log('Running database migrations...');
       // Use migrate:up:prod in production (no dotenv wrapper needed since DATABASE_URL is already set)
       const script = process.env.NODE_ENV === 'production' ? 'migrate:up:prod' : 'migrate:up';
-      execSync(`pnpm --filter @home/db ${script}`, { stdio: 'inherit' });
+      const cmd = `pnpm --filter @ohs/db ${script}`;
+      console.log(`Executing: ${cmd}`);
+      execSync(cmd, { stdio: 'inherit' });
       console.log('Migrations complete');
     } catch (err) {
       console.error('Migration failed:', err);
+      // Log additional debug info on failure
+      console.error('Debug: Listing workspace packages...');
+      try {
+        execSync('pnpm list --depth 0', { stdio: 'inherit' });
+      } catch {
+        console.error('Failed to list packages');
+      }
       process.exit(1);
     }
+  } else {
+    console.log('DATABASE_URL not set, skipping migrations');
   }
 
   const server = Fastify({
@@ -94,7 +112,7 @@ async function main() {
     reply.code(404).send({ ok: false, error: 'Not Found' });
   });
 
-  const port = Number(process.env.HOME_API_PORT ?? process.env.PORT ?? 3001);
+  const port = Number(process.env.OHS_API_PORT ?? process.env.PORT ?? 3001);
   const address = await server.listen({ port, host: '0.0.0.0' });
   console.log(`API listening on ${address}`);
 }

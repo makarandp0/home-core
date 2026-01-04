@@ -13,7 +13,7 @@ import {
   type IdParams,
   type OwnerAliasBatchApplyResponse,
   type SuggestedOwnerNamesResponse,
-} from '@home/types';
+} from '@ohs/types';
 import {
   getOwnerAliases,
   createOwnerAlias,

@@ -1,5 +1,5 @@
 {
-  "name": "@home/api",
+  "name": "@ohs/api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,6 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "prestart": "pnpm --filter @home/web build",
     "start": "node dist/index.js",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
@@ -21,8 +20,8 @@
     "@fastify/basic-auth": "^5.1.1",
     "@fastify/static": "^6.12.0",
     "@google/generative-ai": "^0.24.1",
-    "@home/db": "workspace:*",
-    "@home/types": "workspace:*",
+    "@ohs/db": "workspace:*",
+    "@ohs/types": "workspace:*",
     "fastify": "^4.26.2",
     "firebase-admin": "^13.6.0",
     "jimp": "^1.6.0",
@@ -31,7 +30,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@home/tsconfig": "workspace:*",
+    "@ohs/tsconfig": "workspace:*",
     "@types/node": "^22.0.0",
     "eslint": "^9.11.1",
     "tsx": "^4.19.1",

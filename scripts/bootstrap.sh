@@ -12,7 +12,7 @@ set -e
 cd "$(dirname "$0")/.."
 source scripts/_common.sh
 
-echo "Setting up home-core..."
+echo "Setting up openHomeStorage..."
 echo ""
 
 # 1. Check Node version
@@ -46,7 +46,7 @@ if docker compose ps postgres 2>/dev/null | grep -q "running"; then
   info "PostgreSQL running"
 else
   EXISTING_PG=$(docker ps --filter "publish=5432" --format "{{.Names}}" 2>/dev/null)
-  if [[ -n "$EXISTING_PG" && "$EXISTING_PG" == *"home-core"*"postgres"* ]]; then
+  if [[ -n "$EXISTING_PG" && "$EXISTING_PG" == *"ohs"*"postgres"* ]]; then
     info "Reusing existing PostgreSQL ($EXISTING_PG)"
   elif [[ -n "$EXISTING_PG" ]]; then
     error "Port 5432 in use by $EXISTING_PG. Stop it first."
@@ -76,7 +76,7 @@ load_env
 
 # 6. Run migrations
 echo ""
-pnpm --filter @home/db migrate:up
+pnpm --filter @ohs/db migrate:up
 info "Migrations complete"
 
 # 7. Set up doc-processor

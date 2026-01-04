@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { createHash } from 'node:crypto';
-import { getDb, llmCache, eq } from '@home/db';
+import { getDb, llmCache, eq } from '@ohs/db';
 import type { ExtractTextResult, ParseTextResult, VisionResult } from '../providers/types.js';
 
 export type CacheableOperation = 'extract_text' | 'parse_text' | 'analyze';

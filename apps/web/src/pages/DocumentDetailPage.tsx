@@ -5,7 +5,7 @@ import {
   type DocumentJsonMetadata,
   DocumentMetadataSchema,
   DeleteResponseSchema,
-} from '@home/types';
+} from '@ohs/types';
 import { api, getAuthToken, getErrorMessage } from '@/lib/api';
 import { OwnerNameAutocomplete } from '@/components/OwnerNameAutocomplete';
 import { Collapsible } from '@/components/ui/collapsible';

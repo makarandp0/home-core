@@ -7,7 +7,7 @@ import {
   type DocumentData,
   type ExtractionMethod,
   type ApiError,
-} from '@home/types';
+} from '@ohs/types';
 import { type FileType } from './useFileUpload';
 import { api, getErrorMessage } from '@/lib/api';
 

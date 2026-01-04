@@ -11,7 +11,7 @@ import {
   type OwnerAliasCreate,
   type OwnerAliasUpdate,
   type OwnerAliasBatchApplyResponse,
-} from '@home/types';
+} from '@ohs/types';
 import { api, getErrorMessage } from '@/lib/api';
 
 export function useOwnerAliases() {

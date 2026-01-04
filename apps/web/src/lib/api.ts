@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import type { ApiError } from '@home/types';
+import type { ApiError } from '@ohs/types';
 import { getFirebaseAuth } from './firebase';
 
 /**

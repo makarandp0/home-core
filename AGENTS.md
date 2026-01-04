@@ -1,6 +1,6 @@
 # Contributing
 
-Development setup, commands, and contribution guidelines for home-core.
+Development setup, commands, and contribution guidelines for openHomeStorage (ohs).
 
 ## Requirements
 
@@ -15,7 +15,7 @@ Development setup, commands, and contribution guidelines for home-core.
 pnpm bootstrap   # Install deps, start Postgres, run migrations, set up doc-processor, build
 ```
 
-The bootstrap script will automatically reuse an existing home-core PostgreSQL container if one is already running (e.g., from another worktree or directory).
+The bootstrap script will automatically reuse an existing ohs PostgreSQL container if one is already running (e.g., from another worktree or directory).
 
 ## Development
 
@@ -72,9 +72,9 @@ apps/
   api/          # Fastify (TypeScript) backend
   doc-processor/# FastAPI (Python) document service
 packages/
-  db/           # Database client and migrations (@home/db)
-  types/        # Shared Zod v4 schemas (@home/types)
-  utils/        # Shared utilities (@home/utils)
+  db/           # Database client and migrations (@ohs/db)
+  types/        # Shared Zod v4 schemas (@ohs/types)
+  utils/        # Shared utilities (@ohs/utils)
   tsconfig/     # Shared TypeScript configs
 ```
 
@@ -86,15 +86,15 @@ PostgreSQL with Drizzle ORM for type-safe queries and node-pg-migrate for migrat
 
 ```bash
 # Create a new migration
-pnpm --filter @home/db migrate:create add-users-table
+pnpm --filter @ohs/db migrate:create add-users-table
 
 # Edit the migration file in packages/db/migrations/
 
 # Run pending migrations
-pnpm --filter @home/db migrate:up
+pnpm --filter @ohs/db migrate:up
 
 # Regenerate Drizzle schema from database
-pnpm --filter @home/db db:introspect
+pnpm --filter @ohs/db db:introspect
 
 # Update packages/db/src/schema/index.ts to export new tables
 ```
@@ -103,16 +103,16 @@ pnpm --filter @home/db db:introspect
 
 | Command                                        | Description             |
 | ---------------------------------------------- | ----------------------- |
-| `pnpm --filter @home/db migrate:create <name>` | Create new migration    |
-| `pnpm --filter @home/db migrate:up`            | Run pending migrations  |
-| `pnpm --filter @home/db migrate:down`          | Rollback last migration |
-| `pnpm --filter @home/db db:introspect`         | Generate schema from DB |
+| `pnpm --filter @ohs/db migrate:create <name>` | Create new migration    |
+| `pnpm --filter @ohs/db migrate:up`            | Run pending migrations  |
+| `pnpm --filter @ohs/db migrate:down`          | Rollback last migration |
+| `pnpm --filter @ohs/db db:introspect`         | Generate schema from DB |
 
 ### Using the Database in API
 
 ```typescript
-import { getDb, eq } from '@home/db';
-import { documents } from '@home/db';
+import { getDb, eq } from '@ohs/db';
+import { documents } from '@ohs/db';
 
 const db = getDb();
 const docs = await db.select().from(documents).where(eq(documents.id, id));
@@ -136,9 +136,9 @@ Zod v4 schemas live in `packages/types/src/schemas/*` and are shared by API and 
 ## Adding Dependencies
 
 ```bash
-pnpm add <pkg> --filter @home/web   # Web only
-pnpm add <pkg> --filter @home/api   # API only
-pnpm add <pkg> --filter @home/types # Shared package
+pnpm add <pkg> --filter @ohs/web   # Web only
+pnpm add <pkg> --filter @ohs/api   # API only
+pnpm add <pkg> --filter @ohs/types # Shared package
 pnpm add -D <pkg> --filter ...      # Dev dependency
 ```
 
@@ -191,12 +191,12 @@ See `.env.example` for the full list with comments. Key variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/home_dev` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/ohs_dev` |
 | `DOCUMENT_STORAGE_PATH` | Directory for uploaded documents | `./documents` |
 | `AUTH_ENABLED` | Enable Firebase authentication | `false` (single-user mode) |
-| `HOME_DOC_PROCESSOR_URL` | Doc processor service URL | `http://localhost:8000` |
-| `HOME_API_PORT` | API server port | `3001` (+ branch offset in dev) |
-| `HOME_WEB_PORT` | Web server port | `5173` (+ branch offset in dev) |
+| `OHS_DOC_PROCESSOR_URL` | Doc processor service URL | `http://localhost:8000` |
+| `OHS_API_PORT` | API server port | `3001` (+ branch offset in dev) |
+| `OHS_WEB_PORT` | Web server port | `5173` (+ branch offset in dev) |
 
 **Authentication** (only when `AUTH_ENABLED=true`):
 - `FIREBASE_SERVICE_ACCOUNT_BASE64` — Base64-encoded service account JSON
@@ -206,13 +206,13 @@ See `.env.example` for the full list with comments. Key variables:
 **Notes:**
 - **Dev**: PostgreSQL and doc-processor run in Docker on fixed ports (5432, 8000) shared across worktrees. Web and API get branch-specific ports.
 - **Self-host**: All services run in Docker. Inter-service communication uses Docker's internal networking (`http://doc-processor:8000`).
-- **Railway**: Services are deployed separately. You must set `HOME_DOC_PROCESSOR_URL` to the doc-processor's Railway internal URL.
+- **Railway**: Services are deployed separately. You must set `OHS_DOC_PROCESSOR_URL` to the doc-processor's Railway internal URL.
 
 ## Railway Deployment
 
 1. Add a PostgreSQL database from the Railway dashboard
 2. Deploy the API and doc-processor as separate services
-3. Set `HOME_DOC_PROCESSOR_URL` on the API service to point to your doc-processor's internal URL
+3. Set `OHS_DOC_PROCESSOR_URL` on the API service to point to your doc-processor's internal URL
 4. Configure API keys via the Settings page in the UI
 
 ## Commit Guidelines
@@ -230,7 +230,7 @@ See `.env.example` for the full list with comments. Key variables:
 ## Common Gotchas
 
 - Run `pnpm build` before `pnpm typecheck` — typecheck depends on built packages
-- Restart dev servers after changing shared schemas in `@home/types`
+- Restart dev servers after changing shared schemas in `@ohs/types`
 - All worktrees share the same PostgreSQL (port 5432) and doc-processor (port 8000) containers
 - Each worktree has its own `.env` (copied when created)
 

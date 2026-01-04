@@ -1,8 +1,8 @@
 // Copyright (c) 2025 Makarand Patwardhan
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { getDb, ownerNameAliases, documents, eq, ilike, sql, isNotNull, and } from '@home/db';
-import type { OwnerAlias, OwnerAliasCreate, OwnerAliasUpdate, OwnerAliasBatchApplyResponse, SuggestedOwnerNamesResponse } from '@home/types';
+import { getDb, ownerNameAliases, documents, eq, ilike, sql, isNotNull, and } from '@ohs/db';
+import type { OwnerAlias, OwnerAliasCreate, OwnerAliasUpdate, OwnerAliasBatchApplyResponse, SuggestedOwnerNamesResponse } from '@ohs/types';
 
 /**
  * Validate that a string is a valid regex pattern.

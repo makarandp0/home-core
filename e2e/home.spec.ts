@@ -8,7 +8,7 @@ test('dashboard shows welcome page with quick links', async ({ page }) => {
   await page.goto('/dashboard');
 
   // App header renders
-  await expect(page.getByRole('heading', { level: 1, name: /home-core web/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /openHomeStorage/i })).toBeVisible();
 
   // Dashboard welcome section
   await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible();

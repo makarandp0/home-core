@@ -1,5 +1,5 @@
 import { StepIndicator, type StepStatus } from './StepIndicator';
-import type { ExtractionMethod } from '@home/types';
+import type { ExtractionMethod } from '@ohs/types';
 
 export interface StepStatuses {
   extracting: StepStatus;

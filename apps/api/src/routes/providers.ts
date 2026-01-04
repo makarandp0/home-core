@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { FastifyPluginAsync } from 'fastify';
-import { type ProvidersResponse } from '@home/types';
+import { type ProvidersResponse } from '@ohs/types';
 import { providerList } from '../providers/index.js';
 import { createRouteBuilder } from '../utils/route-builder.js';
 

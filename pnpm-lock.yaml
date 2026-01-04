@@ -65,10 +65,10 @@ importers:
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
-      '@home/db':
+      '@ohs/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@home/types':
+      '@ohs/types':
         specifier: workspace:*
         version: link:../../packages/types
       fastify:
@@ -90,7 +90,7 @@ importers:
         specifier: ^4.0.0
         version: 4.1.13
     devDependencies:
-      '@home/tsconfig':
+      '@ohs/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
       '@types/node':
@@ -113,10 +113,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@home/types':
+      '@ohs/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@home/utils':
+      '@ohs/utils':
         specifier: workspace:*
         version: link:../../packages/utils
       '@radix-ui/react-avatar':
@@ -174,10 +174,10 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.2))
     devDependencies:
-      '@home/tailwind-config':
+      '@ohs/tailwind-config':
         specifier: workspace:*
         version: link:../../packages/tailwind-config
-      '@home/tsconfig':
+      '@ohs/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
       '@types/react':
@@ -223,7 +223,7 @@ importers:
         specifier: ^4.19.1
         version: 4.21.0
     devDependencies:
-      '@home/tsconfig':
+      '@ohs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/pg':
@@ -250,7 +250,7 @@ importers:
         specifier: ^4.0.0
         version: 4.1.13
     devDependencies:
-      '@home/tsconfig':
+      '@ohs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       typescript:
@@ -259,7 +259,7 @@ importers:
 
   packages/utils:
     devDependencies:
-      '@home/tsconfig':
+      '@ohs/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       typescript:

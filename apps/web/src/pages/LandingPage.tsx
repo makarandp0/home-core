@@ -60,7 +60,7 @@ export function LandingPage() {
           </p>
           <Button variant="outline" asChild>
             <a
-              href="https://github.com/makarandp0/home-core"
+              href="https://github.com/makarandp0/ohs"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -83,7 +83,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="text-center py-8 text-sm text-muted-foreground">
         <a
-          href="https://github.com/makarandp0/home-core"
+          href="https://github.com/makarandp0/ohs"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-foreground transition-colors"

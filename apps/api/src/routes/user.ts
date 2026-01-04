@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { FastifyPluginAsync } from 'fastify';
-import { UserSchema, type User } from '@home/types';
+import { UserSchema, type User } from '@ohs/types';
 import { createRouteBuilder } from '../utils/route-builder.js';
 
 export const userRoutes: FastifyPluginAsync = async (app) => {
