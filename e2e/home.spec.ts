@@ -3,19 +3,18 @@
 
 import { test, expect } from '@playwright/test';
 
-test('home page shows user from API', async ({ page }) => {
-  await page.goto('/');
+test('dashboard shows welcome page with quick links', async ({ page }) => {
+  // With auth disabled (default for e2e), navigating to / redirects to /dashboard
+  await page.goto('/dashboard');
 
-  // Title renders
+  // App header renders
   await expect(page.getByRole('heading', { level: 1, name: /home-core web/i })).toBeVisible();
 
-  // Section heading
-  await expect(
-    page.getByRole('heading', { level: 2, name: /User \(validated via Zod\)/i }),
-  ).toBeVisible();
+  // Dashboard welcome section
+  await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible();
+  await expect(page.getByText(/Your home dashboard/i)).toBeVisible();
 
-  // Data fetched from API and displayed
-  await expect(page.getByText('Name: Ada Lovelace')).toBeVisible();
-  await expect(page.getByText('Email: ada@example.com')).toBeVisible();
-  await expect(page.getByText('ID: u_1')).toBeVisible();
+  // Quick links are visible
+  await expect(page.getByRole('button', { name: /Upload/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Documents/i })).toBeVisible();
 });

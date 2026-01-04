@@ -8,6 +8,7 @@ import { HamburgerMenu } from './components/HamburgerMenu';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { UserMenu } from './components/UserMenu';
 import { HomePage } from './pages/HomePage';
+import { LandingPage } from './pages/LandingPage';
 import { VersionPage } from './pages/VersionPage';
 import { UploadPage } from './pages/UploadPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -49,6 +50,7 @@ export function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
               path="/*"
@@ -58,7 +60,7 @@ export function App() {
                     <div className="min-h-screen bg-background text-foreground p-6">
                       <div className="mb-4 flex items-center justify-between gap-4">
                         <h1 className="text-2xl font-semibold flex items-center gap-2">
-                          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                          <Link to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <HomeIcon className="h-6 w-6 text-primary" aria-hidden />
                             <span>home-core web</span>
                           </Link>
@@ -75,7 +77,7 @@ export function App() {
                         </div>
                       </div>
                       <Routes>
-                        <Route path="/" element={<HomePage />} />
+                        <Route path="/dashboard" element={<HomePage />} />
                         <Route path="/version" element={<VersionPage />} />
                         <Route path="/upload" element={<UploadPage />} />
                         <Route path="/documents" element={<DocumentsPage />} />
