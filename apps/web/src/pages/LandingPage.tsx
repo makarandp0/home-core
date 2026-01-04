@@ -31,7 +31,7 @@ export function LandingPage() {
       {/* Header */}
       <header className="flex items-center justify-between p-6">
         <div className="flex items-center gap-2">
-          <HomeIcon className="h-6 w-6 text-primary" />
+          <HomeIcon className="h-6 w-6 text-primary" aria-hidden="true" />
           <span className="text-xl font-semibold">home-core</span>
         </div>
         <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export function LandingPage() {
 
       {/* Hero */}
       <main className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <HomeIcon className="h-16 w-16 text-primary mx-auto mb-6" />
+        <HomeIcon aria-hidden="true" className="h-16 w-16 text-primary mx-auto mb-6" />
         <h1 className="text-4xl font-bold mb-4">home-core</h1>
         <p className="text-xl text-muted-foreground mb-8">
           A self-hosted document management platform with AI-powered metadata extraction.
